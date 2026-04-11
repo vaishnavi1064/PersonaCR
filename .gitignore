@@ -1,0 +1,15 @@
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+
+# Local vector store (regenerated per machine)
+backend/.chroma/
+
+# Environment files
+backend/.env
+frontend/.env
+
+# IDE / OS
+.vscode/
+.DS_Store

@@ -1,0 +1,32 @@
+# API framework
+fastapi
+uvicorn[standard]
+python-dotenv
+httpx
+pydantic
+
+# GitHub access
+PyGithub
+
+# Embeddings + vector store
+fastembed
+chromadb
+
+# LLM
+groq
+
+# Static analysis
+pylint
+astroid
+
+# ML evaluation (STS scoring)
+# all-MiniLM-L6-v2 loaded via sentence-transformers (no extra install)
+
+# PDF report generation
+reportlab
+
+# MCP server
+fastapi-mcp
+
+# Async support
+anyio
