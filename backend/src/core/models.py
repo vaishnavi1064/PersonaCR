@@ -173,3 +173,111 @@ class DocResponse(BaseModel):
     repo_url: str
     repo_name: str
     documents: list[DocContent]
+
+
+# ── Layer 2: Agent outputs ────────────────────────────────────────────────────
+
+class PlannerOutput(BaseModel):
+    focus_areas: list[str] = []
+    review_depth: str = "standard"  # "thorough" | "standard" | "quick"
+    strategy_notes: str = ""
+    should_split: bool = False
+    priority_issues: list[str] = []
+
+
+class StyleFinding(BaseModel):
+    category: str = ""
+    severity: str = "medium"  # "high" | "medium" | "low"
+    description: str = ""
+    fingerprint_value: str = ""
+    submitted_value: str = ""
+    similar_function: str = ""
+
+
+class StyleAnalysisOutput(BaseModel):
+    findings: list[StyleFinding] = []
+    overall_style_score: float = 0.0
+    similar_functions_found: int = 0
+
+
+class DefectFinding(BaseModel):
+    severity: str = "medium"  # "critical" | "high" | "medium" | "low"
+    description: str = ""
+    line_hint: str = ""
+    category: str = ""  # "bug" | "smell" | "security" | "complexity"
+
+
+class DefectHunterOutput(BaseModel):
+    bugs: list[DefectFinding] = []
+    code_smells: list[DefectFinding] = []
+    security_issues: list[DefectFinding] = []
+    defect_score: float = 100.0
+
+
+class QACheckerOutput(BaseModel):
+    style_relevant: bool = True
+    defect_relevant: bool = True
+    issues_flagged: list[str] = []
+    filtered_style_findings: list[StyleFinding] = []
+    filtered_defect_findings: list[DefectFinding] = []
+
+
+class ConfidenceOutput(BaseModel):
+    confidence_score: float = 0.0
+    is_confident: bool = False
+    reason: str = ""
+    suggestion: str = ""
+
+
+class AgentTrace(BaseModel):
+    agent_name: str
+    input_summary: str = ""
+    output_summary: str = ""
+    decision: str = ""
+    execution_time_ms: int = 0
+    iteration: int = 1
+
+
+class ReviewResult(BaseModel):
+    review_output: dict = {}
+    overall_score: float = 0.0
+    issues: list[dict] = []
+    agent_trace: list[AgentTrace] = []
+    iterations: int = 1
+    status: str = "passed"
+
+
+class DocumentationOutput(BaseModel):
+    architecture_overview: str = ""
+    file_summaries: list[dict] = []
+    pattern_guide: str = ""
+    onboarding_guide: str = ""
+
+
+# ── Layer 3: Evaluation outputs ──────────────────────────────────────────────
+
+class PseudoReference(BaseModel):
+    text: str
+    source: str = "llm"   # "llm" | "ast" | "pylint"
+    category: str = ""    # "bug" | "style" | "security" | "complexity" | "documentation"
+
+
+class PseudoRefOutput(BaseModel):
+    references: list[PseudoReference] = []
+    generation_time_ms: int = 0
+
+
+class STSScores(BaseModel):
+    comprehensiveness: float = 0.0     # fraction of pseudo-refs covered by review
+    conciseness: float = 0.0           # fraction of review sentences matching a pseudo-ref
+    relevance: float = 0.0             # harmonic mean of comprehensiveness and conciseness
+    detailed_matches: list[dict] = []  # which review sentence matched which pseudo-ref
+
+
+class QualityGateResult(BaseModel):
+    passed: bool = False
+    comprehensiveness: float = 0.0
+    conciseness: float = 0.0
+    relevance: float = 0.0
+    reason: str = ""
+    should_re_review: bool = False
