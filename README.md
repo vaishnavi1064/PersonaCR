@@ -44,43 +44,7 @@ The system has two autonomous decision loops:
 
 ## Architecture
 
-```
-GitHub Repo URL
-      │
-      ▼
-┌─────────────────────────────────────┐
-│  Layer 1 — Fingerprint Extraction   │
-│  PyGithub → AST → Jina Embeddings  │
-│  → ChromaDB (file + function level) │
-│  → Supabase cache                   │
-└─────────────────────────────────────┘
-      │
-      ▼
-┌─────────────────────────────────────┐
-│  Layer 2 — Multi-Agent Orchestrator │
-│                                     │
-│  Planner ──→ ┌─ Style Analyst ──┐  │
-│              │  (parallel)       │  │
-│              └─ Defect Hunter ──┘  │
-│                      │              │
-│              QA Checker             │
-│                      │              │
-│         Confidence Evaluator        │
-│          ↺ Agentic Loop 1          │
-└─────────────────────────────────────┘
-      │
-      ▼
-┌─────────────────────────────────────┐
-│  Layer 3 — ML Evaluation            │
-│  Pseudo-Ref Gen → STS Scorer        │
-│  → Quality Gate                     │
-│    ↺ Agentic Loop 2                │
-└─────────────────────────────────────┘
-      │
-      ▼
-   Review Result + Quality Scores
-   (JSON API / MCP Server)
-```
+![PersonaCR Architecture](assets/architecture.png)
 
 ## Performance
 
