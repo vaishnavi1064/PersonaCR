@@ -72,6 +72,7 @@ def save_fingerprint(
     fingerprint_data: dict,
     last_commit_sha: str,
     user_id: str = "anonymous",
+    num_chunks: int | None = None,
 ) -> dict:
     """
     Upsert a fingerprint record in Supabase.
@@ -84,12 +85,19 @@ def save_fingerprint(
     # user_id must be a valid UUID or None (column is UUID type)
     uid = user_id if (user_id and user_id != "anonymous") else None
 
+    # num_chunks = all ingested chunks (incl. __file__ fallbacks); fingerprint total_functions excludes __file__
+    stored_count = (
+        num_chunks
+        if num_chunks is not None
+        else fingerprint_data.get("total_functions", 0)
+    )
+
     payload = {
         "user_id": uid,
         "repo_url": repo_url,
         "repo_name": repo_name,
         "fingerprint_data": fingerprint_data,
-        "num_functions": fingerprint_data.get("total_functions", 0),
+        "num_functions": stored_count,
         "languages": languages_pg,
         "last_commit_sha": last_commit_sha,
         "updated_at": datetime.now(timezone.utc).isoformat(),

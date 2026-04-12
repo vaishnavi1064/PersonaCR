@@ -1,7 +1,14 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.src.routes.analyze_routes import router as analyze_router
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s %(name)s: %(message)s",
+)
 
 app = FastAPI(title="PersonaCR Backend", version="2.0.0")
 

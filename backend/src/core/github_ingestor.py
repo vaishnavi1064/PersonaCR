@@ -37,6 +37,7 @@ class CodeChunk:
     source: str
     start_line: int
     end_line: int
+    granularity: str = "function"   # "function" | "file" — Ringer (2025) two-stage retrieval
     metadata: dict = field(default_factory=dict)
 
 
@@ -109,6 +110,40 @@ def _extract_generic_functions(source: str, file_path: str, language: str) -> li
     return chunks
 
 
+def _create_file_level_chunk(
+    file_path: str,
+    language: str,
+    function_chunks: list[CodeChunk],
+    source: str,
+) -> CodeChunk:
+    """
+    Build a file-level summary chunk for Ringer-style two-stage retrieval.
+    Content: file path + language + all extracted function signatures (first line each).
+    Embedded alongside function-level chunks; queried first in Stage 1 retrieval.
+    """
+    signatures = []
+    for chunk in function_chunks:
+        sig = chunk.source.splitlines()[0].strip() if chunk.source else ""
+        if sig:
+            signatures.append(sig)
+
+    summary_lines = [
+        f"# File: {file_path}",
+        f"# Language: {language}",
+        f"# Functions ({len(signatures)}):",
+    ] + [f"  {sig}" for sig in signatures[:50]]
+
+    return CodeChunk(
+        file_path=file_path,
+        language=language,
+        function_name="__file_summary__",
+        source="\n".join(summary_lines)[:3000],
+        start_line=1,
+        end_line=source.count("\n") + 1,
+        granularity="file",
+    )
+
+
 def ingest_repo(repo_url: str, github_token: str | None = None) -> tuple[list[CodeChunk], str]:
     """
     Pull all code files from a GitHub repo and extract functions.
@@ -170,16 +205,20 @@ def ingest_repo(repo_url: str, github_token: str | None = None) -> tuple[list[Co
         else:
             file_chunks = _extract_generic_functions(source, path, language)
 
-        # If no functions extracted, treat the whole file as one chunk
         if not file_chunks:
+            # No functions found — treat whole file as a single file-level chunk
             file_chunks = [CodeChunk(
                 file_path=path,
                 language=language,
                 function_name="__file__",
-                source=source[:3000],  # cap at 3000 chars
+                source=source[:3000],
                 start_line=1,
                 end_line=source.count("\n") + 1,
+                granularity="file",
             )]
+        else:
+            # Functions found — also add a file-level summary chunk (Ringer 2025)
+            file_chunks.append(_create_file_level_chunk(path, language, file_chunks, source))
 
         chunks.extend(file_chunks)
 

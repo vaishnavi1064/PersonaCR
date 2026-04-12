@@ -9,10 +9,11 @@ from pydantic import BaseModel, Field
 # ── Layer 1: Fingerprint ────────────────────────────────────────────────────
 
 class FingerprintData(BaseModel):
+    # ── Original features ────────────────────────────────────────────────────
     avg_function_length: float = 0.0
     max_function_length: int = 0
     docstring_coverage: float = 0.0
-    naming_style: str = "unknown"
+    naming_convention: str = "unknown"       # snake_case | camelCase | PascalCase
     error_handling_rate: float = 0.0
     type_hint_usage: float = 0.0
     avg_complexity: float = 0.0
@@ -21,6 +22,31 @@ class FingerprintData(BaseModel):
     languages: list[str] = []
     language_distribution: dict[str, int] = {}
     total_functions: int = 0
+    # ── Ghaleb MSR 2026 — comment features ──────────────────────────────────
+    comment_density: float = 0.0            # comment lines / total lines
+    inline_comment_ratio: float = 0.0       # inline comments / all comments
+    comment_to_code_ratio: float = 0.0      # comment lines / code lines
+    # ── Ghaleb MSR 2026 — conditional features ───────────────────────────────
+    conditional_density: float = 0.0        # conditional keywords / lines
+    conditionals_per_100_lines: float = 0.0 # conditional_density × 100
+    # ── Ghaleb MSR 2026 — loop features ─────────────────────────────────────
+    loop_density: float = 0.0               # loop keywords / lines
+    for_to_while_ratio: float = 0.0         # for loops / (for + while loops)
+    # ── Ghaleb MSR 2026 — style features ────────────────────────────────────
+    comprehension_ratio: float = 0.0        # comprehensions / (comprehensions + for), Python only
+    change_concentration_gini: float = 0.0  # Gini of function lengths
+    # ── Ghaleb MSR 2026 — indentation features ───────────────────────────────
+    indentation_consistency: float = 1.0    # fraction of functions using dominant style
+    primary_indent_depth: float = 0.0       # average indent width in spaces
+    # ── Ghaleb MSR 2026 — line length features ───────────────────────────────
+    avg_line_length: float = 0.0
+    max_line_length: int = 0
+    std_line_length: float = 0.0
+    lines_over_80: float = 0.0              # fraction of lines > 80 chars
+    lines_over_120: float = 0.0             # fraction of lines > 120 chars
+    # ── Ghaleb MSR 2026 — import features ────────────────────────────────────
+    import_density: float = 0.0             # import statements / total lines
+    wildcard_import_ratio: float = 0.0      # wildcard imports / total imports
 
 
 class FingerprintResponse(BaseModel):
