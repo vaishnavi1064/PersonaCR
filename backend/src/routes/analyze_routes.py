@@ -27,13 +27,19 @@ class AnalyzeRequest(BaseModel):
     force_refresh: bool = False
 
 
-@router.post("/analyze-repo")
+@router.post("/analyze-repo", operation_id="analyze_repo")
 def analyze_repo(payload: AnalyzeRequest) -> dict:
     """
-    Build or return a coding fingerprint for a GitHub repo.
+    Analyze a GitHub repository to build a developer's coding fingerprint.
 
-    - If the repo was analyzed before AND the commit SHA hasn't changed, returns the cached fingerprint.
-    - If stale (new commits) or force_refresh=True, re-runs the full extraction.
+    Extracts 30+ code features including function length, error handling rate,
+    naming conventions, docstring coverage, comment density, complexity metrics,
+    and indentation style. Stores code embeddings in ChromaDB for similarity
+    search during reviews. Caches the fingerprint in Supabase keyed to the
+    latest commit SHA — repeated calls are instant if the repo hasn't changed.
+
+    Must be called before review_code — the fingerprint is required for
+    personalized review. Use force_refresh=true to re-analyze after new commits.
     """
     db = SupabaseREST()
     repo_url = payload.repo_url.rstrip("/")

@@ -1,0 +1,61 @@
+{
+  "_comment": "PersonaCR MCP configuration examples. Copy the relevant section to your tool's MCP config file.",
+
+  "claude_desktop": {
+    "_config_file": "~/Library/Application Support/Claude/claude_desktop_config.json  (macOS)",
+    "mcpServers": {
+      "personacr": {
+        "command": "npx",
+        "args": ["mcp-remote", "http://localhost:8000/mcp"]
+      }
+    }
+  },
+
+  "cursor": {
+    "_config_file": ".cursor/mcp.json  (in your project root or ~/.cursor/mcp.json globally)",
+    "mcpServers": {
+      "personacr": {
+        "command": "npx",
+        "args": ["mcp-remote", "http://localhost:8000/mcp"]
+      }
+    }
+  },
+
+  "vscode_copilot": {
+    "_config_file": ".vscode/mcp.json  (in your project root)",
+    "servers": {
+      "personacr": {
+        "type": "sse",
+        "url": "http://localhost:8000/mcp"
+      }
+    }
+  },
+
+  "production_remote": {
+    "_comment": "Replace the URL with your deployed Render/Railway URL after deployment",
+    "mcpServers": {
+      "personacr": {
+        "command": "npx",
+        "args": ["mcp-remote", "https://your-personacr.onrender.com/mcp"]
+      }
+    }
+  },
+
+  "available_tools": {
+    "_comment": "These MCP tools are exposed by PersonaCR",
+    "analyze_repo": {
+      "description": "Analyze a GitHub repo to build a developer coding fingerprint. Call this first.",
+      "required_params": ["repo_url"],
+      "optional_params": ["force_refresh", "github_token"]
+    },
+    "review_code": {
+      "description": "Review code against a developer's personal patterns. Requires analyze_repo to have been called.",
+      "required_params": ["repo_url", "code"],
+      "optional_params": ["language"]
+    },
+    "health_check": {
+      "description": "Check if the PersonaCR server is running.",
+      "required_params": []
+    }
+  }
+}

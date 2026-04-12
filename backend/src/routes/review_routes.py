@@ -28,21 +28,21 @@ class CodeReviewRequest(BaseModel):
     language: str = "python"
 
 
-@router.post("/review")
+@router.post("/review", operation_id="review_code")
 def review_code(req: CodeReviewRequest) -> dict:
     """
-    Submit code for personalized review against a repo's fingerprint.
+    Submit code for personalized review against a developer's coding fingerprint.
 
-    Prerequisites:
-      - The repo must have been analyzed via POST /api/analyze-repo first.
-        That call ingests code, builds the fingerprint, stores it in Supabase,
-        and embeds chunks into ChromaDB.
+    Compares the submitted code against the developer's personal patterns (not
+    generic rules) using a 6-agent pipeline: Planner selects focus areas,
+    Style Analyst finds deviations from the developer's style via ChromaDB
+    similarity search, Defect Hunter catches bugs with AST + LLM analysis,
+    QA Checker filters irrelevant findings, Confidence Evaluator scores
+    retrieval quality, and a CRScore-inspired Layer 3 evaluation computes
+    comprehensiveness and conciseness scores via STS (all-MiniLM-L6-v2).
 
-    Flow:
-      1. Parse user_id + repo_name from the URL
-      2. Load cached fingerprint from Supabase
-      3. Run the orchestrator (Planner → Style ‖ Defect → QA → Confidence)
-      4. Return structured result with agent traces and timing
+    The repo_url must have been previously analyzed via analyze_repo.
+    Returns style deviations, defects, quality scores, and full agent traces.
     """
     repo_url = req.repo_url.rstrip("/")
 
