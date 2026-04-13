@@ -1,0 +1,103 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+:root {
+  /* Typography */
+  --font-display: 'Instrument Serif', Georgia, serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Accent — Purple (default) */
+  --accent: #8B7CF6;
+  --accent-dark: #6C5CE7;
+  --accent-glow: rgba(139,124,246,0.15);
+  --accent-surface: rgba(139,124,246,0.06);
+  --accent-text: #B4A9FA;
+
+  /* Semantic */
+  --success: #4ADE80;
+  --warning: #FBBF24;
+  --error: #F87171;
+  --style-accent: #E2A84B;
+  --defect-accent: #E25555;
+}
+
+/* Blue accent option */
+[data-accent="blue"] {
+  --accent: #5B8DEF;
+  --accent-dark: #3B6FD4;
+  --accent-glow: rgba(91,141,239,0.15);
+  --accent-surface: rgba(91,141,239,0.06);
+  --accent-text: #8CB4F7;
+}
+
+/* Teal accent option */
+[data-accent="teal"] {
+  --accent: #4ECDC4;
+  --accent-dark: #2EAD9E;
+  --accent-glow: rgba(78,205,196,0.15);
+  --accent-surface: rgba(78,205,196,0.06);
+  --accent-text: #7EDDD6;
+}
+
+/* Coral accent option */
+[data-accent="coral"] {
+  --accent: #F07167;
+  --accent-dark: #D45750;
+  --accent-glow: rgba(240,113,103,0.15);
+  --accent-surface: rgba(240,113,103,0.06);
+  --accent-text: #F5968F;
+}
+
+/* Dark theme */
+[data-theme="dark"] {
+  --bg-primary: #0A0A0B;
+  --bg-secondary: #111113;
+  --bg-tertiary: #18181B;
+  --bg-card: #141416;
+  --bg-card-hover: #1C1C1F;
+  --text-primary: #EDEDEC;
+  --text-secondary: #A1A1A0;
+  --text-tertiary: #5C5C5B;
+  --border: rgba(255,255,255,0.08);
+  --border-hover: rgba(255,255,255,0.14);
+}
+
+/* Light theme */
+[data-theme="light"] {
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F8F8F7;
+  --bg-tertiary: #F0F0EE;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #F5F5F3;
+  --text-primary: #1A1A1A;
+  --text-secondary: #6B6B6A;
+  --text-tertiary: #9C9C9B;
+  --border: rgba(0,0,0,0.08);
+  --border-hover: rgba(0,0,0,0.14);
+}
+
+/* Landing page always dark regardless of theme */
+.landing-page {
+  --bg-primary: #0A0A0B;
+  --bg-secondary: #111113;
+  --bg-tertiary: #18181B;
+  --bg-card: #141416;
+  --bg-card-hover: #1C1C1F;
+  --text-primary: #EDEDEC;
+  --text-secondary: #A1A1A0;
+  --text-tertiary: #5C5C5B;
+  --border: rgba(255,255,255,0.08);
+  --border-hover: rgba(255,255,255,0.14);
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+* {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
