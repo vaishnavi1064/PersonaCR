@@ -23,7 +23,7 @@ function DiamondLogo() {
       <span
         style={{
           fontFamily: 'var(--font-display)',
-          fontSize: 16,
+          fontSize: 17,
           color: 'var(--text-primary)',
           letterSpacing: '-0.2px',
         }}
@@ -39,7 +39,7 @@ function FooterColHeading({ children }: { children: React.ReactNode }) {
     <p
       style={{
         fontFamily: 'var(--font-mono)',
-        fontSize: 11,
+        fontSize: 12,
         letterSpacing: '1.5px',
         textTransform: 'uppercase',
         color: 'var(--text-tertiary)',
@@ -61,7 +61,7 @@ function FooterLink({ href, external, children }: FooterLinkProps) {
   const sharedStyle: React.CSSProperties = {
     display: 'block',
     fontFamily: 'var(--font-body)',
-    fontSize: 13,
+    fontSize: 14,
     color: 'var(--text-secondary)',
     textDecoration: 'none',
     marginBottom: 8,
@@ -133,7 +133,7 @@ export default function Footer() {
             <p
               style={{
                 fontFamily: 'var(--font-body)',
-                fontSize: 13,
+                fontSize: 14,
                 color: 'var(--text-secondary)',
                 marginTop: 10,
                 lineHeight: 1.5,
@@ -144,7 +144,7 @@ export default function Footer() {
             <p
               style={{
                 fontFamily: 'var(--font-body)',
-                fontSize: 12,
+                fontSize: 13,
                 color: 'var(--text-tertiary)',
                 marginTop: 4,
               }}
@@ -203,7 +203,7 @@ export default function Footer() {
             style={{
               fontFamily: 'var(--font-display)',
               fontStyle: 'italic',
-              fontSize: 13,
+              fontSize: 14,
               color: 'var(--text-tertiary)',
             }}
           >
@@ -212,7 +212,7 @@ export default function Footer() {
           <span
             style={{
               fontFamily: 'var(--font-mono)',
-              fontSize: 12,
+              fontSize: 13,
               color: 'var(--text-tertiary)',
             }}
           >

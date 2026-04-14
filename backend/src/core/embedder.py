@@ -124,7 +124,7 @@ def embed_and_store(
         pass
     collection = client.create_collection(
         name=col_name,
-        metadata={"hnsw:space": "cosine"},
+        metadata={"hnsw:space": "cosine", "user_id": user_id},
     )
 
     # Embed in batches
@@ -327,3 +327,30 @@ def delete_collection(user_id: str, repo_name: str) -> None:
         client.delete_collection(col_name)
     except Exception:
         pass
+
+
+def delete_guest_collections(guest_session_id: str) -> int:
+    """
+    Delete all ChromaDB collections that belong to a guest session.
+    Collections created by embed_and_store store the user_id in their metadata,
+    so we can do an exact match to find all collections for this guest.
+    Returns the number of deleted collections.
+    """
+    client = _get_client()
+    deleted = 0
+    try:
+        all_collections = client.list_collections()
+        for col in all_collections:
+            name = col.name if hasattr(col, "name") else str(col)
+            try:
+                collection = client.get_collection(name)
+                meta = collection.metadata or {}
+                if meta.get("user_id") == guest_session_id:
+                    client.delete_collection(name)
+                    deleted += 1
+                    logger.info("Deleted guest collection: %s", name)
+            except Exception:
+                continue
+    except Exception as e:
+        logger.warning("delete_guest_collections error: %s", e)
+    return deleted

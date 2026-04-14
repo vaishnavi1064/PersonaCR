@@ -35,7 +35,7 @@ export default function AgentTrace({ traces }: { traces: TraceEntry[] }) {
     <details style={{ marginTop: 10 }}>
       <summary style={{
         fontFamily: 'var(--font-body)',
-        fontSize: 11,
+        fontSize: 12,
         color: 'var(--text-tertiary)',
         cursor: 'pointer',
         userSelect: 'none',
@@ -73,7 +73,7 @@ export default function AgentTrace({ traces }: { traces: TraceEntry[] }) {
               }} />
               <span style={{
                 fontFamily: 'var(--font-mono)',
-                fontSize: 10,
+                fontSize: 11,
                 color: 'var(--text-primary)',
                 width: 160,
                 flexShrink: 0,
@@ -85,7 +85,7 @@ export default function AgentTrace({ traces }: { traces: TraceEntry[] }) {
               </span>
               <span style={{
                 fontFamily: 'var(--font-body)',
-                fontSize: 10,
+                fontSize: 11,
                 color: 'var(--text-tertiary)',
                 flex: 1,
                 whiteSpace: 'nowrap',
@@ -97,7 +97,7 @@ export default function AgentTrace({ traces }: { traces: TraceEntry[] }) {
               {ms != null && (
                 <span style={{
                   fontFamily: 'var(--font-mono)',
-                  fontSize: 10,
+                  fontSize: 11,
                   color: 'var(--text-tertiary)',
                   flexShrink: 0,
                   marginLeft: 4,
@@ -108,7 +108,7 @@ export default function AgentTrace({ traces }: { traces: TraceEntry[] }) {
               {t.iteration != null && t.iteration > 1 && (
                 <span style={{
                   fontFamily: 'var(--font-mono)',
-                  fontSize: 9,
+                  fontSize: 10,
                   color: 'var(--warning)',
                   flexShrink: 0,
                   marginLeft: 2,

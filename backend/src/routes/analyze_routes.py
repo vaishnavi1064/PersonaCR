@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 from backend.src.core.github_ingestor import ingest_repo
 from backend.src.core.pattern_extractor import extract_fingerprint
-from backend.src.core.embedder import embed_and_store
+from backend.src.core.embedder import embed_and_store, delete_guest_collections
 from backend.src.core.cache_manager import get_cached_fingerprint, save_fingerprint
 from backend.src.db.supabase_rest import SupabaseREST
 
@@ -105,19 +105,21 @@ def analyze_repo(payload: AnalyzeRequest) -> dict:
             "error": str(e),
         }
 
-    # Save to Supabase
-    try:
-        save_fingerprint(
-            db,
-            repo_url,
-            repo_name,
-            fingerprint,
-            latest_sha,
-            payload.user_id,
-            num_chunks=len(chunks),
-        )
-    except Exception as e:
-        logger.warning("Could not save fingerprint to Supabase: %s", e)
+    # Save to Supabase — skip for guest sessions (no persistent account)
+    is_guest = payload.user_id.startswith("guest_")
+    if not is_guest:
+        try:
+            save_fingerprint(
+                db,
+                repo_url,
+                repo_name,
+                fingerprint,
+                latest_sha,
+                payload.user_id,
+                num_chunks=len(chunks),
+            )
+        except Exception as e:
+            logger.warning("Could not save fingerprint to Supabase: %s", e)
 
     return {
         "repo_url": repo_url,
@@ -129,3 +131,16 @@ def analyze_repo(payload: AnalyzeRequest) -> dict:
         "message": f"Analyzed {len(chunks)} functions from {repo_name}.",
         "embedding": embedding_info,
     }
+
+
+@router.delete("/cleanup-guest/{session_id}", operation_id="cleanup_guest")
+def cleanup_guest(session_id: str) -> dict:
+    """
+    Wipe all ChromaDB collections for a guest session.
+    Called via sendBeacon when the guest closes their tab.
+    """
+    if not session_id.startswith("guest_"):
+        return {"deleted": 0, "message": "Not a guest session — nothing to do."}
+    deleted = delete_guest_collections(session_id)
+    logger.info("Cleaned up %d guest collections for %s", deleted, session_id)
+    return {"deleted": deleted, "message": f"Removed {deleted} collection(s) for guest session."}

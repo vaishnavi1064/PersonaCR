@@ -78,7 +78,7 @@ export default function BotMessage({ text, type = 'text', data }: BotMessageProp
         {text && (
           <p style={{
             fontFamily: 'var(--font-body)',
-            fontSize: 14,
+            fontSize: 15,
             color: 'var(--text-primary)',
             lineHeight: 1.6,
             margin: 0,

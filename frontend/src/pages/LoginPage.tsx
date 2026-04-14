@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Navigate, Link, useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, type Variants } from 'framer-motion'
 import { useStore } from '../store/useStore'
 import { signInWithGitHub, supabase } from '../lib/supabase'
 
@@ -22,7 +22,7 @@ function DiamondLogo({ bg = 'var(--bg-card)' }: { bg?: string }) {
         <rect x="10" y="10" width="8" height="8" rx="1" transform="rotate(45 14 14)" fill={bg} opacity="0.7" />
         <rect x="12" y="12" width="4" height="4" rx="0.5" transform="rotate(45 14 14)" fill="var(--accent)" />
       </svg>
-      <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, color: 'var(--text-primary)', letterSpacing: '-0.2px' }}>
+      <span style={{ fontFamily: 'var(--font-display)', fontSize: 19, color: 'var(--text-primary)', letterSpacing: '-0.2px' }}>
         PersonaCR
       </span>
     </div>
@@ -32,9 +32,9 @@ function DiamondLogo({ bg = 'var(--bg-card)' }: { bg?: string }) {
 // ── Sparkle dot (background decoration) ─────────────────────────────────────
 function SparkleGroup() {
   const dots = [
-    { top: '15%', left: '8%',  size: 4, delay: '0s',   dur: '6s'  },
-    { top: '70%', left: '88%', size: 3, delay: '2s',   dur: '7s'  },
-    { top: '40%', left: '92%', size: 4, delay: '3.5s', dur: '5.5s'},
+    { top: '15%', left: '8%', size: 4, delay: '0s', dur: '6s' },
+    { top: '70%', left: '88%', size: 3, delay: '2s', dur: '7s' },
+    { top: '40%', left: '92%', size: 4, delay: '3.5s', dur: '5.5s' },
   ]
   return (
     <>
@@ -75,24 +75,24 @@ function FingerprintVisual() {
 
   // Concentric arc paths — slightly irregular bezier fingerprint arcs
   const arcs = [
-    { r: 90, op: 0.08, dur: 40, dir: 1  },
+    { r: 90, op: 0.08, dur: 40, dir: 1 },
     { r: 77, op: 0.12, dur: 35, dir: -1 },
-    { r: 65, op: 0.18, dur: 30, dir: 1  },
+    { r: 65, op: 0.18, dur: 30, dir: 1 },
     { r: 53, op: 0.28, dur: 26, dir: -1 },
-    { r: 42, op: 0.35, dur: 22, dir: 1  },
+    { r: 42, op: 0.35, dur: 22, dir: 1 },
     { r: 32, op: 0.28, dur: 20, dir: -1 },
-    { r: 22, op: 0.18, dur: 18, dir: 1  },
+    { r: 22, op: 0.18, dur: 18, dir: 1 },
     { r: 13, op: 0.10, dur: 16, dir: -1 },
   ]
 
   // Agent dots: angle in degrees, color, orbit radius, speed
   const agents = [
-    { angle:   0, color: '#8B7CF6', orbit: 96, dur: 10, label: 'Planner'    },
-    { angle:  60, color: '#D85A30', orbit: 96, dur: 13, label: 'Style'      },
-    { angle: 120, color: '#D85A30', orbit: 96, dur: 11, label: 'Defect'     },
-    { angle: 180, color: '#D4537E', orbit: 96, dur: 14, label: 'QA'         },
-    { angle: 240, color: '#1D9E75', orbit: 96, dur: 9,  label: 'Confidence' },
-    { angle: 300, color: '#639922', orbit: 96, dur: 12, label: 'Gate'       },
+    { angle: 0, color: '#8B7CF6', orbit: 96, dur: 10, label: 'Planner' },
+    { angle: 60, color: '#D85A30', orbit: 96, dur: 13, label: 'Style' },
+    { angle: 120, color: '#D85A30', orbit: 96, dur: 11, label: 'Defect' },
+    { angle: 180, color: '#D4537E', orbit: 96, dur: 14, label: 'QA' },
+    { angle: 240, color: '#1D9E75', orbit: 96, dur: 9, label: 'Confidence' },
+    { angle: 300, color: '#639922', orbit: 96, dur: 12, label: 'Gate' },
   ]
 
   // Sparkle particles inside the right panel
@@ -116,17 +116,17 @@ function FingerprintVisual() {
         `).join('')}
 
         ${agents.map((ag, i) => {
-          const rad = (ag.angle * Math.PI) / 180
-          const sx = Math.cos(rad) * ag.orbit
-          const sy = Math.sin(rad) * ag.orbit
-          return `
+        const rad = (ag.angle * Math.PI) / 180
+        const sx = Math.cos(rad) * ag.orbit
+        const sy = Math.sin(rad) * ag.orbit
+        return `
             @keyframes orbit-${i} {
               from { transform: translate(${sx.toFixed(1)}px, ${sy.toFixed(1)}px); }
               to   { transform: translate(${sx.toFixed(1)}px, ${sy.toFixed(1)}px) rotate(360deg)
                                 translate(${ag.orbit}px) rotate(-360deg); }
             }
           `
-        }).join('')}
+      }).join('')}
 
         @keyframes particle-float {
           0%   { transform: translateY(0);    opacity: var(--p-op); }
@@ -145,7 +145,7 @@ function FingerprintVisual() {
         {/* Ambient glow behind fingerprint center */}
         <defs>
           <radialGradient id="fp-glow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%"   stopColor="var(--accent)" stopOpacity="0.18" />
+            <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.18" />
             <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
           </radialGradient>
         </defs>
@@ -221,7 +221,7 @@ function FingerprintVisual() {
         style={{
           fontFamily: 'var(--font-display)',
           fontStyle: 'italic',
-          fontSize: 14,
+          fontSize: 15,
           color: 'var(--accent-text)',
           textAlign: 'center',
           marginTop: 16,
@@ -250,67 +250,62 @@ function describeOpenArc(cx: number, cy: number, r: number, startDeg: number, en
 }
 
 // ── Stagger variants ──────────────────────────────────────────────────────────
-const container = {
+const container: Variants = {
   hidden: {},
   show: { transition: { staggerChildren: 0.08 } },
 }
-const item = {
+const item: Variants = {
   hidden: { opacity: 0, y: 10 },
-  show:   { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } },
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function LoginPage() {
-  const session    = useStore((s) => s.session)
+  const session = useStore((s) => s.session)
   const setSession = useStore((s) => s.setSession)
-  const setUser    = useStore((s) => s.setUser)
+  const setUser = useStore((s) => s.setUser)
   const setIsGuest = useStore((s) => s.setIsGuest)
-  const navigate   = useNavigate()
-  const [authError,     setAuthError]     = useState<string | null>(null)
+  const navigate = useNavigate()
+  const [authError, setAuthError] = useState<string | null>(null)
   const [githubLoading, setGithubLoading] = useState(false)
-  const [completing,    setCompleting]    = useState(false)
+  const [completing, setCompleting] = useState(false)
 
-  // If OAuth callback lands on /login with a valid session, forward to /chat.
+  // ── OAuth callback handler ────────────────────────────────────────────────
+  // The access_token is in the URL hash (#access_token=...) after GitHub auth.
+  // We parse it directly and call setSession() — the most reliable approach.
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      if (!s) return
-      setSession(s as unknown as Record<string, unknown>)
-      setUser(s.user as unknown as Record<string, unknown>)
-      setIsGuest(false)
-      navigate('/chat', { replace: true })
-    })
-  }, [navigate, setSession, setUser, setIsGuest])
+    const hash = window.location.hash
+    const params = new URLSearchParams(hash.slice(1))   // strip leading #
+    const accessToken  = params.get('access_token')
+    const refreshToken = params.get('refresh_token') ?? ''
 
-  // Detect OAuth callback params landing on this page
-  // (happens when Supabase redirects here instead of /chat)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const hasCode  = params.has('code')
-    const hasToken = window.location.hash.includes('access_token')
-
-    if (!hasCode && !hasToken) return
+    if (!accessToken) return   // not an OAuth callback — normal login page view
 
     setCompleting(true)
-    // Let Supabase complete the PKCE exchange — session will appear via onAuthStateChange
-    // which App.tsx listens to and writes into the store. Poll until it shows up.
-    const interval = setInterval(() => {
-      supabase.auth.getSession().then(({ data: { session: s } }) => {
-        if (s) {
-          clearInterval(interval)
-          navigate('/chat', { replace: true })
+    console.log('[PersonaCR] OAuth callback detected, calling setSession...')
+
+    supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+      .then(({ data, error }) => {
+        console.log('[PersonaCR] setSession result:', { data, error })
+        if (error || !data.session) {
+          setCompleting(false)
+          setAuthError(error?.message ?? 'Sign-in failed. Please try again.')
+          return
         }
+        // Session established — update store then go to chat
+        setSession(data.session as unknown as Record<string, unknown>)
+        setUser(data.session.user as unknown as Record<string, unknown>)
+        setIsGuest(false)
+        // Clean hash from URL so it doesn't confuse anything on back-navigation
+        window.history.replaceState(null, '', window.location.pathname)
+        navigate('/chat', { replace: true })
       })
-    }, 300)
-
-    // Safety timeout — stop polling after 10s and show an error
-    const timeout = setTimeout(() => {
-      clearInterval(interval)
-      setCompleting(false)
-      setAuthError('Sign-in timed out. Please try again.')
-    }, 10_000)
-
-    return () => { clearInterval(interval); clearTimeout(timeout) }
-  }, [navigate])
+      .catch((err) => {
+        console.error('[PersonaCR] setSession threw:', err)
+        setCompleting(false)
+        setAuthError(err instanceof Error ? err.message : 'Sign-in failed.')
+      })
+  }, [navigate, setSession, setUser, setIsGuest])
 
   if (session) return <Navigate to="/chat" replace />
 
@@ -327,7 +322,7 @@ export default function LoginPage() {
           <rect x="10" y="10" width="8" height="8" rx="1" transform="rotate(45 14 14)" fill="var(--bg-primary)" opacity="0.7" />
           <rect x="12" y="12" width="4" height="4" rx="0.5" transform="rotate(45 14 14)" fill="var(--accent)" />
         </svg>
-        <p style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--text-secondary)' }}>
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: 15, color: 'var(--text-secondary)' }}>
           Completing sign-in…
         </p>
       </div>
@@ -420,7 +415,7 @@ export default function LoginPage() {
               variants={item}
               style={{
                 fontFamily: 'var(--font-display)',
-                fontSize: 28,
+                fontSize: 29,
                 color: 'var(--text-primary)',
                 letterSpacing: '-0.5px',
                 lineHeight: 1.15,
@@ -434,7 +429,7 @@ export default function LoginPage() {
               variants={item}
               style={{
                 fontFamily: 'var(--font-body)',
-                fontSize: 14,
+                fontSize: 15,
                 color: 'var(--text-secondary)',
                 marginTop: 8,
                 marginBottom: 36,
@@ -456,7 +451,7 @@ export default function LoginPage() {
                   border: '0.5px solid color-mix(in srgb, var(--error, #e55) 40%, transparent)',
                   borderRadius: 8,
                   fontFamily: 'var(--font-body)',
-                  fontSize: 12,
+                  fontSize: 13,
                   color: 'var(--error, #ff6b6b)',
                   lineHeight: 1.5,
                 }}
@@ -483,12 +478,12 @@ export default function LoginPage() {
                   borderRadius: 12,
                   fontFamily: 'var(--font-body)',
                   fontWeight: 500,
-                  fontSize: 15,
+                  fontSize: 16,
                   cursor: githubLoading ? 'not-allowed' : 'pointer',
                   boxShadow: '0 4px 16px var(--accent-glow)',
                   transition: 'filter 0.2s ease, transform 0.2s ease',
                 }}
-                onMouseEnter={(e) => { if (!githubLoading) { e.currentTarget.style.filter = 'brightness(1.1)'; e.currentTarget.style.transform = 'translateY(-1px)' }}}
+                onMouseEnter={(e) => { if (!githubLoading) { e.currentTarget.style.filter = 'brightness(1.1)'; e.currentTarget.style.transform = 'translateY(-1px)' } }}
                 onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; e.currentTarget.style.transform = 'translateY(0)' }}
               >
                 <GitHubIcon />
@@ -510,7 +505,7 @@ export default function LoginPage() {
               <span
                 style={{
                   fontFamily: 'var(--font-body)',
-                  fontSize: 12,
+                  fontSize: 13,
                   color: 'var(--text-tertiary)',
                   whiteSpace: 'nowrap',
                 }}
@@ -537,19 +532,19 @@ export default function LoginPage() {
                   borderRadius: 12,
                   fontFamily: 'var(--font-body)',
                   fontWeight: 500,
-                  fontSize: 14,
+                  fontSize: 15,
                   cursor: 'pointer',
                   transition: 'border-color 0.2s, background 0.2s, color 0.2s',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = 'var(--border-hover)'
-                  e.currentTarget.style.background  = 'var(--bg-card)'
-                  e.currentTarget.style.color       = 'var(--text-primary)'
+                  e.currentTarget.style.background = 'var(--bg-card)'
+                  e.currentTarget.style.color = 'var(--text-primary)'
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = 'var(--border)'
-                  e.currentTarget.style.background  = 'transparent'
-                  e.currentTarget.style.color       = 'var(--text-secondary)'
+                  e.currentTarget.style.background = 'transparent'
+                  e.currentTarget.style.color = 'var(--text-secondary)'
                 }}
               >
                 {/* Person icon */}
@@ -562,7 +557,7 @@ export default function LoginPage() {
 
               <p style={{
                 fontFamily: 'var(--font-body)',
-                fontSize: 11,
+                fontSize: 12,
                 color: 'var(--text-tertiary)',
                 textAlign: 'center',
                 marginTop: 10,
@@ -578,7 +573,7 @@ export default function LoginPage() {
                 to="/"
                 style={{
                   fontFamily: 'var(--font-body)',
-                  fontSize: 13,
+                  fontSize: 14,
                   color: 'var(--text-tertiary)',
                   textDecoration: 'none',
                   display: 'inline-flex',

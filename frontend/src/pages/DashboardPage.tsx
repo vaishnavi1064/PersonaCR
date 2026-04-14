@@ -78,7 +78,7 @@ export default function DashboardPage() {
             <div>
               <h1 style={{
                 fontFamily: 'var(--font-display)',
-                fontSize: 24,
+                fontSize: 25,
                 color: 'var(--text-primary)',
                 letterSpacing: '-0.3px',
                 marginBottom: 4,
@@ -87,7 +87,7 @@ export default function DashboardPage() {
               </h1>
               <p style={{
                 fontFamily: 'var(--font-body)',
-                fontSize: 13,
+                fontSize: 14,
                 color: 'var(--text-tertiary)',
               }}>
                 {loading
@@ -120,7 +120,7 @@ export default function DashboardPage() {
             <div>
               <p style={{
                 fontFamily: 'var(--font-body)',
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: 500,
                 color: 'var(--text-primary)',
                 marginBottom: 12,

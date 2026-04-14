@@ -86,7 +86,7 @@ export default function Stats() {
             <span
               style={{
                 fontFamily: 'var(--font-display)',
-                fontSize: 40,
+                fontSize: 41,
                 lineHeight: 1,
                 color: 'var(--accent)',
                 letterSpacing: '-1px',
@@ -97,7 +97,7 @@ export default function Stats() {
             <span
               style={{
                 fontFamily: 'var(--font-body)',
-                fontSize: 12,
+                fontSize: 13,
                 color: 'var(--text-tertiary)',
                 lineHeight: 1.4,
                 maxWidth: 100,

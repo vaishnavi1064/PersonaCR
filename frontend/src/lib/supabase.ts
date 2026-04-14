@@ -4,19 +4,26 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
 
 console.log('Supabase URL:', supabaseUrl)
+console.log('Anon Key loaded:', supabaseAnonKey ? supabaseAnonKey.slice(0, 15) + '...' : 'UNDEFINED')
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
     'Missing Supabase env vars (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).'
   )
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    flowType: 'implicit',   // Supabase sends #access_token — implicit flow
+    detectSessionInUrl: true,
+    persistSession: true,
+  },
+})
 
 export async function signInWithGitHub() {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'github',
     options: {
-      redirectTo: `${window.location.origin}/chat`,
+      redirectTo: `${window.location.origin}/login`,
     },
   })
   if (error) throw error

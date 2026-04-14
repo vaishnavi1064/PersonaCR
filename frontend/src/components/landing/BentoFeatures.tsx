@@ -83,7 +83,7 @@ function CardHeading({ children }: { children: React.ReactNode }) {
     <h3
       style={{
         fontFamily: 'var(--font-display)',
-        fontSize: 18,
+        fontSize: 19,
         color: 'var(--text-primary)',
         letterSpacing: '-0.2px',
         lineHeight: 1.2,
@@ -100,7 +100,7 @@ function CardBody({ children }: { children: React.ReactNode }) {
     <p
       style={{
         fontFamily: 'var(--font-body)',
-        fontSize: 13,
+        fontSize: 14,
         color: 'var(--text-secondary)',
         lineHeight: 1.6,
       }}
@@ -132,7 +132,7 @@ export default function BentoFeatures() {
         transition={{ duration: 0.5 }}
         style={{
           fontFamily: 'var(--font-mono)',
-          fontSize: 11,
+          fontSize: 12,
           letterSpacing: '2px',
           textTransform: 'uppercase',
           color: 'var(--text-tertiary)',
@@ -188,7 +188,7 @@ export default function BentoFeatures() {
                 key={v}
                 style={{
                   fontFamily: 'var(--font-mono)',
-                  fontSize: 9,
+                  fontSize: 10,
                   background: 'var(--accent-surface)',
                   color: 'var(--accent-text)',
                   borderRadius: 999,
@@ -246,7 +246,7 @@ export default function BentoFeatures() {
               gap: 8,
               marginTop: 14,
               fontFamily: 'var(--font-mono)',
-              fontSize: 11,
+              fontSize: 12,
               color: 'var(--text-tertiary)',
             }}
           >

@@ -56,7 +56,7 @@ export default function SummaryCards({ avgScore, totalReviews, topIssue, avgLate
         >
           <p style={{
             fontFamily: 'var(--font-body)',
-            fontSize: 12,
+            fontSize: 13,
             color: 'var(--text-tertiary)',
             marginBottom: 6,
           }}>

@@ -44,7 +44,7 @@ export default function FingerprintCard({ data }: { data: FingerprintData }) {
     <div style={{ marginTop: 8 }}>
       <p style={{
         fontFamily: 'var(--font-body)',
-        fontSize: 14,
+        fontSize: 15,
         color: 'var(--text-primary)',
         marginBottom: 12,
         lineHeight: 1.5,
@@ -71,7 +71,7 @@ export default function FingerprintCard({ data }: { data: FingerprintData }) {
           >
             <p style={{
               fontFamily: 'var(--font-mono)',
-              fontSize: 10,
+              fontSize: 11,
               color: 'var(--text-tertiary)',
               marginBottom: 4,
               letterSpacing: '0.3px',
@@ -80,7 +80,7 @@ export default function FingerprintCard({ data }: { data: FingerprintData }) {
             </p>
             <p style={{
               fontFamily: 'var(--font-body)',
-              fontSize: 15,
+              fontSize: 16,
               fontWeight: 500,
               color: 'var(--text-primary)',
               lineHeight: 1,
@@ -111,7 +111,7 @@ export default function FingerprintCard({ data }: { data: FingerprintData }) {
             >
               <p style={{
                 fontFamily: 'var(--font-mono)',
-                fontSize: 10,
+                fontSize: 11,
                 color: 'var(--text-tertiary)',
                 marginBottom: 4,
                 letterSpacing: '0.3px',
@@ -120,7 +120,7 @@ export default function FingerprintCard({ data }: { data: FingerprintData }) {
               </p>
               <p style={{
                 fontFamily: 'var(--font-body)',
-                fontSize: 15,
+                fontSize: 16,
                 fontWeight: 500,
                 color: 'var(--text-primary)',
                 lineHeight: 1,

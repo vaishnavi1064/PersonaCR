@@ -6,7 +6,7 @@ import Sidebar from '../components/layout/Sidebar'
 import TopBar from '../components/layout/TopBar'
 import MessageList from '../components/chat/MessageList'
 import ChatInput from '../components/chat/ChatInput'
-import { analyzeRepo, reviewCode } from '../lib/api'
+import { analyzeRepo, reviewCode, cleanupGuestSession } from '../lib/api'
 import { saveReview, saveRepo } from '../lib/db'
 import {
   createChat, loadChats, loadChatMessages,
@@ -44,7 +44,11 @@ export default function ChatPage() {
     activeMessages, setActiveMessages, appendMessage,
     lastAnalyzedRepo, setLastAnalyzedRepo,
     chats, setChats, upsertChatMeta, updateChatTitle,
+    user, isGuest, guestSessionId,
   } = useStore()
+
+  // Resolve user ID: real Supabase UUID for logged-in users, guest session ID for guests
+  const userId = (user as { id?: string } | null)?.id ?? guestSessionId ?? 'anonymous'
 
   const [loading,    setLoading]    = useState(false)
   const [initDone,   setInitDone]   = useState(false)
@@ -52,6 +56,14 @@ export default function ChatPage() {
   // Track persisted messages for the active chat (mirrors activeMessages but in Supabase shape)
   const persistedRef = useRef<PersistedMessage[]>([])
   const chatIdRef    = useRef<string | null>(null)
+
+  // Wipe guest ChromaDB collection when tab closes
+  useEffect(() => {
+    if (!isGuest || !guestSessionId) return
+    const cleanup = () => cleanupGuestSession(guestSessionId)
+    window.addEventListener('beforeunload', cleanup)
+    return () => window.removeEventListener('beforeunload', cleanup)
+  }, [isGuest, guestSessionId])
 
   // ── Init: load chats on mount ───────────────────────────────────────────────
   useEffect(() => {
@@ -173,35 +185,30 @@ export default function ChatPage() {
     })
   }, [appendMessage, lastAnalyzedRepo, updateChatTitle])
 
-  // ── Helper: create a new chat ─────────────────────────────────────────────
-  const startNewChat = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    const userId = session?.user?.id
-
+  // ── Helper: create a new chat (UI only — saved on first message) ────────
+  const startNewChat = useCallback(() => {
     setLastAnalyzedRepo(null)
     const welcome = makeBotMsg('text', 'Paste a GitHub repo URL to learn your coding style, or paste code for a personalized review.')
 
-    if (!userId) {
-      // Dev mode: just clear messages
-      chatIdRef.current = null
-      setActiveChatId(null)
-      setActiveMessages([welcome])
-      persistedRef.current = []
-      return
-    }
-
-    const meta = await createChat(userId)
-    if (!meta) return
-
-    upsertChatMeta(meta)
-    setActiveChatId(meta.id)
-    chatIdRef.current = meta.id
+    // Clear everything immediately without hitting DB (like ChatGPT)
+    chatIdRef.current = null
+    setActiveChatId(null)
     setActiveMessages([welcome])
-    persistedRef.current = [toPersisted(welcome)]
-  }, [setLastAnalyzedRepo, setActiveChatId, setActiveMessages, upsertChatMeta])
+    persistedRef.current = []
+  }, [setLastAnalyzedRepo, setActiveChatId, setActiveMessages])
 
   // ── Input handler ─────────────────────────────────────────────────────────
   const handleSubmit = useCallback(async (text: string) => {
+    // If there is no active chat (because we clicked + New review), create it now before saving the message.
+    if (!chatIdRef.current && userId !== 'anonymous') {
+      const meta = await createChat(userId)
+      if (meta) {
+        upsertChatMeta(meta)
+        setActiveChatId(meta.id)
+        chatIdRef.current = meta.id
+      }
+    }
+
     await addMessage(makeUserMsg(text), text)
     setLoading(true)
 
@@ -209,7 +216,7 @@ export default function ChatPage() {
       if (GH_REGEX.test(text)) {
         // ── Analyze repo ────────────────────────────────────────────
         const repoUrl = text.match(GH_REGEX)![0]
-        const r = await analyzeRepo(repoUrl)
+        const r = await analyzeRepo(repoUrl, userId)
         setLastAnalyzedRepo(repoUrl)
 
         const fp = r.fingerprint ?? {}
@@ -246,7 +253,7 @@ export default function ChatPage() {
           return
         }
 
-        const r = await reviewCode(lastAnalyzedRepo, text)
+        const r = await reviewCode(lastAnalyzedRepo, text, userId)
         const data: Record<string, unknown> = {
           overall_score: r.overall_score,
           status:        r.status,

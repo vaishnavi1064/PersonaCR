@@ -27,7 +27,7 @@ function CustomTooltip({ active, payload, label }: {
       borderRadius: 8,
       padding: '8px 12px',
       fontFamily: 'var(--font-body)',
-      fontSize: 12,
+      fontSize: 13,
       color: 'var(--text-primary)',
       boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
     }}>
@@ -47,7 +47,7 @@ function EmptyState() {
     }}>
       <p style={{
         fontFamily: 'var(--font-body)',
-        fontSize: 13,
+        fontSize: 14,
         color: 'var(--text-tertiary)',
         textAlign: 'center',
         lineHeight: 1.6,
@@ -78,7 +78,7 @@ export default function QualityTrend({ data }: Props) {
     }}>
       <p style={{
         fontFamily: 'var(--font-body)',
-        fontSize: 14,
+        fontSize: 15,
         fontWeight: 500,
         color: 'var(--text-primary)',
         marginBottom: 20,
@@ -94,13 +94,13 @@ export default function QualityTrend({ data }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke={borderColor} vertical={false} />
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 11, fill: textTertiary, fontFamily: 'var(--font-body)' }}
+              tick={{ fontSize: 12, fill: textTertiary, fontFamily: 'var(--font-body)' }}
               axisLine={{ stroke: borderColor }}
               tickLine={false}
             />
             <YAxis
               domain={[0, 100]}
-              tick={{ fontSize: 11, fill: textTertiary, fontFamily: 'var(--font-body)' }}
+              tick={{ fontSize: 12, fill: textTertiary, fontFamily: 'var(--font-body)' }}
               axisLine={{ stroke: borderColor }}
               tickLine={false}
             />
@@ -108,7 +108,7 @@ export default function QualityTrend({ data }: Props) {
               y={50}
               stroke={borderColor}
               strokeDasharray="6 4"
-              label={{ value: 'threshold', position: 'insideTopRight', fontSize: 9, fill: textTertiary }}
+              label={{ value: 'threshold', position: 'insideTopRight', fontSize: 10, fill: textTertiary }}
             />
             <Tooltip content={<CustomTooltip />} />
             <Line

@@ -31,7 +31,7 @@ function statusBadge(status: string) {
 
 const cellStyle: React.CSSProperties = {
   fontFamily: 'var(--font-body)',
-  fontSize: 13,
+  fontSize: 14,
   color: 'var(--text-secondary)',
   padding: '14px 20px',
   borderTop: '0.5px solid var(--border)',
@@ -64,7 +64,7 @@ function TableRow({ row }: { row: HistoryRow }) {
       <td style={cellStyle}>
         <span style={{
           fontFamily: 'var(--font-mono)',
-          fontSize: 11,
+          fontSize: 12,
           background: badge.bg,
           color: badge.color,
           padding: '3px 10px',
@@ -104,7 +104,7 @@ export default function ReviewHistory({ rows }: Props) {
         }}>
           <p style={{
             fontFamily: 'var(--font-body)',
-            fontSize: 14,
+            fontSize: 15,
             color: 'var(--text-tertiary)',
           }}>
             No reviews yet.
@@ -113,7 +113,7 @@ export default function ReviewHistory({ rows }: Props) {
             onClick={() => navigate('/chat')}
             style={{
               fontFamily: 'var(--font-body)',
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: 500,
               color: 'white',
               background: 'var(--accent)',
@@ -143,7 +143,7 @@ export default function ReviewHistory({ rows }: Props) {
               {['Date', 'Repository', 'Score', 'Issues', 'Status'].map((h) => (
                 <th key={h} style={{
                   fontFamily: 'var(--font-body)',
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: 500,
                   color: 'var(--text-secondary)',
                   padding: '12px 20px',

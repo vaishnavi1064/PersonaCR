@@ -91,18 +91,18 @@ export default function ReviewResult({ data }: { data: ReviewData }) {
       }}>
         <span style={{
           fontFamily: 'var(--font-display)',
-          fontSize: 28,
+          fontSize: 29,
           color: scoreColor(data.overall_score),
           lineHeight: 1,
         }}>
           {Math.round(data.overall_score)}
         </span>
-        <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text-secondary)' }}>
+        <span style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--text-secondary)' }}>
           /100
         </span>
         <span style={{
           fontFamily: 'var(--font-mono)',
-          fontSize: 10,
+          fontSize: 11,
           background: bg,
           color,
           padding: '2px 10px',
@@ -114,7 +114,7 @@ export default function ReviewResult({ data }: { data: ReviewData }) {
         {data.iterations != null && data.iterations > 1 && (
           <span style={{
             fontFamily: 'var(--font-mono)',
-            fontSize: 10,
+            fontSize: 11,
             color: 'var(--text-tertiary)',
             background: 'var(--bg-secondary)',
             padding: '2px 8px',
@@ -127,7 +127,7 @@ export default function ReviewResult({ data }: { data: ReviewData }) {
           <span style={{
             marginLeft: 'auto',
             fontFamily: 'var(--font-mono)',
-            fontSize: 11,
+            fontSize: 12,
             color: 'var(--text-tertiary)',
           }}>
             {(data.latency_ms / 1000).toFixed(1)}s
@@ -147,7 +147,7 @@ export default function ReviewResult({ data }: { data: ReviewData }) {
       {issues.length === 0 && (
         <p style={{
           fontFamily: 'var(--font-body)',
-          fontSize: 13,
+          fontSize: 14,
           color: 'var(--success)',
           marginBottom: 12,
         }}>
@@ -163,7 +163,7 @@ export default function ReviewResult({ data }: { data: ReviewData }) {
               key={p.label}
               style={{
                 fontFamily: 'var(--font-mono)',
-                fontSize: 10,
+                fontSize: 11,
                 color: 'var(--text-tertiary)',
                 background: 'var(--bg-secondary)',
                 border: '0.5px solid var(--border)',

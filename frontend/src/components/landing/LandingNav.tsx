@@ -30,7 +30,7 @@ function PersonaCRLogo() {
       <span
         style={{
           fontFamily: 'var(--font-display)',
-          fontSize: 18,
+          fontSize: 19,
           color: 'var(--text-primary)',
           letterSpacing: '-0.3px',
         }}
@@ -78,7 +78,7 @@ export default function LandingNav() {
           rel="noreferrer"
           style={{
             fontFamily: 'var(--font-mono)',
-            fontSize: 13,
+            fontSize: 14,
             color: 'var(--text-tertiary)',
             textDecoration: 'none',
             transition: 'color 0.15s',
@@ -94,7 +94,7 @@ export default function LandingNav() {
           rel="noreferrer"
           style={{
             fontFamily: 'var(--font-mono)',
-            fontSize: 13,
+            fontSize: 14,
             color: 'var(--text-tertiary)',
             textDecoration: 'none',
             transition: 'color 0.15s',
@@ -110,7 +110,7 @@ export default function LandingNav() {
           to="/login"
           style={{
             fontFamily: 'var(--font-body)',
-            fontSize: 13,
+            fontSize: 14,
             fontWeight: 500,
             color: 'var(--text-primary)',
             textDecoration: 'none',
@@ -136,7 +136,7 @@ export default function LandingNav() {
           to="/login"
           style={{
             fontFamily: 'var(--font-body)',
-            fontSize: 13,
+            fontSize: 14,
             fontWeight: 500,
             color: '#fff',
             textDecoration: 'none',

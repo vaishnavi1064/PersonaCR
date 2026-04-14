@@ -42,7 +42,7 @@ export default function Hero() {
           variants={fadeUp}
           style={{
             fontFamily: 'var(--font-mono)',
-            fontSize: 11,
+            fontSize: 12,
             letterSpacing: '3px',
             textTransform: 'uppercase',
             color: 'var(--text-tertiary)',
@@ -81,7 +81,7 @@ export default function Hero() {
           variants={fadeUp}
           style={{
             fontFamily: 'var(--font-body)',
-            fontSize: 17,
+            fontSize: 18,
             color: 'var(--text-secondary)',
             maxWidth: 460,
             lineHeight: 1.7,
@@ -105,7 +105,7 @@ export default function Hero() {
             style={{
               fontFamily: 'var(--font-body)',
               fontWeight: 500,
-              fontSize: 14,
+              fontSize: 15,
               color: '#fff',
               textDecoration: 'none',
               padding: '12px 24px',
@@ -131,7 +131,7 @@ export default function Hero() {
             rel="noreferrer"
             style={{
               fontFamily: 'var(--font-body)',
-              fontSize: 14,
+              fontSize: 15,
               color: 'var(--text-primary)',
               textDecoration: 'none',
               padding: '12px 24px',

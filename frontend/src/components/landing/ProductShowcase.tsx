@@ -40,7 +40,7 @@ function ScoreCounter({ inView }: { inView: boolean }) {
     <span
       style={{
         fontFamily: 'var(--font-display)',
-        fontSize: 40,
+        fontSize: 41,
         lineHeight: 1,
         color: 'var(--success)',
       }}
@@ -71,7 +71,7 @@ function WindowChrome() {
       <span
         style={{
           fontFamily: 'var(--font-mono)',
-          fontSize: 11,
+          fontSize: 12,
           color: '#555',
           marginLeft: 8,
         }}
@@ -126,13 +126,13 @@ export default function ProductShowcase() {
               }}
             >
               <ScoreCounter inView={inView} />
-              <span style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: '#555' }}>
+              <span style={{ fontFamily: 'var(--font-body)', fontSize: 15, color: '#555' }}>
                 /100
               </span>
               <span
                 style={{
                   fontFamily: 'var(--font-mono)',
-                  fontSize: 10,
+                  fontSize: 11,
                   color: 'var(--success)',
                   background: '#162A20',
                   padding: '2px 8px',
@@ -145,7 +145,7 @@ export default function ProductShowcase() {
                 style={{
                   marginLeft: 'auto',
                   fontFamily: 'var(--font-mono)',
-                  fontSize: 11,
+                  fontSize: 12,
                   color: '#444',
                 }}
               >
@@ -180,7 +180,7 @@ export default function ProductShowcase() {
                     <span
                       style={{
                         fontFamily: 'var(--font-mono)',
-                        fontSize: 9,
+                        fontSize: 10,
                         letterSpacing: '0.8px',
                         color: isStyle ? 'var(--style-accent)' : 'var(--defect-accent)',
                         flexShrink: 0,
@@ -192,7 +192,7 @@ export default function ProductShowcase() {
                     <span
                       style={{
                         fontFamily: 'var(--font-body)',
-                        fontSize: 12,
+                        fontSize: 13,
                         color: '#A1A1A0',
                         lineHeight: 1.4,
                       }}
@@ -216,7 +216,7 @@ export default function ProductShowcase() {
                   key={p.label}
                   style={{
                     fontFamily: 'var(--font-mono)',
-                    fontSize: 9,
+                    fontSize: 10,
                     color: '#666',
                     background: '#1a1a1a',
                     border: '1px solid #2a2a2a',
@@ -245,7 +245,7 @@ export default function ProductShowcase() {
             gap: 10,
             marginTop: 18,
             fontFamily: 'var(--font-mono)',
-            fontSize: 12,
+            fontSize: 13,
             color: 'var(--text-tertiary)',
           }}
         >

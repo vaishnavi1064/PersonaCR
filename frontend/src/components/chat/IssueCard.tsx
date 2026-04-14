@@ -19,7 +19,7 @@ export default function IssueCard({ issue }: { issue: Issue }) {
         {/* Category badge */}
         <span style={{
           fontFamily: 'var(--font-mono)',
-          fontSize: 9,
+          fontSize: 10,
           letterSpacing: '0.5px',
           padding: '1px 6px',
           borderRadius: 999,
@@ -34,7 +34,7 @@ export default function IssueCard({ issue }: { issue: Issue }) {
         {issue.severity && (
           <span style={{
             fontFamily: 'var(--font-mono)',
-            fontSize: 9,
+            fontSize: 10,
             color: 'var(--text-tertiary)',
             letterSpacing: '0.3px',
           }}>
@@ -45,7 +45,7 @@ export default function IssueCard({ issue }: { issue: Issue }) {
 
       <p style={{
         fontFamily: 'var(--font-body)',
-        fontSize: 13,
+        fontSize: 14,
         color: 'var(--text-secondary)',
         lineHeight: 1.5,
         margin: 0,

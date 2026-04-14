@@ -22,7 +22,7 @@ export default function IssueBreakdown({ data }: Props) {
     }}>
       <p style={{
         fontFamily: 'var(--font-body)',
-        fontSize: 14,
+        fontSize: 15,
         fontWeight: 500,
         color: 'var(--text-primary)',
         marginBottom: 20,
@@ -40,7 +40,7 @@ export default function IssueBreakdown({ data }: Props) {
         }}>
           <p style={{
             fontFamily: 'var(--font-body)',
-            fontSize: 13,
+            fontSize: 14,
             color: 'var(--text-tertiary)',
           }}>
             No data yet
@@ -58,7 +58,7 @@ export default function IssueBreakdown({ data }: Props) {
               }}>
                 <span style={{
                   fontFamily: 'var(--font-body)',
-                  fontSize: 12,
+                  fontSize: 13,
                   color: 'var(--text-secondary)',
                   textTransform: 'capitalize',
                 }}>
@@ -66,7 +66,7 @@ export default function IssueBreakdown({ data }: Props) {
                 </span>
                 <span style={{
                   fontFamily: 'var(--font-body)',
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: 500,
                   color: 'var(--text-primary)',
                 }}>

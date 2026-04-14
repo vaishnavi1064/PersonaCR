@@ -35,7 +35,7 @@ export default function BottomCTA() {
         <h2
           style={{
             fontFamily: 'var(--font-display)',
-            fontSize: 32,
+            fontSize: 33,
             color: 'var(--text-primary)',
             letterSpacing: '-0.5px',
             lineHeight: 1.1,
@@ -47,7 +47,7 @@ export default function BottomCTA() {
         <p
           style={{
             fontFamily: 'var(--font-body)',
-            fontSize: 14,
+            fontSize: 15,
             color: 'var(--text-secondary)',
             marginTop: 12,
             lineHeight: 1.6,
@@ -63,7 +63,7 @@ export default function BottomCTA() {
             marginTop: 32,
             fontFamily: 'var(--font-body)',
             fontWeight: 500,
-            fontSize: 14,
+            fontSize: 15,
             color: '#fff',
             textDecoration: 'none',
             padding: '12px 28px',

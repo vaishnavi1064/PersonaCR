@@ -21,7 +21,7 @@ export default function UserMessage({ text }: { text: string }) {
         {isCode ? (
           <pre style={{
             fontFamily: 'var(--font-mono)',
-            fontSize: 12,
+            fontSize: 13,
             color: 'var(--text-primary)',
             margin: 0,
             whiteSpace: 'pre-wrap',
@@ -33,7 +33,7 @@ export default function UserMessage({ text }: { text: string }) {
         ) : (
           <p style={{
             fontFamily: 'var(--font-body)',
-            fontSize: 14,
+            fontSize: 15,
             color: 'var(--text-primary)',
             margin: 0,
             lineHeight: 1.55,

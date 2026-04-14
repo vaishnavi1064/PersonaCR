@@ -43,7 +43,7 @@ export default function TopBar({ title = 'New review' }: { title?: string }) {
         </button>
         <span style={{
           fontFamily: 'var(--font-body)',
-          fontSize: 14,
+          fontSize: 15,
           color: 'var(--text-secondary)',
           whiteSpace: 'nowrap',
           overflow: 'hidden',
@@ -75,7 +75,7 @@ function NavPill({ href, active, label }: { href: string; active: boolean; label
       to={href}
       style={{
         fontFamily: 'var(--font-body)',
-        fontSize: 13,
+        fontSize: 14,
         color: active ? 'var(--text-primary)' : 'var(--text-tertiary)',
         textDecoration: 'none',
         padding: '4px 10px',

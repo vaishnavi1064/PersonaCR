@@ -42,14 +42,16 @@ export function toPersisted(
 // ── Store types ───────────────────────────────────────────────────────────────
 interface AppState {
   // Auth
-  user:           Record<string, unknown> | null
-  session:        Record<string, unknown> | null
-  authLoading:    boolean
-  isGuest:        boolean
-  setSession:     (session: Record<string, unknown> | null) => void
-  setUser:        (user: Record<string, unknown> | null) => void
-  setAuthLoading: (loading: boolean) => void
-  setIsGuest:     (v: boolean) => void
+  user:             Record<string, unknown> | null
+  session:          Record<string, unknown> | null
+  authLoading:      boolean
+  isGuest:          boolean
+  guestSessionId:   string | null   // temporary ID for isolated guest ChromaDB collections
+  setSession:       (session: Record<string, unknown> | null) => void
+  setUser:          (user: Record<string, unknown> | null) => void
+  setAuthLoading:   (loading: boolean) => void
+  setIsGuest:       (v: boolean) => void
+  clearGuestSession:() => void
 
   // Chat metadata (sidebar list) — persisted to localStorage (metadata only, no messages)
   chats:           ChatMeta[]
@@ -88,14 +90,27 @@ export const useStore = create<AppState>()(
   persist(
     (set) => ({
       // Auth
-      user:           null,
-      session:        null,
-      authLoading:    true,   // true until getSession() resolves on mount
-      isGuest:        false,
-      setSession:     (session) => set({ session }),
-      setUser:        (user)    => set({ user }),
-      setAuthLoading: (loading) => set({ authLoading: loading }),
-      setIsGuest:     (v)       => set({ isGuest: v }),
+      user:             null,
+      session:          null,
+      authLoading:      true,
+      isGuest:          false,
+      guestSessionId:   null,
+      setSession:       (session) => set({ session }),
+      setUser:          (user)    => set({ user }),
+      setAuthLoading:   (loading) => set({ authLoading: loading }),
+      setIsGuest: (v) => set((s) => {
+        if (v && !s.guestSessionId) {
+          // Generate a new guest session ID and persist it
+          const gid = 'guest_' + crypto.randomUUID()
+          return { isGuest: true, guestSessionId: gid }
+        }
+        if (!v) {
+          // Real login — clear guest session
+          return { isGuest: false, guestSessionId: null }
+        }
+        return { isGuest: true }
+      }),
+      clearGuestSession: () => set({ isGuest: false, guestSessionId: null }),
 
       // Chat metadata
       chats:    [],
@@ -148,11 +163,12 @@ export const useStore = create<AppState>()(
       partialize: (s) => ({
         theme:           s.theme,
         accent:          s.accent,
-        chats:           s.chats,       // metadata only — no message content
+        chats:           s.chats,
         activeChatId:    s.activeChatId,
         lastAnalyzedRepo:s.lastAnalyzedRepo,
         reviews:         s.reviews,
         isGuest:         s.isGuest,
+        guestSessionId:  s.guestSessionId,
       }),
     }
   )

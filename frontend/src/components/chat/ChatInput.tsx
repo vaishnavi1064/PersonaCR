@@ -64,7 +64,7 @@ export default function ChatInput({ onSubmit, disabled }: ChatInputProps) {
           style={{
             flex: 1,
             fontFamily: 'var(--font-body)',
-            fontSize: 14,
+            fontSize: 15,
             color: 'var(--text-primary)',
             background: 'transparent',
             border: 'none',
@@ -132,7 +132,7 @@ export default function ChatInput({ onSubmit, disabled }: ChatInputProps) {
 
       <p style={{
         fontFamily: 'var(--font-body)',
-        fontSize: 11,
+        fontSize: 12,
         color: 'var(--text-tertiary)',
         textAlign: 'center',
         marginTop: 8,

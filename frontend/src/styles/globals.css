@@ -57,10 +57,10 @@
   --bg-card: #141416;
   --bg-card-hover: #1C1C1F;
   --text-primary: #EDEDEC;
-  --text-secondary: #A1A1A0;
-  --text-tertiary: #5C5C5B;
-  --border: rgba(255,255,255,0.08);
-  --border-hover: rgba(255,255,255,0.14);
+  --text-secondary: #B0B0AE;
+  --text-tertiary: #757573;
+  --border: rgba(255,255,255,0.12);
+  --border-hover: rgba(255,255,255,0.22);
 }
 
 /* Light theme */
@@ -69,12 +69,12 @@
   --bg-secondary: #F8F8F7;
   --bg-tertiary: #F0F0EE;
   --bg-card: #FFFFFF;
-  --bg-card-hover: #F5F5F3;
+  --bg-card-hover: #EBEBEB;
   --text-primary: #1A1A1A;
-  --text-secondary: #6B6B6A;
-  --text-tertiary: #9C9C9B;
-  --border: rgba(0,0,0,0.08);
-  --border-hover: rgba(0,0,0,0.14);
+  --text-secondary: #4A4A4A;
+  --text-tertiary: #737373;
+  --border: rgba(0,0,0,0.18);
+  --border-hover: rgba(0,0,0,0.28);
 }
 
 /* Landing page always dark regardless of theme */

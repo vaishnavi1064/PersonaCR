@@ -59,7 +59,7 @@ export default function ScrollingTicker() {
             <span
               style={{
                 fontFamily: 'var(--font-mono)',
-                fontSize: 9,
+                fontSize: 10,
                 letterSpacing: '1px',
                 color: f.type === 'STYLE' ? 'var(--style-accent)' : 'var(--defect-accent)',
                 fontWeight: 500,
@@ -70,7 +70,7 @@ export default function ScrollingTicker() {
             <span
               style={{
                 fontFamily: 'var(--font-body)',
-                fontSize: 12,
+                fontSize: 13,
                 color: 'var(--text-secondary)',
               }}
             >

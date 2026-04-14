@@ -7,7 +7,7 @@ import { supabase } from '../../lib/supabase'
 
 function DiamondIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 28 28" fill="none">
+    <svg width="24" height="24" viewBox="0 0 28 28" fill="none">
       <rect x="7" y="7" width="14" height="14" rx="2" transform="rotate(45 14 14)" fill="var(--accent)" opacity="0.9" />
       <rect x="10" y="10" width="8" height="8" rx="1" transform="rotate(45 14 14)" fill="var(--bg-secondary)" opacity="0.7" />
       <rect x="12" y="12" width="4" height="4" rx="0.5" transform="rotate(45 14 14)" fill="var(--accent)" />
@@ -55,7 +55,7 @@ function SidebarItem({
     >
       <span style={{
         fontFamily: 'var(--font-body)',
-        fontSize: 12,
+        fontSize: 13,
         color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
@@ -182,7 +182,7 @@ export default function Sidebar({ onNewChat }: SidebarProps) {
               <DiamondIcon />
               <span style={{
                 fontFamily: 'var(--font-display)',
-                fontSize: 14,
+                fontSize: 18,
                 color: 'var(--text-primary)',
                 letterSpacing: '-0.1px',
               }}>
@@ -204,7 +204,7 @@ export default function Sidebar({ onNewChat }: SidebarProps) {
                 borderRadius: 8,
                 cursor: 'pointer',
                 fontFamily: 'var(--font-body)',
-                fontSize: 12,
+                fontSize: 13,
                 color: 'var(--text-secondary)',
                 transition: 'background 0.15s, border-color 0.15s',
               }}
@@ -227,7 +227,7 @@ export default function Sidebar({ onNewChat }: SidebarProps) {
             <div style={{ padding: '8px 0 4px' }}>
               <p style={{
                 fontFamily: 'var(--font-body)',
-                fontSize: 11,
+                fontSize: 12,
                 color: 'var(--text-tertiary)',
                 padding: '0 16px',
                 marginBottom: 4,
@@ -252,7 +252,7 @@ export default function Sidebar({ onNewChat }: SidebarProps) {
             <div style={{ padding: '8px 0 4px', flex: 1, overflowY: 'auto' }}>
               <p style={{
                 fontFamily: 'var(--font-body)',
-                fontSize: 11,
+                fontSize: 12,
                 color: 'var(--text-tertiary)',
                 padding: '0 16px',
                 marginBottom: 4,
@@ -296,7 +296,7 @@ export default function Sidebar({ onNewChat }: SidebarProps) {
               background: 'var(--accent-surface)',
               color: 'var(--accent)',
               fontFamily: 'var(--font-mono)',
-              fontSize: 11,
+              fontSize: 12,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -309,7 +309,7 @@ export default function Sidebar({ onNewChat }: SidebarProps) {
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{
                 fontFamily: 'var(--font-body)',
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: 500,
                 color: 'var(--text-primary)',
                 whiteSpace: 'nowrap',
@@ -321,7 +321,7 @@ export default function Sidebar({ onNewChat }: SidebarProps) {
               {orgLabel && (
                 <p style={{
                   fontFamily: 'var(--font-body)',
-                  fontSize: 11,
+                  fontSize: 12,
                   color: 'var(--text-tertiary)',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
@@ -376,7 +376,7 @@ export default function Sidebar({ onNewChat }: SidebarProps) {
                     border: 'none',
                     cursor: 'pointer',
                     fontFamily: 'var(--font-body)',
-                    fontSize: 13,
+                    fontSize: 14,
                     color: 'var(--text-secondary)',
                     textAlign: 'left',
                     transition: 'background 0.1s, color 0.1s',

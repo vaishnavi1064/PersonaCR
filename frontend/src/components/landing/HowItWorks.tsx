@@ -43,7 +43,7 @@ export default function HowItWorks() {
         transition={{ duration: 0.5 }}
         style={{
           fontFamily: 'var(--font-mono)',
-          fontSize: 11,
+          fontSize: 12,
           letterSpacing: '2px',
           textTransform: 'uppercase',
           color: 'var(--text-tertiary)',
@@ -97,7 +97,7 @@ export default function HowItWorks() {
             <p
               style={{
                 fontFamily: 'var(--font-mono)',
-                fontSize: 12,
+                fontSize: 13,
                 color: 'var(--text-tertiary)',
                 marginBottom: 16,
                 letterSpacing: '0.5px',
@@ -110,7 +110,7 @@ export default function HowItWorks() {
             <h3
               style={{
                 fontFamily: 'var(--font-display)',
-                fontSize: 22,
+                fontSize: 23,
                 color: 'var(--text-primary)',
                 letterSpacing: '-0.3px',
                 lineHeight: 1.1,
@@ -124,7 +124,7 @@ export default function HowItWorks() {
             <p
               style={{
                 fontFamily: 'var(--font-body)',
-                fontSize: 13,
+                fontSize: 14,
                 color: 'var(--text-secondary)',
                 lineHeight: 1.6,
               }}
