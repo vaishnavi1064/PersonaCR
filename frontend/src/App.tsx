@@ -65,6 +65,9 @@ export default function App() {
         setUser(null)
       }
       setAuthLoading(false)
+    }).catch(err => {
+      console.error("Supabase auth error:", err)
+      if (!bootstrapped) setAuthLoading(false)
     })
 
     return () => subscription.unsubscribe()
