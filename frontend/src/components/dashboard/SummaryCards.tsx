@@ -4,14 +4,21 @@ interface Props {
   avgScore:     number | null
   totalReviews: number
   topIssue:     string | null
-  avgLatency?:  string | null
+  latencyP50?:  number | null  // milliseconds
+  latencyP95?:  number | null  // milliseconds
 }
 
 function fmt(label: string) {
   return label.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-export default function SummaryCards({ avgScore, totalReviews, topIssue, avgLatency }: Props) {
+function formatMs(ms: number): string {
+  return (ms / 1000).toFixed(1) + 's'
+}
+
+export default function SummaryCards({ avgScore, totalReviews, topIssue, latencyP50, latencyP95 }: Props) {
+  const hasLatency = latencyP50 != null && latencyP95 != null
+
   const cards = [
     {
       label: 'Avg score',
@@ -32,10 +39,12 @@ export default function SummaryCards({ avgScore, totalReviews, topIssue, avgLate
       small: !!topIssue,
     },
     {
-      label: 'Avg latency',
-      value: avgLatency ?? '—',
+      label: 'Pipeline latency',
+      value: hasLatency
+        ? `p50: ${formatMs(latencyP50)} · p95: ${formatMs(latencyP95)}`
+        : '—',
       accent: false,
-      small: false,
+      small: hasLatency,
     },
   ]
 

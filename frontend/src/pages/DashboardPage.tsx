@@ -1,18 +1,25 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import Sidebar from '../components/layout/Sidebar'
 import TopBar from '../components/layout/TopBar'
 import SummaryCards from '../components/dashboard/SummaryCards'
 import QualityTrend from '../components/dashboard/QualityTrend'
 import IssueBreakdown from '../components/dashboard/IssueBreakdown'
 import ReviewHistory from '../components/dashboard/ReviewHistory'
+import CRScoreCard from '../components/dashboard/CRScoreCard'
+import AgentLatencyChart from '../components/dashboard/AgentLatencyChart'
+import LoopHealthCard from '../components/dashboard/LoopHealthCard'
 import type { HistoryRow } from '../components/dashboard/ReviewHistory'
-import { fetchReviews, computeDashboardStats } from '../lib/db'
+import { fetchReviews, computeDashboardStats, computeAdvancedStats } from '../lib/db'
+import type { ReviewRow, AdvancedStats } from '../lib/db'
 import { supabase } from '../lib/supabase'
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState(() => computeDashboardStats([]))
+  const [reviews, setReviews] = useState<ReviewRow[]>([])
   const [historyRows, setHistoryRows] = useState<HistoryRow[]>([])
+
+  const stats = useMemo(() => computeDashboardStats(reviews), [reviews])
+  const advanced = useMemo<AdvancedStats>(() => computeAdvancedStats(reviews), [reviews])
 
   useEffect(() => {
     let cancelled = false
@@ -28,12 +35,12 @@ export default function DashboardPage() {
         return
       }
 
-      const reviews = await fetchReviews(userId)
+      const fetched = await fetchReviews(userId)
       if (cancelled) return
 
-      setStats(computeDashboardStats(reviews))
+      setReviews(fetched)
 
-      const rows: HistoryRow[] = reviews.map((r) => ({
+      const rows: HistoryRow[] = fetched.map((r) => ({
         date:   new Date(r.created_at).toLocaleDateString('en-US', {
           month: 'short', day: 'numeric',
         }),
@@ -103,6 +110,8 @@ export default function DashboardPage() {
               avgScore={stats.avgScore}
               totalReviews={stats.totalReviews}
               topIssue={stats.topIssue}
+              latencyP50={advanced.latency.p50}
+              latencyP95={advanced.latency.p95}
             />
 
             {/* Charts row */}
@@ -115,6 +124,20 @@ export default function DashboardPage() {
               <QualityTrend data={stats.trendData} />
               <IssueBreakdown data={stats.breakdown} />
             </div>
+
+            {/* New metrics row: CRScore + Loop Health */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 16,
+              alignItems: 'stretch',
+            }}>
+              <CRScoreCard data={advanced.crScore} />
+              <LoopHealthCard data={advanced.loopHealth} />
+            </div>
+
+            {/* Per-agent latency */}
+            <AgentLatencyChart data={advanced.agentLatency} />
 
             {/* Review history */}
             <div>

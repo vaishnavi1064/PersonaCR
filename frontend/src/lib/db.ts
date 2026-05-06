@@ -210,6 +210,155 @@ export function computeDashboardStats(reviews: ReviewRow[]) {
   return { avgScore, totalReviews: reviews.length, topIssue, trendData, breakdown }
 }
 
+// ── Advanced dashboard metrics ─────────────────────────────────────────────────
+
+export interface LatencyStats {
+  p50: number | null   // milliseconds
+  p95: number | null   // milliseconds
+}
+
+export interface CRScoreStats {
+  comprehensiveness: number | null  // 0–100
+  conciseness: number | null        // 0–100
+  relevance: number | null          // 0–100
+}
+
+export interface AgentLatencyEntry {
+  agent: string
+  avgMs: number
+  count: number
+}
+
+export interface LoopHealthStats {
+  confidencePassRate: number | null  // 0–100
+  qualityGatePassRate: number | null // 0–100
+}
+
+export interface AdvancedStats {
+  latency: LatencyStats
+  crScore: CRScoreStats
+  agentLatency: AgentLatencyEntry[]
+  loopHealth: LoopHealthStats
+}
+
+/** Safely parse agent_trace — handles null, undefined, strings, or non-arrays */
+function parseAgentTrace(raw: unknown): AgentTraceRow[] {
+  if (!raw) return []
+  let arr = raw
+  if (typeof arr === 'string') {
+    try { arr = JSON.parse(arr) } catch { return [] }
+  }
+  if (!Array.isArray(arr)) return []
+  return arr as AgentTraceRow[]
+}
+
+function percentile(sorted: number[], p: number): number {
+  if (sorted.length === 0) return 0
+  const idx = (p / 100) * (sorted.length - 1)
+  const lo = Math.floor(idx)
+  const hi = Math.ceil(idx)
+  if (lo === hi) return sorted[lo]
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo)
+}
+
+export function computeAdvancedStats(reviews: ReviewRow[]): AdvancedStats {
+  // ── Latency p50/p95 ──
+  const totalLatencies: number[] = []
+  for (const r of reviews) {
+    const trace = parseAgentTrace(r.agent_trace)
+    if (trace.length === 0) continue
+    let sum = 0
+    for (const t of trace) {
+      sum += (t.execution_time_ms ?? 0)
+    }
+    if (sum > 0) totalLatencies.push(sum)
+  }
+  totalLatencies.sort((a, b) => a - b)
+  const latency: LatencyStats = totalLatencies.length > 0
+    ? { p50: percentile(totalLatencies, 50), p95: percentile(totalLatencies, 95) }
+    : { p50: null, p95: null }
+
+  // ── CRScore averages ──
+  const compVals: number[] = []
+  const concVals: number[] = []
+  const relVals: number[] = []
+  for (const r of reviews) {
+    if (r.comprehensiveness != null) compVals.push(r.comprehensiveness)
+    if (r.conciseness != null) concVals.push(r.conciseness)
+    if (r.relevance != null) relVals.push(r.relevance)
+  }
+  const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((s, v) => s + v, 0) / arr.length : null
+  const crScore: CRScoreStats = {
+    comprehensiveness: compVals.length > 0 ? (avg(compVals)! * 100) : null,
+    conciseness: concVals.length > 0 ? (avg(concVals)! * 100) : null,
+    relevance: relVals.length > 0 ? (avg(relVals)! * 100) : null,
+  }
+
+  // ── Per-agent latency ──
+  const agentAcc: Record<string, { totalMs: number; count: number }> = {}
+  for (const r of reviews) {
+    const trace = parseAgentTrace(r.agent_trace)
+    for (const t of trace) {
+      if (!t.agent_name || t.execution_time_ms == null) continue
+      if (!agentAcc[t.agent_name]) agentAcc[t.agent_name] = { totalMs: 0, count: 0 }
+      agentAcc[t.agent_name].totalMs += t.execution_time_ms
+      agentAcc[t.agent_name].count += 1
+    }
+  }
+  const agentLatency: AgentLatencyEntry[] = Object.entries(agentAcc)
+    .map(([agent, { totalMs, count }]) => ({ agent, avgMs: Math.round(totalMs / count), count }))
+    .sort((a, b) => b.avgMs - a.avgMs)
+
+  // ── Agentic loop health ──
+  const confidenceRegex = /Confident=(True|False)/
+  const passedRegex = /Passed=(True|False)/
+
+  let confidentFirstTotal = 0
+  let confidentFirstPassed = 0
+  let qualityGateTotal = 0
+  let qualityGatePassed = 0
+
+  for (const r of reviews) {
+    const trace = parseAgentTrace(r.agent_trace)
+
+    // Confidence on iteration 1
+    const confEntry = trace.find(
+      (t) => t.agent_name === 'confidence_evaluator' && t.iteration === 1
+    )
+    if (confEntry?.output_summary) {
+      const m = confidenceRegex.exec(confEntry.output_summary)
+      if (m) {
+        confidentFirstTotal++
+        if (m[1] === 'True') confidentFirstPassed++
+      }
+    }
+
+    // Quality gate — last entry (highest iteration)
+    const qgEntries = trace
+      .filter((t) => t.agent_name === 'quality_gate')
+      .sort((a, b) => (a.iteration ?? 0) - (b.iteration ?? 0))
+    const lastQG = qgEntries[qgEntries.length - 1]
+    if (lastQG?.output_summary) {
+      const m = passedRegex.exec(lastQG.output_summary)
+      if (m) {
+        qualityGateTotal++
+        if (m[1] === 'True') qualityGatePassed++
+      }
+    }
+  }
+
+  const loopHealth: LoopHealthStats = {
+    confidencePassRate: confidentFirstTotal > 0
+      ? Math.round((confidentFirstPassed / confidentFirstTotal) * 100)
+      : null,
+    qualityGatePassRate: qualityGateTotal > 0
+      ? Math.round((qualityGatePassed / qualityGateTotal) * 100)
+      : null,
+  }
+
+  return { latency, crScore, agentLatency, loopHealth }
+}
+
 // ── Chat persistence ───────────────────────────────────────────────────────────
 
 /** Shape stored in Supabase user_chats.messages jsonb */
