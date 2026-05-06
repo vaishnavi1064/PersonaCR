@@ -76,6 +76,10 @@ interface AppState {
   reviews:   Record<string, unknown>[]
   addReview: (review: Record<string, unknown>) => void
 
+  // Repo selection per chat
+  selectedRepoUrlsByChatId: Record<string, string[]>
+  setSelectedRepoUrls:     (chatId: string, urls: string[]) => void
+
   // UI
   sidebarOpen:   boolean
   toggleSidebar: () => void
@@ -148,6 +152,13 @@ export const useStore = create<AppState>()(
       reviews:   [],
       addReview: (review) => set((s) => ({ reviews: [review, ...s.reviews] })),
 
+      // Repo selection per chat
+      selectedRepoUrlsByChatId: {},
+      setSelectedRepoUrls: (chatId, urls) =>
+        set((s) => ({
+          selectedRepoUrlsByChatId: { ...s.selectedRepoUrlsByChatId, [chatId]: urls },
+        })),
+
       // UI
       sidebarOpen:   true,
       toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
@@ -167,6 +178,7 @@ export const useStore = create<AppState>()(
         activeChatId:    s.activeChatId,
         lastAnalyzedRepo:s.lastAnalyzedRepo,
         reviews:         s.reviews,
+        selectedRepoUrlsByChatId: s.selectedRepoUrlsByChatId,
         isGuest:         s.isGuest,
         guestSessionId:  s.guestSessionId,
       }),

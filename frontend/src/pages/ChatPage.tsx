@@ -6,11 +6,13 @@ import Sidebar from '../components/layout/Sidebar'
 import TopBar from '../components/layout/TopBar'
 import MessageList from '../components/chat/MessageList'
 import ChatInput from '../components/chat/ChatInput'
-import { analyzeRepo, reviewCode, cleanupGuestSession } from '../lib/api'
+import RepoSelector from '../components/chat/RepoSelector'
+import { analyzeRepo, reviewCode, cleanupGuestSession, chatWithInsights } from '../lib/api'
 import { saveReview, saveRepo } from '../lib/db'
 import {
   createChat, loadChats, loadChatMessages,
   saveChatMessages, generateTitle,
+  updateChatSelectedRepos, loadChatSelectedRepos,
 } from '../lib/db'
 import { supabase } from '../lib/supabase'
 
@@ -37,6 +39,18 @@ function makeBotMsg(
   return { id: uid(), role: 'bot', type, text, data }
 }
 
+/** Generate a chat title from the selected repo URLs (simple rule, no LLM). */
+function repoSelectionTitle(urls: string[]): string | null {
+  if (urls.length === 0) return null
+  const names = urls.map((u) => {
+    const parts = u.replace(/\/$/, '').split('/')
+    return parts[parts.length - 1] || parts.slice(-2).join('/')
+  })
+  if (names.length === 1) return names[0]
+  if (names.length === 2) return `${names[0]} + ${names[1]}`
+  return `${names[0]} + ${names.length - 1} more`
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export default function ChatPage() {
   const {
@@ -45,6 +59,7 @@ export default function ChatPage() {
     lastAnalyzedRepo, setLastAnalyzedRepo,
     chats, setChats, upsertChatMeta, updateChatTitle,
     user, isGuest, guestSessionId,
+    selectedRepoUrlsByChatId, setSelectedRepoUrls,
   } = useStore()
 
   // Resolve user ID: real Supabase UUID for logged-in users, guest session ID for guests
@@ -52,6 +67,7 @@ export default function ChatPage() {
 
   const [loading,    setLoading]    = useState(false)
   const [initDone,   setInitDone]   = useState(false)
+  const [selectedRepoUrls, setSelectedRepoUrlsLocal] = useState<string[]>([])
 
   // Track persisted messages for the active chat (mirrors activeMessages but in Supabase shape)
   const persistedRef = useRef<PersistedMessage[]>([])
@@ -106,6 +122,7 @@ export default function ChatPage() {
         const welcome = makeBotMsg('text', 'Paste a GitHub repo URL to learn your coding style, or paste code for a personalized review.')
         setActiveMessages([welcome])
         persistedRef.current = [toPersisted(welcome)]
+        setSelectedRepoUrlsLocal(meta.selected_repos ?? [])
         setInitDone(true)
         return
       }
@@ -116,6 +133,14 @@ export default function ChatPage() {
 
       // If we already have messages in memory for this chat, reuse them
       if (activeChatId === targetId && activeMessages.length > 0) {
+        // Restore selected repos from Zustand cache or Supabase
+        const cached = selectedRepoUrlsByChatId[targetId]
+        if (cached) {
+          setSelectedRepoUrlsLocal(cached)
+        } else {
+          const fromDb = await loadChatSelectedRepos(targetId)
+          if (!cancelled) setSelectedRepoUrlsLocal(fromDb)
+        }
         setInitDone(true)
         return
       }
@@ -135,6 +160,20 @@ export default function ChatPage() {
         setLastAnalyzedRepo(chatMeta.last_repo_url)
       }
 
+      // Restore selected repos
+      const selectedFromMeta = chatMeta?.selected_repos
+      if (Array.isArray(selectedFromMeta) && selectedFromMeta.length > 0) {
+        setSelectedRepoUrlsLocal(selectedFromMeta)
+      } else {
+        const cached = selectedRepoUrlsByChatId[targetId!]
+        if (cached) {
+          setSelectedRepoUrlsLocal(cached)
+        } else {
+          const fromDb = await loadChatSelectedRepos(targetId!)
+          if (!cancelled) setSelectedRepoUrlsLocal(fromDb)
+        }
+      }
+
       setInitDone(true)
     }
 
@@ -150,6 +189,16 @@ export default function ChatPage() {
 
     chatIdRef.current = activeChatId
     setLoading(true)
+
+    // Restore selected repos for this chat
+    const cached = selectedRepoUrlsByChatId[activeChatId]
+    if (cached) {
+      setSelectedRepoUrlsLocal(cached)
+    } else {
+      loadChatSelectedRepos(activeChatId).then((urls) => {
+        setSelectedRepoUrlsLocal(urls)
+      })
+    }
 
     loadChatMessages(activeChatId).then((persisted) => {
       persistedRef.current = persisted
@@ -188,6 +237,7 @@ export default function ChatPage() {
   // ── Helper: create a new chat (UI only — saved on first message) ────────
   const startNewChat = useCallback(() => {
     setLastAnalyzedRepo(null)
+    setSelectedRepoUrlsLocal([])
     const welcome = makeBotMsg('text', 'Paste a GitHub repo URL to learn your coding style, or paste code for a personalized review.')
 
     // Clear everything immediately without hitting DB (like ChatGPT)
@@ -196,6 +246,24 @@ export default function ChatPage() {
     setActiveMessages([welcome])
     persistedRef.current = []
   }, [setLastAnalyzedRepo, setActiveChatId, setActiveMessages])
+
+  // ── Handle repo selection changes ─────────────────────────────────────────
+  const handleSelectionChange = useCallback((urls: string[]) => {
+    setSelectedRepoUrlsLocal(urls)
+
+    const cid = chatIdRef.current
+    if (cid) {
+      // Persist to Zustand
+      setSelectedRepoUrls(cid, urls)
+      // Persist to Supabase (fire-and-forget)
+      updateChatSelectedRepos(cid, urls)
+      // Update chat title based on selection
+      const selTitle = repoSelectionTitle(urls)
+      if (selTitle) {
+        updateChatTitle(cid, selTitle)
+      }
+    }
+  }, [setSelectedRepoUrls, updateChatTitle])
 
   // ── Input handler ─────────────────────────────────────────────────────────
   const handleSubmit = useCallback(async (text: string) => {
@@ -206,6 +274,12 @@ export default function ChatPage() {
         upsertChatMeta(meta)
         setActiveChatId(meta.id)
         chatIdRef.current = meta.id
+
+        // Persist current selection to the new chat
+        if (selectedRepoUrls.length > 0) {
+          setSelectedRepoUrls(meta.id, selectedRepoUrls)
+          updateChatSelectedRepos(meta.id, selectedRepoUrls)
+        }
       }
     }
 
@@ -271,14 +345,29 @@ export default function ChatPage() {
         })
 
       } else {
-        await addMessage(makeBotMsg('text', 'Paste a GitHub repo URL to analyze, or paste code to review.'))
+        // ── Free-form Q&A ───────────────────────────────────────────
+        if (selectedRepoUrls.length === 0) {
+          await addMessage(makeBotMsg('text', 'Select at least one repo above to ask questions about your code.'))
+        } else {
+          try {
+            const result = await chatWithInsights(
+              text,
+              selectedRepoUrls,
+              userId,
+              chatIdRef.current ?? undefined,
+            )
+            await addMessage(makeBotMsg('text', result.answer))
+          } catch (err) {
+            await addMessage(makeBotMsg('text', `Error: ${err instanceof Error ? err.message : String(err)}`))
+          }
+        }
       }
     } catch (err) {
       await addMessage(makeBotMsg('text', `Error: ${err instanceof Error ? err.message : String(err)}`))
     } finally {
       setLoading(false)
     }
-  }, [addMessage, lastAnalyzedRepo, setLastAnalyzedRepo])
+  }, [addMessage, lastAnalyzedRepo, setLastAnalyzedRepo, selectedRepoUrls, userId, upsertChatMeta, setActiveChatId, setSelectedRepoUrls])
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -304,6 +393,11 @@ export default function ChatPage() {
             flexDirection: 'column',
             flex: 1,
           }}>
+            <RepoSelector
+              userId={userId}
+              selectedUrls={selectedRepoUrls}
+              onSelectionChange={handleSelectionChange}
+            />
             <MessageList messages={activeMessages} loading={loading} />
             <ChatInput onSubmit={handleSubmit} disabled={loading || !initDone} />
           </div>

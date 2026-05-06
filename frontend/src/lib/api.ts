@@ -37,3 +37,29 @@ export function cleanupGuestSession(guestSessionId: string) {
   // sendBeacon works even when the tab is closing — fetch would be cancelled
   navigator.sendBeacon(url)
 }
+
+export interface InsightsResponse {
+  answer: string
+  repos_used: string[]
+  code_chunks_retrieved: number
+}
+
+export async function chatWithInsights(
+  message: string,
+  selectedRepoUrls: string[],
+  userId: string,
+  chatId?: string,
+): Promise<InsightsResponse> {
+  const res = await fetch(`${API}/api/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message,
+      selected_repo_urls: selectedRepoUrls,
+      user_id: userId,
+      chat_id: chatId ?? null,
+    }),
+  })
+  if (!res.ok) throw new Error(`Chat failed: ${res.status}`)
+  return res.json()
+}

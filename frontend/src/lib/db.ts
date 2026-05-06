@@ -371,11 +371,12 @@ export interface PersistedMessage {
 }
 
 export interface ChatMeta {
-  id:            string
-  title:         string
-  starred:       boolean
-  last_repo_url: string | null
-  updated_at:    string
+  id:              string
+  title:           string
+  starred:         boolean
+  last_repo_url:   string | null
+  selected_repos?: string[]
+  updated_at:      string
 }
 
 /** Title from first meaningful user message */
@@ -412,7 +413,7 @@ export async function createChat(userId: string): Promise<ChatMeta | null> {
       messages: [welcome],
       starred:  false,
     })
-    .select('id, title, starred, last_repo_url, updated_at')
+    .select('id, title, starred, last_repo_url, selected_repos, updated_at')
     .single()
 
   if (error) { console.warn('[db] createChat failed:', error.message); return null }
@@ -422,7 +423,7 @@ export async function createChat(userId: string): Promise<ChatMeta | null> {
 export async function loadChats(userId: string): Promise<ChatMeta[]> {
   const { data, error } = await supabase
     .from('user_chats')
-    .select('id, title, starred, last_repo_url, updated_at')
+    .select('id, title, starred, last_repo_url, selected_repos, updated_at')
     .eq('user_id', userId)
     .order('updated_at', { ascending: false })
 
@@ -466,4 +467,48 @@ export async function toggleChatStar(chatId: string, starred: boolean): Promise<
     .eq('id', chatId)
 
   if (error) console.warn('[db] toggleChatStar failed:', error.message)
+}
+
+// ── Repo selector helpers ──────────────────────────────────────────────────────
+
+export interface AnalyzedRepo {
+  repo_url:  string
+  repo_name: string
+  languages: string[]
+}
+
+export async function getUserAnalyzedRepos(userId: string): Promise<AnalyzedRepo[]> {
+  const { data, error } = await supabase
+    .from('user_repos')
+    .select('repo_url, repo_name, languages')
+    .eq('user_id', userId)
+    .order('analyzed_at', { ascending: false })
+
+  if (error) { console.warn('[db] getUserAnalyzedRepos failed:', error.message); return [] }
+  return (data ?? []) as AnalyzedRepo[]
+}
+
+export async function updateChatSelectedRepos(
+  chatId: string,
+  repoUrls: string[],
+): Promise<void> {
+  const { error } = await supabase
+    .from('user_chats')
+    .update({ selected_repos: repoUrls, updated_at: new Date().toISOString() })
+    .eq('id', chatId)
+
+  if (error) console.warn('[db] updateChatSelectedRepos failed:', error.message)
+}
+
+export async function loadChatSelectedRepos(chatId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('user_chats')
+    .select('selected_repos')
+    .eq('id', chatId)
+    .single()
+
+  if (error) { console.warn('[db] loadChatSelectedRepos failed:', error.message); return [] }
+  const repos = data?.selected_repos
+  if (Array.isArray(repos)) return repos as string[]
+  return []
 }

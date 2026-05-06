@@ -281,3 +281,30 @@ class QualityGateResult(BaseModel):
     relevance: float = 0.0
     reason: str = ""
     should_re_review: bool = False
+
+
+# ── Insights / Conversational Q&A ───────────────────────────────────────────
+
+class InsightsChatRequest(BaseModel):
+    message: str
+    selected_repo_urls: list[str]
+    user_id: str
+    chat_id: str | None = None
+
+
+class InsightsChatResponse(BaseModel):
+    answer: str
+    repos_used: list[str]
+    code_chunks_retrieved: int
+
+
+class InsightsAgentInput(BaseModel):
+    question: str
+    selected_repo_urls: list[str]
+    user_id: str
+
+
+class InsightsAgentOutput(BaseModel):
+    answer: str
+    repos_used: list[str]
+    code_chunks_retrieved: int
