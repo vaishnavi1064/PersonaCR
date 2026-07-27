@@ -56,7 +56,6 @@ export default function ChatPage() {
   const {
     activeChatId, setActiveChatId,
     activeMessages, setActiveMessages, appendMessage,
-    lastAnalyzedRepo, setLastAnalyzedRepo,
     chats, setChats, upsertChatMeta, updateChatTitle,
     user, isGuest, guestSessionId,
     selectedRepoUrlsByChatId, setSelectedRepoUrls,
@@ -154,23 +153,22 @@ export default function ChatPage() {
         : [makeBotMsg('text', 'Paste a GitHub repo URL to learn your coding style, or paste code for a personalized review.')]
       )
 
-      // Restore last repo from chat metadata
+      // Restore selected repos (single source of truth; index 0 = review target)
       const chatMeta = fetchedChats.find((c) => c.id === targetId)
-      if (chatMeta?.last_repo_url && !lastAnalyzedRepo) {
-        setLastAnalyzedRepo(chatMeta.last_repo_url)
-      }
-
-      // Restore selected repos
       const selectedFromMeta = chatMeta?.selected_repos
       if (Array.isArray(selectedFromMeta) && selectedFromMeta.length > 0) {
         setSelectedRepoUrlsLocal(selectedFromMeta)
+        setSelectedRepoUrls(targetId!, selectedFromMeta)
       } else {
         const cached = selectedRepoUrlsByChatId[targetId!]
         if (cached) {
           setSelectedRepoUrlsLocal(cached)
         } else {
           const fromDb = await loadChatSelectedRepos(targetId!)
-          if (!cancelled) setSelectedRepoUrlsLocal(fromDb)
+          if (!cancelled) {
+            setSelectedRepoUrlsLocal(fromDb)
+            if (fromDb.length > 0) setSelectedRepoUrls(targetId!, fromDb)
+          }
         }
       }
 
@@ -207,10 +205,12 @@ export default function ChatPage() {
         : [makeBotMsg('text', 'Paste a GitHub repo URL to learn your coding style, or paste code for a personalized review.')]
       )
 
-      // Restore last repo for this chat
+      // Prefer DB selected_repos when switching chats (keeps index-0 review target in sync)
       const meta = chats.find((c) => c.id === activeChatId)
-      if (meta?.last_repo_url) setLastAnalyzedRepo(meta.last_repo_url)
-      else setLastAnalyzedRepo(null)
+      if (Array.isArray(meta?.selected_repos) && meta.selected_repos.length > 0) {
+        setSelectedRepoUrlsLocal(meta.selected_repos)
+        setSelectedRepoUrls(activeChatId, meta.selected_repos)
+      }
 
       setLoading(false)
     })
@@ -227,16 +227,15 @@ export default function ChatPage() {
     if (!cid) return
 
     // Fire-and-forget save
-    saveChatMessages(cid, persistedRef.current, lastAnalyzedRepo ?? null).then(() => {
+    saveChatMessages(cid, persistedRef.current).then(() => {
       // Update title in store after save
       const newTitle = generateTitle(persistedRef.current)
       updateChatTitle(cid, newTitle)
     })
-  }, [appendMessage, lastAnalyzedRepo, updateChatTitle])
+  }, [appendMessage, updateChatTitle])
 
   // ── Helper: create a new chat (UI only — saved on first message) ────────
   const startNewChat = useCallback(() => {
-    setLastAnalyzedRepo(null)
     setSelectedRepoUrlsLocal([])
     const welcome = makeBotMsg('text', 'Paste a GitHub repo URL to learn your coding style, or paste code for a personalized review.')
 
@@ -245,7 +244,7 @@ export default function ChatPage() {
     setActiveChatId(null)
     setActiveMessages([welcome])
     persistedRef.current = []
-  }, [setLastAnalyzedRepo, setActiveChatId, setActiveMessages])
+  }, [setActiveChatId, setActiveMessages])
 
   // ── Handle repo selection changes ─────────────────────────────────────────
   const handleSelectionChange = useCallback((urls: string[]) => {
@@ -264,6 +263,14 @@ export default function ChatPage() {
       }
     }
   }, [setSelectedRepoUrls, updateChatTitle])
+
+  /** Promote a selected URL to review target by moving it to index 0. */
+  const handlePrimaryChange = useCallback((url: string | null) => {
+    if (!url || !selectedRepoUrls.includes(url)) return
+    if (selectedRepoUrls[0] === url) return
+    const next = [url, ...selectedRepoUrls.filter((u) => u !== url)]
+    handleSelectionChange(next)
+  }, [selectedRepoUrls, handleSelectionChange])
 
   // ── Input handler ─────────────────────────────────────────────────────────
   const handleSubmit = useCallback(async (text: string) => {
@@ -291,7 +298,17 @@ export default function ChatPage() {
         // ── Analyze repo ────────────────────────────────────────────
         const repoUrl = text.match(GH_REGEX)![0]
         const r = await analyzeRepo(repoUrl, userId)
-        setLastAnalyzedRepo(repoUrl)
+        
+        // Add to selected (index 0 is the review target when this is the first repo)
+        const cleanUrl = repoUrl.replace(/\/$/, '')
+        if (!selectedRepoUrls.includes(cleanUrl)) {
+          const nextSelected = [...selectedRepoUrls, cleanUrl]
+          setSelectedRepoUrlsLocal(nextSelected)
+          if (chatIdRef.current) {
+            setSelectedRepoUrls(chatIdRef.current, nextSelected)
+            updateChatSelectedRepos(chatIdRef.current, nextSelected)
+          }
+        }
 
         const fp = r.fingerprint ?? {}
         const data: Record<string, unknown> = {
@@ -321,13 +338,15 @@ export default function ChatPage() {
         })
 
       } else if (isCodeSnippet(text)) {
-        // ── Review code ─────────────────────────────────────────────
-        if (!lastAnalyzedRepo) {
-          await addMessage(makeBotMsg('text', 'Please analyze a GitHub repo first by pasting its URL.'))
+        // ── Review code — selected[0] is the review target (single slice) ─
+        const reviewTarget = selectedRepoUrls[0] ?? null
+
+        if (!reviewTarget) {
+          await addMessage(makeBotMsg('text', 'Select a repo above (or paste a GitHub URL) to review code against your style.'))
           return
         }
 
-        const r = await reviewCode(lastAnalyzedRepo, text, userId)
+        const r = await reviewCode(reviewTarget, text, userId)
         const data: Record<string, unknown> = {
           overall_score: r.overall_score,
           status:        r.status,
@@ -341,7 +360,7 @@ export default function ChatPage() {
         // Save review to Supabase
         supabase.auth.getSession().then(({ data: { session } }) => {
           if (!session?.user?.id) return
-          saveReview({ userId: session.user.id, repoUrl: lastAnalyzedRepo!, code: text, result: r })
+          saveReview({ userId: session.user.id, repoUrl: reviewTarget, code: text, result: r })
         })
 
       } else {
@@ -367,7 +386,7 @@ export default function ChatPage() {
     } finally {
       setLoading(false)
     }
-  }, [addMessage, lastAnalyzedRepo, setLastAnalyzedRepo, selectedRepoUrls, userId, upsertChatMeta, setActiveChatId, setSelectedRepoUrls])
+  }, [addMessage, selectedRepoUrls, userId, upsertChatMeta, setActiveChatId, setSelectedRepoUrls])
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -397,6 +416,8 @@ export default function ChatPage() {
               userId={userId}
               selectedUrls={selectedRepoUrls}
               onSelectionChange={handleSelectionChange}
+              primaryUrl={selectedRepoUrls[0] ?? null}
+              onPrimaryChange={handlePrimaryChange}
             />
             <MessageList messages={activeMessages} loading={loading} />
             <ChatInput onSubmit={handleSubmit} disabled={loading || !initDone} />

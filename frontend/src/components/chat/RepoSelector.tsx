@@ -9,16 +9,29 @@ interface Props {
   userId: string
   selectedUrls: string[]
   onSelectionChange: (urls: string[]) => void
+  /** Derived review target — selectedUrls[0]. Kept for call-site clarity. */
+  primaryUrl?: string | null
+  /** Promote a URL to review target (reorder to index 0). */
+  onPrimaryChange?: (url: string | null) => void
 }
 
 const chipEasing: [number, number, number, number] = [0.22, 1, 0.36, 1]
 
-export default function RepoSelector({ userId, selectedUrls, onSelectionChange }: Props) {
+export default function RepoSelector({
+  userId,
+  selectedUrls,
+  onSelectionChange,
+  primaryUrl: primaryUrlProp,
+  onPrimaryChange,
+}: Props) {
   const [repos, setRepos] = useState<AnalyzedRepo[]>([])
   const [showInput, setShowInput] = useState(false)
   const [inputValue, setInputValue] = useState('')
   const [adding, setAdding] = useState(false)
   const [addError, setAddError] = useState<string | null>(null)
+
+  // Single-slice contract: index 0 is always the review target
+  const primaryUrl = primaryUrlProp ?? selectedUrls[0] ?? null
 
   // Load user's analyzed repos
   useEffect(() => {
@@ -26,11 +39,21 @@ export default function RepoSelector({ userId, selectedUrls, onSelectionChange }
     getUserAnalyzedRepos(userId).then(setRepos)
   }, [userId])
 
+  const promotePrimary = useCallback((url: string) => {
+    if (onPrimaryChange) {
+      onPrimaryChange(url)
+      return
+    }
+    if (!selectedUrls.includes(url) || selectedUrls[0] === url) return
+    onSelectionChange([url, ...selectedUrls.filter((u) => u !== url)])
+  }, [selectedUrls, onSelectionChange, onPrimaryChange])
+
   const toggleRepo = useCallback((url: string) => {
     const isSelected = selectedUrls.includes(url)
     const next = isSelected
       ? selectedUrls.filter((u) => u !== url)
       : [...selectedUrls, url]
+    // Order alone encodes primary — no separate primary store write
     onSelectionChange(next)
   }, [selectedUrls, onSelectionChange])
 
@@ -52,7 +75,7 @@ export default function RepoSelector({ userId, selectedUrls, onSelectionChange }
         return [{ repo_url: cleanUrl, repo_name: repoName, languages: [] }, ...prev]
       })
 
-      // Auto-select the new repo
+      // Auto-select the new repo (becomes primary if it is the only selection)
       if (!selectedUrls.includes(cleanUrl)) {
         onSelectionChange([...selectedUrls, cleanUrl])
       }
@@ -141,6 +164,9 @@ export default function RepoSelector({ userId, selectedUrls, onSelectionChange }
                   exit={{ opacity: 0, scale: 0.9 }}
                   transition={{ duration: 0.25, ease: chipEasing }}
                   style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
                     fontFamily: 'var(--font-body)',
                     fontSize: 13,
                     color: isSelected ? 'var(--accent)' : 'var(--text-secondary)',
@@ -150,14 +176,31 @@ export default function RepoSelector({ userId, selectedUrls, onSelectionChange }
                     padding: '5px 12px',
                     cursor: 'pointer',
                     transition: 'background 0.15s, border-color 0.15s, color 0.15s',
-                    whiteSpace: 'nowrap',
                     maxWidth: 200,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
                   }}
                   title={repo.repo_url}
                 >
-                  {repoDisplayName(repo)}
+                  {isSelected && (
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        promotePrimary(repo.repo_url)
+                      }}
+                      title={primaryUrl === repo.repo_url ? "Code reviews use this repo's fingerprint" : "Click the dot to make this the review target"}
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: '50%',
+                        background: primaryUrl === repo.repo_url ? 'var(--accent)' : 'transparent',
+                        border: `1px solid ${primaryUrl === repo.repo_url ? 'var(--accent)' : 'var(--text-tertiary)'}`,
+                        flexShrink: 0,
+                        cursor: 'pointer',
+                      }}
+                    />
+                  )}
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {repoDisplayName(repo)}
+                  </span>
                 </motion.button>
               )
             })}

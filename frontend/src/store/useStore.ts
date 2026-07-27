@@ -69,14 +69,10 @@ interface AppState {
   setActiveMessages: (msgs: ChatMessage[]) => void
   appendMessage:     (msg: ChatMessage) => void
 
-  // Review data
-  lastAnalyzedRepo:    string | null
-  setLastAnalyzedRepo: (url: string | null) => void
-
   reviews:   Record<string, unknown>[]
   addReview: (review: Record<string, unknown>) => void
 
-  // Repo selection per chat
+  // Repo selection per chat — single source of truth (index 0 = review target)
   selectedRepoUrlsByChatId: Record<string, string[]>
   setSelectedRepoUrls:     (chatId: string, urls: string[]) => void
 
@@ -147,12 +143,10 @@ export const useStore = create<AppState>()(
       appendMessage:     (msg)  => set((s) => ({ activeMessages: [...s.activeMessages, msg] })),
 
       // Review data
-      lastAnalyzedRepo:    null,
-      setLastAnalyzedRepo: (url) => set({ lastAnalyzedRepo: url }),
       reviews:   [],
       addReview: (review) => set((s) => ({ reviews: [review, ...s.reviews] })),
 
-      // Repo selection per chat
+      // Repo selection per chat — single source of truth (index 0 = review target)
       selectedRepoUrlsByChatId: {},
       setSelectedRepoUrls: (chatId, urls) =>
         set((s) => ({
@@ -176,7 +170,6 @@ export const useStore = create<AppState>()(
         accent:          s.accent,
         chats:           s.chats,
         activeChatId:    s.activeChatId,
-        lastAnalyzedRepo:s.lastAnalyzedRepo,
         reviews:         s.reviews,
         selectedRepoUrlsByChatId: s.selectedRepoUrlsByChatId,
         isGuest:         s.isGuest,
