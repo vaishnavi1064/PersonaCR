@@ -1,0 +1,105 @@
+# PersonaCR CI — GitHub Actions
+# Provenance for commands is documented in the job comments below.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── 1. Smoke: clean-clone reproducibility ─────────────────────────────────
+  # Source: scripts/smoke_test.sh (creates throwaway venv, pip installs
+  # backend/requirements.txt, imports sts_scorer / embedder / main).
+  # Would catch Python 3.12+ ast.Str regressions via a fresh install+import.
+  smoke:
+    name: Smoke (clean install)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Run clean-clone smoke test
+        run: bash scripts/smoke_test.sh
+
+  # ── 2. Lint / type ────────────────────────────────────────────────────────
+  # Backend: ruff + mypy (not pinned in backend/requirements.txt or a
+  # pyproject.toml — installed here as CI tooling; no ruff/mypy config in repo).
+  # Frontend: package.json scripts — "lint": "eslint ."; build uses "tsc -b"
+  # (root tsconfig is project-references only). Typecheck via tsc -b --noEmit.
+  lint-type:
+    name: Lint / typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ruff + mypy
+        run: pip install ruff mypy
+
+      - name: Ruff (backend)
+        run: ruff check backend
+
+      - name: Mypy (backend)
+        run: mypy backend/src --ignore-missing-imports
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: TypeScript check (tsc --noEmit via project build mode)
+        working-directory: frontend
+        # package.json "build" uses `tsc -b`; root tsconfig.json is references-only
+        # (`"files": []`), so plain `tsc --noEmit` typechecks nothing useful.
+        run: npx tsc -b --noEmit
+
+      - name: ESLint
+        working-directory: frontend
+        # package.json → "lint": "eslint ."
+        run: npm run lint
+
+  # ── 3. Deterministic evals ────────────────────────────────────────────────
+  # Source: TEST_MATRIX.md / pytest.ini — `pytest tests -m "not groq"`.
+  # Defect Hunter: deterministic AST coverage is in tests/test_agents.py
+  # (TestDefectHunterAST). The labeled harness `python evals/run_eval.py`
+  # (evals/README.md) requires GROQ_API_KEY — intentionally NOT run here.
+  # Also skipped: @pytest.mark.groq, evals/minimal_a*.py benchmarks.
+  evals:
+    name: Deterministic evals
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend + test deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          # pytest / pytest-asyncio not in backend/requirements.txt;
+          # pytest.ini sets asyncio_mode = auto (needs pytest-asyncio).
+          pip install pytest pytest-asyncio
+
+      - name: Pytest (exclude Groq + minimal-A benchmarks)
+        run: python -m pytest tests -m "not groq" -v
