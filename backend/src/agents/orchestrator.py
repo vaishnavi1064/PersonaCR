@@ -23,6 +23,7 @@ beyond two passes rarely justify the added LLM latency.
 from __future__ import annotations
 
 import asyncio
+import logging
 
 from backend.src.core.models import (
     AgentTrace,
@@ -36,6 +37,8 @@ from backend.src.agents.confidence_evaluator import evaluate_confidence
 from backend.src.evaluation.pseudo_ref_gen import generate_pseudo_references
 from backend.src.evaluation.sts_scorer import compute_sts_scores
 from backend.src.evaluation.quality_gate import evaluate_quality
+
+logger = logging.getLogger(__name__)
 
 
 async def _run_in_executor(func, *args):
@@ -268,6 +271,17 @@ async def run_review(
 
         iteration += 1
 
+        # Snapshot first-pass results so a bad re-review cannot destroy them.
+        first_pass_issues = list(all_issues)
+        first_pass_style = style_output
+        first_pass_defect = defect_output
+        first_pass_qa = qa_output
+        first_pass_conf = conf_output
+        first_pass_plan = plan_output
+        first_pass_sts = sts_scores
+        first_pass_gate = gate_result
+        first_pass_pseudo = pseudo_refs
+
         # Enrich fingerprint with quality feedback so Planner can adapt focus
         enriched_fp = dict(fingerprint)
         enriched_fp["_quality_feedback"] = quality_feedback
@@ -334,23 +348,28 @@ async def run_review(
             iteration=iteration,
         ))
 
-        # Rebuild issues from refreshed QA output
-        all_issues = []
+        # Build re-review issues into a separate list — do not wipe first pass yet.
+        rereview_issues: list[dict] = []
         for f in qa_output.filtered_style_findings:
-            all_issues.append({
+            rereview_issues.append({
                 "type": "style", "category": f.category, "severity": f.severity,
                 "description": f.description, "fingerprint_value": f.fingerprint_value,
                 "submitted_value": f.submitted_value,
             })
         for f in qa_output.filtered_defect_findings:
-            all_issues.append({
+            rereview_issues.append({
                 "type": "defect", "category": f.category, "severity": f.severity,
                 "description": f.description, "line_hint": f.line_hint,
             })
 
-        # Re-run Layer 3 on new review output
+        rereview_has_errors = any(
+            issue.get("category") == "error" for issue in rereview_issues
+        )
+        rereview_valid = bool(rereview_issues) and not rereview_has_errors
+
+        # Always score the candidate (Layer 3), then decide whether to commit.
         review_sentences = [
-            issue["description"] for issue in all_issues if issue.get("description")
+            issue["description"] for issue in rereview_issues if issue.get("description")
         ]
         pseudo_refs = generate_pseudo_references(code, language)
         sts_scores, sts_ms = compute_sts_scores(review_sentences, pseudo_refs.references)
@@ -376,6 +395,34 @@ async def run_review(
             execution_time_ms=gate_ms,
             iteration=iteration,
         ))
+
+        # Commit only if non-empty, non-error, and not clearly worse than first pass.
+        if rereview_valid and sts_scores.relevance >= first_pass_sts.relevance:
+            all_issues = rereview_issues
+        else:
+            # Floor rule: empty / error / worse re-review must not replace first pass.
+            style_output = first_pass_style
+            defect_output = first_pass_defect
+            qa_output = first_pass_qa
+            conf_output = first_pass_conf
+            plan_output = first_pass_plan
+            sts_scores = first_pass_sts
+            gate_result = first_pass_gate
+            pseudo_refs = first_pass_pseudo
+            all_issues = first_pass_issues
+            if not rereview_issues or rereview_has_errors:
+                reason = "empty or error findings"
+            else:
+                reason = "lower relevance than first pass"
+            logger.info("Loop 2 re-review discarded (%s); keeping first-pass findings", reason)
+            traces.append(AgentTrace(
+                agent_name="quality_gate_reloop",
+                input_summary=f"Re-review produced {len(rereview_issues)} issues",
+                output_summary="Discarded re-review; first-pass findings preserved",
+                decision=f"Non-destructive Loop 2: {reason}",
+                execution_time_ms=0,
+                iteration=iteration,
+            ))
 
     # ── Final score and status ────────────────────────────────────────────────
     overall_score = round(

@@ -65,7 +65,8 @@ def _ast_pseudo_refs(code: str, language: str) -> list[PseudoReference]:
         has_docstring = (
             func.body
             and isinstance(func.body[0], ast.Expr)
-            and isinstance(func.body[0].value, (ast.Constant, ast.Str))
+            and isinstance(func.body[0].value, ast.Constant)
+            and isinstance(func.body[0].value.value, str)
         )
         if not has_docstring:
             refs.append(PseudoReference(

@@ -146,6 +146,7 @@ def hunt_defects(code: str, language: str) -> tuple[DefectHunterOutput, int]:
         "}\n\n"
         "Score 100 = no defects found. Score 0 = critical bugs. "
         "Be specific — cite line numbers where possible."
+        "Only report genuine defects. If the code is correct and well-written, report nothing. Do not invent issues for simple or trivial code."
     )
 
     user_prompt = (
