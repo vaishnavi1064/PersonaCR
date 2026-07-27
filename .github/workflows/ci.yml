@@ -57,13 +57,20 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          # GHA currently forces Node 24 for JS actions; align the toolchain.
+          node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install frontend deps
         working-directory: frontend
-        run: npm ci
+        # Prefer lockfile-strict install; fall back once if optional-dep drift
+        # between npm clients leaves the lock briefly unsatisfiable.
+        run: |
+          npm ci --no-fund --no-audit || {
+            echo "::warning::npm ci failed; regenerating install from package-lock via npm install"
+            npm install --no-fund --no-audit
+          }
 
       - name: TypeScript check (tsc --noEmit via project build mode)
         working-directory: frontend
