@@ -20,7 +20,8 @@ logger = logging.getLogger(__name__)
 
 # Singleton model — loaded once, reused across calls
 _model: TextEmbedding | None = None
-_chroma_client: chromadb.PersistentClient | None = None
+# chromadb stubs treat PersistentClient as a function, not a type.
+_chroma_client: Any | None = None
 
 CHROMA_DIR = os.path.join(os.path.dirname(__file__), "..", "..", ".chroma")
 MODEL_NAME = "jinaai/jina-embeddings-v2-base-code"
@@ -39,7 +40,7 @@ def _get_model() -> TextEmbedding:
     return _model
 
 
-def _get_client() -> chromadb.PersistentClient:
+def _get_client() -> Any:
     global _chroma_client
     if _chroma_client is None:
         os.makedirs(CHROMA_DIR, exist_ok=True)

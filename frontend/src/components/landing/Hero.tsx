@@ -1,14 +1,16 @@
-import { motion } from 'framer-motion'
+import { motion, type Variants } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import FingerprintBg from './FingerprintBg'
 import GlowOrbs from './GlowOrbs'
 
-const fadeUp = {
+const fadeEase = [0.22, 1, 0.36, 1] as const
+
+const fadeUp: Variants = {
   hidden: { opacity: 0, y: 14 },
   show: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1], delay: i * 0.12 },
+    transition: { duration: 0.55, ease: fadeEase, delay: i * 0.12 },
   }),
 }
 

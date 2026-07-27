@@ -20,7 +20,9 @@ pylint
 astroid
 
 # ML evaluation (STS scoring)
-# all-MiniLM-L6-v2 loaded via sentence-transformers (no extra install)
+# all-MiniLM-L6-v2 loaded via sentence-transformers
+sentence-transformers==5.2.3
+numpy==2.3.5
 
 # PDF report generation
 reportlab

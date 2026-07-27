@@ -42,7 +42,7 @@ class SupabaseREST:
 
     def upsert(self, table: str, payload: dict[str, Any], on_conflict: str = "id") -> dict[str, Any]:
         """Insert or update if conflict on the specified column."""
-        headers = {**self.headers, "Prefer": f"return=representation,resolution=merge-duplicates"}
+        headers = {**self.headers, "Prefer": "return=representation,resolution=merge-duplicates"}
         resp = httpx.post(self._url(table), headers=headers, json=payload, timeout=30.0)
         resp.raise_for_status()
         data = resp.json()

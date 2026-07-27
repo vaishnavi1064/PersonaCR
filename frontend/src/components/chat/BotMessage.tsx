@@ -93,7 +93,7 @@ export default function BotMessage({ text, type = 'text', data }: BotMessageProp
           <FingerprintCard data={data as Parameters<typeof FingerprintCard>[0]['data']} />
         )}
         {type === 'review' && data && (
-          <ReviewResult data={data as Parameters<typeof ReviewResult>[0]['data']} />
+          <ReviewResult data={data as unknown as Parameters<typeof ReviewResult>[0]['data']} />
         )}
       </div>
     </motion.div>

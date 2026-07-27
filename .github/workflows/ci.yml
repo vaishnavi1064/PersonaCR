@@ -52,7 +52,8 @@ jobs:
         run: ruff check backend
 
       - name: Mypy (backend)
-        run: mypy backend/src --ignore-missing-imports
+        # Config: mypy.ini (explicit_package_bases for namespace packages).
+        run: mypy backend/src
 
       - uses: actions/setup-node@v4
         with:

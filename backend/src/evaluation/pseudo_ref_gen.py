@@ -19,9 +19,9 @@ import time
 
 from dotenv import load_dotenv
 
-load_dotenv("backend/.env")
-
 from backend.src.core.models import PseudoReference, PseudoRefOutput
+
+load_dotenv("backend/.env")
 
 
 # ── AST-based pseudo-references ───────────────────────────────────────────────

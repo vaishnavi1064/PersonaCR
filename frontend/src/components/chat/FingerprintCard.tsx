@@ -23,7 +23,6 @@ function round1(v?: number) {
 
 export default function FingerprintCard({ data }: { data: FingerprintData }) {
   const funcs = data.functions_analyzed ?? 0
-  const files = data.files_analyzed ?? '?'
 
   const stats = [
     { label: 'Avg length',     value: `${round1(data.avg_function_length)} lines` },

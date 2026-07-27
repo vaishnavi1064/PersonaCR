@@ -14,10 +14,10 @@ from typing import Any
 
 from dotenv import load_dotenv
 
-load_dotenv("backend/.env")
-
 from backend.src.core.models import InsightsAgentOutput
 from backend.src.db.supabase_rest import SupabaseREST
+
+load_dotenv("backend/.env")
 
 logger = logging.getLogger(__name__)
 
@@ -260,7 +260,7 @@ def get_insights(
             max_tokens=1000,
         )
         answer = response.choices[0].message.content.strip()
-    except Exception as e:
+    except Exception:
         logger.exception("Groq call failed in insights_agent")
         answer = "I ran into an error processing that. Try again?"
 

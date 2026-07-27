@@ -65,7 +65,7 @@ function WindowChrome() {
       {['#FF5F57', '#FFBD2E', '#28C840'].map((color, i) => (
         <div
           key={i}
-          style={{ width: 8, height: 8, borderRadius: '50%', background: '#333' }}
+          style={{ width: 8, height: 8, borderRadius: '50%', background: color }}
         />
       ))}
       <span

@@ -23,11 +23,9 @@ beyond two passes rarely justify the added LLM latency.
 from __future__ import annotations
 
 import asyncio
-import time
 
 from backend.src.core.models import (
     AgentTrace,
-    FingerprintData,
     ReviewResult,
 )
 from backend.src.agents.planner import plan_review

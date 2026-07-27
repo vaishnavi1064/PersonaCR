@@ -253,10 +253,10 @@ def _indentation_stats(source: str) -> dict:
 
 def _line_length_stats(source: str) -> dict:
     """Returns avg, max, std, lines_over_80, lines_over_120 (all as ratios 0–1)."""
-    lines = [l for l in source.splitlines() if l.strip()]
+    lines = [line for line in source.splitlines() if line.strip()]
     if not lines:
         return {"avg": 0.0, "max": 0, "std": 0.0, "over_80": 0.0, "over_120": 0.0}
-    lengths = [len(l) for l in lines]
+    lengths = [len(line) for line in lines]
     n = len(lengths)
     avg = round(mean(lengths), 1)
     mx = max(lengths)
@@ -352,7 +352,7 @@ def extract_fingerprint(chunks: list) -> dict:
         if name in ("__file__", "__file_summary__"):
             continue
 
-        lines = [l for l in source.splitlines() if l.strip()]
+        lines = [line for line in source.splitlines() if line.strip()]
         if not lines:
             continue
 

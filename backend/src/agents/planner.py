@@ -14,9 +14,9 @@ import time
 
 from dotenv import load_dotenv
 
-load_dotenv("backend/.env")
-
 from backend.src.core.models import PlannerOutput
+
+load_dotenv("backend/.env")
 
 
 def _rules_based_plan(code: str, language: str, fingerprint: dict) -> PlannerOutput | None:
@@ -25,7 +25,7 @@ def _rules_based_plan(code: str, language: str, fingerprint: dict) -> PlannerOut
     fingerprint, return a plan without calling the LLM.
     Returns None if the code is too complex for rules-based planning.
     """
-    lines = [l for l in code.strip().splitlines() if l.strip()]
+    lines = [line for line in code.strip().splitlines() if line.strip()]
     num_lines = len(lines)
 
     has_try = bool(re.search(r"\b(try|except|catch|finally)\b", code))

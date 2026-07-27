@@ -242,7 +242,6 @@ function describeOpenArc(cx: number, cy: number, r: number, startDeg: number, en
   const y1 = cy + r * Math.sin(toRad(startDeg))
   const x2 = cx + r * Math.cos(toRad(endDeg))
   const y2 = cy + r * Math.sin(toRad(endDeg))
-  const largeArc = endDeg - startDeg > 180 ? 1 : 0
   // Add slight bezier wobble for organic look
   const mx = cx + r * Math.cos(toRad((startDeg + endDeg) / 2))
   const my = cy + r * Math.sin(toRad((startDeg + endDeg) / 2)) - r * 0.04
@@ -268,7 +267,11 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const [authError, setAuthError] = useState<string | null>(null)
   const [githubLoading, setGithubLoading] = useState(false)
-  const [completing, setCompleting] = useState(false)
+  // Derive initial completing from hash so we don't sync-setState in the effect.
+  const [completing, setCompleting] = useState(() => {
+    const params = new URLSearchParams(window.location.hash.slice(1))
+    return Boolean(params.get('access_token'))
+  })
 
   // ── OAuth callback handler ────────────────────────────────────────────────
   // The access_token is in the URL hash (#access_token=...) after GitHub auth.
@@ -281,7 +284,6 @@ export default function LoginPage() {
 
     if (!accessToken) return   // not an OAuth callback — normal login page view
 
-    setCompleting(true)
     console.log('[PersonaCR] OAuth callback detected, calling setSession...')
 
     supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })

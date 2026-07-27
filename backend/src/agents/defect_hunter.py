@@ -17,9 +17,9 @@ import time
 
 from dotenv import load_dotenv
 
-load_dotenv("backend/.env")
-
 from backend.src.core.models import DefectFinding, DefectHunterOutput
+
+load_dotenv("backend/.env")
 
 
 def _ast_analysis(code: str, language: str) -> list[DefectFinding]:

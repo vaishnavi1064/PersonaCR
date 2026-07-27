@@ -2,7 +2,6 @@
 Pydantic data models for all PersonaCR V2 entities.
 """
 from __future__ import annotations
-from typing import Any
 from pydantic import BaseModel, Field
 
 

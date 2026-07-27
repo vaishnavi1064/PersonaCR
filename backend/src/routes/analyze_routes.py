@@ -9,13 +9,13 @@ import logging
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-logger = logging.getLogger(__name__)
-
 from backend.src.core.github_ingestor import ingest_repo
 from backend.src.core.pattern_extractor import extract_fingerprint
 from backend.src.core.embedder import embed_and_store, delete_guest_collections
 from backend.src.core.cache_manager import get_cached_fingerprint, save_fingerprint
 from backend.src.db.supabase_rest import SupabaseREST
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["fingerprint"])
 

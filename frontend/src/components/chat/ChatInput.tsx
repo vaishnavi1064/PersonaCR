@@ -1,4 +1,4 @@
-import { useState, useRef, KeyboardEvent } from 'react'
+import { useState, useRef, type KeyboardEvent } from 'react'
 import { Send, Paperclip } from 'lucide-react'
 
 interface ChatInputProps {

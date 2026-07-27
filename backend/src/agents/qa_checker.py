@@ -15,15 +15,13 @@ import time
 
 from dotenv import load_dotenv
 
-load_dotenv("backend/.env")
-
 from backend.src.core.models import (
-    DefectFinding,
     DefectHunterOutput,
     QACheckerOutput,
     StyleAnalysisOutput,
-    StyleFinding,
 )
+
+load_dotenv("backend/.env")
 
 
 def check_quality(
