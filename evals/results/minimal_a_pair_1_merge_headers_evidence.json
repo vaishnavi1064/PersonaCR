@@ -1,0 +1,403 @@
+{
+  "pair_id": "pair_1_merge_headers",
+  "written_at": "2026-07-27T21:16:04.571554+00:00",
+  "note": "Additive instrumentation from live run_review wrappers. Style Analyst JSON schema only emits findings + overall_style_score; finding descriptions are the reasoning.",
+  "arms": {
+    "in_style/personalized": {
+      "style_score": 80.0,
+      "n_style_findings": 3,
+      "similar_functions_found": 8,
+      "throttled": false,
+      "timestamp": "2026-07-27T21:14:10.520149+00:00",
+      "evidence": {
+        "retrieval": {
+          "retrieval_files": [
+            {
+              "file_path": "src/requests/hooks.py",
+              "distance": 0.6757084131240845
+            },
+            {
+              "file_path": "src/requests/utils.py",
+              "distance": 0.7008941173553467
+            },
+            {
+              "file_path": "src/requests/structures.py",
+              "distance": 0.718374490737915
+            }
+          ],
+          "retrieval_functions": [
+            {
+              "rank": 1,
+              "function_name": "default_headers",
+              "file_path": "src/requests/utils.py",
+              "distance": 0.42323994636535645,
+              "source_preview": "def default_headers() -> CaseInsensitiveDict[str]:\n    \"\"\"\n    :rtype: requests.structures.CaseInsensitiveDict\n    \"\"\"\n    return CaseInsensitiveDict(\n        {\n            \"User-Agent\": default_user_",
+              "source_in_prompt": "def default_headers() -> CaseInsensitiveDict[str]:\n    \"\"\"\n    :rtype: requests.structures.CaseInsensitiveDict\n    \"\"\"\n    return CaseInsensitiveDict(\n        {\n            \"User-Agent\": default_user_agent(),\n            \"Accept-Encoding\": DEFAULT_ACCEPT_ENCODING,\n            \"Accept\": \"*/*\",\n            \"Connection\": \"keep-alive\",\n        }\n    )"
+            },
+            {
+              "rank": 2,
+              "function_name": "__eq__",
+              "file_path": "src/requests/structures.py",
+              "distance": 0.6994857788085938,
+              "source_preview": "    def __eq__(self, other: object) -> bool:\n        if isinstance(other, Mapping):\n            other_dict: CaseInsensitiveDict[Any] = CaseInsensitiveDict(other)  # type: ignore[reportUnknownArgumentT",
+              "source_in_prompt": "    def __eq__(self, other: object) -> bool:\n        if isinstance(other, Mapping):\n            other_dict: CaseInsensitiveDict[Any] = CaseInsensitiveDict(other)  # type: ignore[reportUnknownArgumentType]\n        else:\n            return NotImplemented\n        # Compare insensitively\n        return dict(self.lower_items()) == dict(other_dict.lower_items())"
+            },
+            {
+              "rank": 3,
+              "function_name": "default_hooks",
+              "file_path": "src/requests/hooks.py",
+              "distance": 0.706437349319458,
+              "source_preview": "def default_hooks() -> dict[str, list[_t.HookType]]:\n    return {event: [] for event in HOOKS}",
+              "source_in_prompt": "def default_hooks() -> dict[str, list[_t.HookType]]:\n    return {event: [] for event in HOOKS}"
+            },
+            {
+              "rank": 4,
+              "function_name": "parse_dict_header",
+              "file_path": "src/requests/utils.py",
+              "distance": 0.7127856016159058,
+              "source_preview": "def parse_dict_header(value: str) -> dict[str, str | None]:\n    \"\"\"Parse lists of key, value pairs as described by RFC 2068 Section 2 and\n    convert them into a python dict:\n\n    >>> d = parse_dict_h",
+              "source_in_prompt": "def parse_dict_header(value: str) -> dict[str, str | None]:\n    \"\"\"Parse lists of key, value pairs as described by RFC 2068 Section 2 and\n    convert them into a python dict:\n\n    >>> d = parse_dict_header('foo=\"is a fish\", bar=\"as well\"')\n    >>> type(d) is dict\n    True\n    >>> sorted(d.items())\n    [('bar', 'as well'), ('foo', 'is a fish')]\n\n    If there is no value for a key it will be `None`:\n\n    >>> parse_dict_header('key_without_value')\n    {'key_without_value': None}\n\n    To create a he"
+            },
+            {
+              "rank": 5,
+              "function_name": "copy",
+              "file_path": "src/requests/structures.py",
+              "distance": 0.7206825017929077,
+              "source_preview": "    def copy(self) -> CaseInsensitiveDict[_VT]:\n        return CaseInsensitiveDict(self._store.values())",
+              "source_in_prompt": "    def copy(self) -> CaseInsensitiveDict[_VT]:\n        return CaseInsensitiveDict(self._store.values())"
+            }
+          ],
+          "n_retrieved_functions": 8,
+          "n_retrieved_logged": 5,
+          "similar_snippets_nonempty": true,
+          "similar_snippets_chars": 1760,
+          "prompt_would_include_similar": true
+        },
+        "style_analyst": {
+          "style_score": 80.0,
+          "similar_functions_found_field": 8,
+          "style_analyst_ms": 5681,
+          "raw_findings": [
+            {
+              "category": "naming",
+              "severity": "low",
+              "description": "The submitted code uses 'merge_headers' as the function name, which is in snake_case, but it does not follow the conventional naming pattern of having a docstring or type hints for the dictionary values.",
+              "fingerprint_value": "snake_case with type hints and docstrings",
+              "submitted_value": "snake_case without type hints for dictionary values and no docstring"
+            },
+            {
+              "category": "complexity",
+              "severity": "medium",
+              "description": "The submitted code has a complexity that is lower than the developer's average complexity of 5.22, but it can be simplified further.",
+              "fingerprint_value": "avg_complexity: 5.22",
+              "submitted_value": "simpler implementation possible"
+            },
+            {
+              "category": "documentation",
+              "severity": "high",
+              "description": "The submitted code lacks a docstring, which is not consistent with the developer's pattern of having a docstring coverage of 0.246.",
+              "fingerprint_value": "docstring_coverage: 0.246",
+              "submitted_value": "no docstring"
+            }
+          ],
+          "n_raw_findings_ex_error": 3,
+          "n_raw_findings_total": 3
+        },
+        "pipeline_issues": [
+          {
+            "type": "style",
+            "category": "naming",
+            "severity": "low",
+            "description": "The submitted code uses 'merge_headers' as the function name, which is in snake_case, but it does not follow the conventional naming pattern of having a docstring or type hints for the dictionary values."
+          },
+          {
+            "type": "style",
+            "category": "complexity",
+            "severity": "medium",
+            "description": "The submitted code has a complexity that is lower than the developer's average complexity of 5.22, but it can be simplified further."
+          },
+          {
+            "type": "style",
+            "category": "documentation",
+            "severity": "high",
+            "description": "The submitted code lacks a docstring, which is not consistent with the developer's pattern of having a docstring coverage of 0.246."
+          },
+          {
+            "type": "defect",
+            "category": "smell",
+            "severity": "medium",
+            "description": "The function can be simplified using the built-in dictionary update method or the {**base, **override} syntax."
+          }
+        ],
+        "note": "Evidence captured from the live run_review path via wrappers; scoring/retrieval/agent logic unchanged."
+      }
+    },
+    "in_style/generic": {
+      "style_score": 50.0,
+      "n_style_findings": 2,
+      "similar_functions_found": 0,
+      "throttled": false,
+      "timestamp": "2026-07-27T21:14:40.286915+00:00",
+      "evidence": {
+        "retrieval": {
+          "retrieval_files": [],
+          "retrieval_functions": [],
+          "n_retrieved_functions": 0,
+          "n_retrieved_logged": 0,
+          "similar_snippets_nonempty": false,
+          "similar_snippets_chars": 0,
+          "prompt_would_include_similar": false
+        },
+        "style_analyst": {
+          "style_score": 50.0,
+          "similar_functions_found_field": 0,
+          "style_analyst_ms": 1472,
+          "raw_findings": [
+            {
+              "category": "style",
+              "severity": "medium",
+              "description": "The submitted code uses explicit loops to merge dictionaries, which may not be the most Pythonic way.",
+              "fingerprint_value": "No similar functions found, but Python's built-in dictionary update method is often used",
+              "submitted_value": "Explicit loops to merge dictionaries"
+            },
+            {
+              "category": "complexity",
+              "severity": "low",
+              "description": "The submitted code has a simple and straightforward implementation, but it may not handle potential edge cases.",
+              "fingerprint_value": "No similar functions found, but error handling is often considered",
+              "submitted_value": "No error handling for potential edge cases"
+            },
+            {
+              "category": "naming",
+              "severity": "low",
+              "description": "The submitted code uses clear and descriptive variable names, but the function name could be more descriptive.",
+              "fingerprint_value": "No similar functions found, but descriptive function names are often used",
+              "submitted_value": "Function name 'merge_headers' could be more descriptive"
+            }
+          ],
+          "n_raw_findings_ex_error": 3,
+          "n_raw_findings_total": 3
+        },
+        "pipeline_issues": [
+          {
+            "type": "style",
+            "category": "style",
+            "severity": "medium",
+            "description": "The submitted code uses explicit loops to merge dictionaries, which may not be the most Pythonic way."
+          },
+          {
+            "type": "style",
+            "category": "naming",
+            "severity": "low",
+            "description": "The submitted code uses clear and descriptive variable names, but the function name could be more descriptive."
+          },
+          {
+            "type": "defect",
+            "category": "smell",
+            "severity": "medium",
+            "description": "The function can be simplified using the built-in dictionary update method or the {**base, **override} syntax."
+          }
+        ],
+        "note": "Evidence captured from the live run_review path via wrappers; scoring/retrieval/agent logic unchanged."
+      }
+    },
+    "off_style/personalized": {
+      "style_score": 80.0,
+      "n_style_findings": 2,
+      "similar_functions_found": 8,
+      "throttled": false,
+      "timestamp": "2026-07-27T21:15:10.609025+00:00",
+      "evidence": {
+        "retrieval": {
+          "retrieval_files": [
+            {
+              "file_path": "src/requests/hooks.py",
+              "distance": 0.6773747205734253
+            },
+            {
+              "file_path": "src/requests/utils.py",
+              "distance": 0.679681122303009
+            },
+            {
+              "file_path": "src/requests/structures.py",
+              "distance": 0.7117555141448975
+            }
+          ],
+          "retrieval_functions": [
+            {
+              "rank": 1,
+              "function_name": "default_headers",
+              "file_path": "src/requests/utils.py",
+              "distance": 0.43249231576919556,
+              "source_preview": "def default_headers() -> CaseInsensitiveDict[str]:\n    \"\"\"\n    :rtype: requests.structures.CaseInsensitiveDict\n    \"\"\"\n    return CaseInsensitiveDict(\n        {\n            \"User-Agent\": default_user_",
+              "source_in_prompt": "def default_headers() -> CaseInsensitiveDict[str]:\n    \"\"\"\n    :rtype: requests.structures.CaseInsensitiveDict\n    \"\"\"\n    return CaseInsensitiveDict(\n        {\n            \"User-Agent\": default_user_agent(),\n            \"Accept-Encoding\": DEFAULT_ACCEPT_ENCODING,\n            \"Accept\": \"*/*\",\n            \"Connection\": \"keep-alive\",\n        }\n    )"
+            },
+            {
+              "rank": 2,
+              "function_name": "parse_dict_header",
+              "file_path": "src/requests/utils.py",
+              "distance": 0.6997305154800415,
+              "source_preview": "def parse_dict_header(value: str) -> dict[str, str | None]:\n    \"\"\"Parse lists of key, value pairs as described by RFC 2068 Section 2 and\n    convert them into a python dict:\n\n    >>> d = parse_dict_h",
+              "source_in_prompt": "def parse_dict_header(value: str) -> dict[str, str | None]:\n    \"\"\"Parse lists of key, value pairs as described by RFC 2068 Section 2 and\n    convert them into a python dict:\n\n    >>> d = parse_dict_header('foo=\"is a fish\", bar=\"as well\"')\n    >>> type(d) is dict\n    True\n    >>> sorted(d.items())\n    [('bar', 'as well'), ('foo', 'is a fish')]\n\n    If there is no value for a key it will be `None`:\n\n    >>> parse_dict_header('key_without_value')\n    {'key_without_value': None}\n\n    To create a he"
+            },
+            {
+              "rank": 3,
+              "function_name": "prepend_scheme_if_needed",
+              "file_path": "src/requests/utils.py",
+              "distance": 0.7057651281356812,
+              "source_preview": "def prepend_scheme_if_needed(url: str, new_scheme: str) -> str:\n    \"\"\"Given a URL that may or may not have a scheme, prepend the given scheme.\n    Does not replace a present scheme with the one provi",
+              "source_in_prompt": "def prepend_scheme_if_needed(url: str, new_scheme: str) -> str:\n    \"\"\"Given a URL that may or may not have a scheme, prepend the given scheme.\n    Does not replace a present scheme with the one provided as an argument.\n\n    :rtype: str\n    \"\"\"\n    parsed = parse_url(url)\n    scheme, auth, _host, _port, path, query, fragment = parsed\n\n    # A defect in urlparse determines that there isn't a netloc present in some\n    # urls. We previously assumed parsing was overly cautious, and swapped the\n    "
+            },
+            {
+              "rank": 4,
+              "function_name": "get_encoding_from_headers",
+              "file_path": "src/requests/utils.py",
+              "distance": 0.7125990390777588,
+              "source_preview": "def get_encoding_from_headers(headers: CaseInsensitiveDict[str]) -> str | None:\n    \"\"\"Returns encodings from given HTTP Header Dict.\n\n    :param headers: dictionary to extract encoding from.\n    :rty",
+              "source_in_prompt": "def get_encoding_from_headers(headers: CaseInsensitiveDict[str]) -> str | None:\n    \"\"\"Returns encodings from given HTTP Header Dict.\n\n    :param headers: dictionary to extract encoding from.\n    :rtype: str\n    \"\"\"\n\n    content_type = headers.get(\"content-type\")\n\n    if not content_type:\n        return None\n\n    content_type, params = _parse_content_type_header(content_type)\n\n    if \"charset\" in params:\n        return params[\"charset\"].strip(\"'\\\"\")\n\n    if \"text\" in content_type:\n        return"
+            },
+            {
+              "rank": 5,
+              "function_name": "resolve_proxies",
+              "file_path": "src/requests/utils.py",
+              "distance": 0.7165052890777588,
+              "source_preview": "def resolve_proxies(\n    request: Request | PreparedRequest,\n    proxies: dict[str, str] | None,\n    trust_env: bool = True,\n) -> dict[str, str]:\n    \"\"\"This method takes proxy information from a requ",
+              "source_in_prompt": "def resolve_proxies(\n    request: Request | PreparedRequest,\n    proxies: dict[str, str] | None,\n    trust_env: bool = True,\n) -> dict[str, str]:\n    \"\"\"This method takes proxy information from a request and configuration\n    input to resolve a mapping of target proxies. This will consider settings\n    such as NO_PROXY to strip proxy configurations.\n\n    :param request: Request or PreparedRequest\n    :param proxies: A dictionary of schemes or schemes and hosts to proxy URLs\n    :param trust_env:"
+            }
+          ],
+          "n_retrieved_functions": 8,
+          "n_retrieved_logged": 5,
+          "similar_snippets_nonempty": true,
+          "similar_snippets_chars": 2735,
+          "prompt_would_include_similar": true
+        },
+        "style_analyst": {
+          "style_score": 80.0,
+          "similar_functions_found_field": 8,
+          "style_analyst_ms": 2255,
+          "raw_findings": [
+            {
+              "category": "naming",
+              "severity": "high",
+              "description": "The function name 'mergeHeaders' does not follow the snake_case convention.",
+              "fingerprint_value": "snake_case",
+              "submitted_value": "camelCase"
+            },
+            {
+              "category": "documentation",
+              "severity": "medium",
+              "description": "The docstring does not include a ':rtype:' or ':return:' directive to specify the return type.",
+              "fingerprint_value": "includes ':rtype:' or ':return:' directive",
+              "submitted_value": "does not include ':rtype:' or ':return:' directive"
+            },
+            {
+              "category": "complexity",
+              "severity": "low",
+              "description": "The function has a relatively low complexity, but it can be simplified further by using the dictionary unpacking operator directly.",
+              "fingerprint_value": "avg_function_length: 14.6",
+              "submitted_value": "function length: 6"
+            }
+          ],
+          "n_raw_findings_ex_error": 3,
+          "n_raw_findings_total": 3
+        },
+        "pipeline_issues": [
+          {
+            "type": "style",
+            "category": "naming",
+            "severity": "high",
+            "description": "The function name 'mergeHeaders' does not follow the snake_case convention."
+          },
+          {
+            "type": "style",
+            "category": "documentation",
+            "severity": "medium",
+            "description": "The docstring does not include a ':rtype:' or ':return:' directive to specify the return type."
+          },
+          {
+            "type": "defect",
+            "category": "bug",
+            "severity": "low",
+            "description": "The function does not handle the case where base or override is not a dictionary."
+          },
+          {
+            "type": "defect",
+            "category": "smell",
+            "severity": "medium",
+            "description": "The dictionary comprehension is unnecessary and can be simplified."
+          }
+        ],
+        "note": "Evidence captured from the live run_review path via wrappers; scoring/retrieval/agent logic unchanged."
+      }
+    },
+    "off_style/generic": {
+      "style_score": 50.0,
+      "n_style_findings": 1,
+      "similar_functions_found": 0,
+      "throttled": false,
+      "timestamp": "2026-07-27T21:15:39.562709+00:00",
+      "evidence": {
+        "retrieval": {
+          "retrieval_files": [],
+          "retrieval_functions": [],
+          "n_retrieved_functions": 0,
+          "n_retrieved_logged": 0,
+          "similar_snippets_nonempty": false,
+          "similar_snippets_chars": 0,
+          "prompt_would_include_similar": false
+        },
+        "style_analyst": {
+          "style_score": 50.0,
+          "similar_functions_found_field": 0,
+          "style_analyst_ms": 1325,
+          "raw_findings": [
+            {
+              "category": "style",
+              "severity": "medium",
+              "description": "The submitted code uses dictionary unpacking with unnecessary dictionary comprehensions.",
+              "fingerprint_value": "Not applicable (no similar functions found)",
+              "submitted_value": "Using {**{k: v for k, v in base.items()}, **{k: v for k, v in override.items()}}"
+            },
+            {
+              "category": "style",
+              "severity": "low",
+              "description": "The submitted code uses a simple function with a clear docstring, but the developer's coding fingerprint is empty.",
+              "fingerprint_value": "Not applicable (no similar functions found)",
+              "submitted_value": "Using a simple function with a clear docstring"
+            },
+            {
+              "category": "naming",
+              "severity": "low",
+              "description": "The submitted code uses camelCase for function and variable names, but the developer's coding fingerprint is empty.",
+              "fingerprint_value": "Not applicable (no similar functions found)",
+              "submitted_value": "Using camelCase for function and variable names (e.g., mergeHeaders, base, override)"
+            }
+          ],
+          "n_raw_findings_ex_error": 3,
+          "n_raw_findings_total": 3
+        },
+        "pipeline_issues": [
+          {
+            "type": "style",
+            "category": "style",
+            "severity": "medium",
+            "description": "The submitted code uses dictionary unpacking with unnecessary dictionary comprehensions."
+          },
+          {
+            "type": "defect",
+            "category": "smell",
+            "severity": "low",
+            "description": "Unnecessary dictionary comprehensions"
+          },
+          {
+            "type": "defect",
+            "category": "smell",
+            "severity": "low",
+            "description": "Redundant dictionary unpacking"
+          }
+        ],
+        "note": "Evidence captured from the live run_review path via wrappers; scoring/retrieval/agent logic unchanged."
+      }
+    }
+  }
+}

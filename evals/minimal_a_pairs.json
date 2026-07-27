@@ -1,0 +1,67 @@
+{
+  "_README": "5 function pairs grounded in the real psf/requests style fingerprint (computed from 268 functions, commit 4ed3d1b). Each pair: same task, IN-STYLE follows requests conventions, OFF-STYLE violates them on named dimensions. Fingerprint key facts: type_hint_usage=0.993, naming=snake_case, docstring_coverage=0.246 (LOW), error_handling_rate=0.131, avg_length=14.6, comprehension_ratio=0.016 (rare).",
+  "user_id": "eval-requests-user",
+  "repo_name": "requests",
+  "pairs": [
+    {
+      "id": "pair_1_merge_headers",
+      "task": "Merge two dicts of HTTP headers, with the second overriding the first",
+      "violations_in_off_style": [
+        "camelCase function name instead of snake_case",
+        "no type hints on parameters or return",
+        "verbose docstring (requests rarely has them)",
+        "uses list comprehension instead of explicit dict construction (requests barely uses comprehensions)"
+      ],
+      "in_style": "def merge_headers(base: dict, override: dict) -> dict:\n    merged = {}\n    for k, v in base.items():\n        merged[k] = v\n    for k, v in override.items():\n        merged[k] = v\n    return merged\n",
+      "off_style": "def mergeHeaders(base, override):\n    \"\"\"Merge two header dicts with override taking precedence.\n\n    Args:\n        base: The base headers dict.\n        override: Headers that override the base.\n\n    Returns:\n        A new merged dict.\n    \"\"\"\n    return {**{k: v for k, v in base.items()}, **{k: v for k, v in override.items()}}\n"
+    },
+    {
+      "id": "pair_2_build_url",
+      "task": "Append a path segment to a base URL, ensuring exactly one slash between them",
+      "violations_in_off_style": [
+        "camelCase name instead of snake_case",
+        "missing type hints",
+        "adds verbose docstring",
+        "wraps entire body in broad try/except (requests rarely has error handling)"
+      ],
+      "in_style": "def build_url(base: str, path: str) -> str:\n    base = base.rstrip('/')\n    path = path.lstrip('/')\n    return f'{base}/{path}'\n",
+      "off_style": "def buildUrl(base, path):\n    \"\"\"Build a full URL from base and path components.\n\n    Args:\n        base: The base URL string.\n        path: The path segment to append.\n\n    Returns:\n        The combined URL string.\n    \"\"\"\n    try:\n        base = base.rstrip('/')\n        path = path.lstrip('/')\n        return base + '/' + path\n    except Exception as e:\n        raise ValueError(f'URL build failed: {e}')\n"
+    },
+    {
+      "id": "pair_3_parse_status",
+      "task": "Return True if an HTTP status code is a success code (200-299)",
+      "violations_in_off_style": [
+        "PascalCase name instead of snake_case",
+        "no type hints",
+        "adds a long docstring with examples (not requests style)",
+        "wraps in try/except where none is needed"
+      ],
+      "in_style": "def is_success_status(code: int) -> bool:\n    return 200 <= code < 300\n",
+      "off_style": "def IsSuccessStatus(code):\n    \"\"\"Check whether an HTTP status code indicates success.\n\n    A success code is any code in the range 200-299 inclusive.\n\n    Args:\n        code: The HTTP status code integer to check.\n\n    Returns:\n        True if success, False otherwise.\n\n    Example:\n        >>> IsSuccessStatus(200)\n        True\n        >>> IsSuccessStatus(404)\n        False\n    \"\"\"\n    try:\n        return 200 <= code < 300\n    except TypeError:\n        return False\n"
+    },
+    {
+      "id": "pair_4_extract_cookies",
+      "task": "Extract cookies from a response-headers dict (parse Set-Cookie values into a name->value dict)",
+      "violations_in_off_style": [
+        "mixedCase parameter names instead of snake_case",
+        "missing type hints",
+        "verbose multi-paragraph docstring",
+        "uses list comprehension + dict() constructor instead of explicit for loop"
+      ],
+      "in_style": "def extract_cookies(headers: dict) -> dict:\n    cookies = {}\n    for value in headers.get('Set-Cookie', '').split(','):\n        value = value.strip()\n        if '=' in value:\n            name, _, rest = value.partition('=')\n            cookies[name.strip()] = rest.split(';')[0].strip()\n    return cookies\n",
+      "off_style": "def extractCookies(responseHeaders):\n    \"\"\"Extract cookie name-value pairs from HTTP response headers.\n\n    Parses the Set-Cookie header field from the provided headers dict\n    and returns a dictionary mapping cookie names to their values.\n    Only the name=value portion is captured; attributes like Path and\n    Domain are ignored.\n\n    Args:\n        responseHeaders: A dict of HTTP response headers.\n\n    Returns:\n        A dict mapping cookie names to values.\n    \"\"\"\n    raw = responseHeaders.get('Set-Cookie', '')\n    return dict(\n        [part.strip().partition('=')[0].strip(), part.strip().partition('=')[2].split(';')[0].strip()]\n        for part in raw.split(',') if '=' in part\n    )\n"
+    },
+    {
+      "id": "pair_5_redact_auth",
+      "task": "Redact the password portion of a URL that contains user:password@ credentials",
+      "violations_in_off_style": [
+        "camelCase name and parameter names instead of snake_case",
+        "no type hints",
+        "wraps in broad try/except with generic fallback (not requests pattern)",
+        "adds lengthy docstring"
+      ],
+      "in_style": "def redact_auth(url: str) -> str:\n    if '@' not in url:\n        return url\n    scheme_rest = url.split('@', 1)\n    if '//' in scheme_rest[0] and ':' in scheme_rest[0].split('//')[-1]:\n        prefix = scheme_rest[0].rsplit(':', 1)[0]\n        return f'{prefix}:***@{scheme_rest[1]}'\n    return url\n",
+      "off_style": "def redactAuth(inputUrl):\n    \"\"\"Redact password credentials from a URL string.\n\n    Searches for user:password@ credentials in the URL and replaces\n    the password with *** to avoid logging sensitive information.\n    Returns the original URL unchanged if no credentials are found.\n\n    Args:\n        inputUrl: A URL string that may contain embedded credentials.\n\n    Returns:\n        The URL with the password portion replaced by ***.\n    \"\"\"\n    try:\n        if '@' not in inputUrl:\n            return inputUrl\n        parts = inputUrl.split('@', 1)\n        if '//' in parts[0] and ':' in parts[0].split('//')[-1]:\n            userPart = parts[0].rsplit(':', 1)[0]\n            return userPart + ':***@' + parts[1]\n        return inputUrl\n    except Exception:\n        return inputUrl\n"
+    }
+  ]
+}

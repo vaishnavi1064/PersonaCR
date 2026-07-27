@@ -1,0 +1,150 @@
+{
+  "_README": "Labeled test set for the Defect Hunter eval. 'expected_defects' lists what the agent SHOULD catch; empty list = clean snippet (measures false positives). 'keywords' are 1-3 distinctive words a correct finding should contain (case-insensitive match against the agent's description + category). AFTER your first run, if a defect shows as missed but the agent actually described it with different words, adjust that case's keywords to match the agent's vocabulary -- legitimate calibration, not cheating. Do NOT add keywords to force a catch the agent did not actually make.",
+
+  "cases": [
+    {
+      "id": "bug_off_by_one",
+      "language": "python",
+      "code": "def last_n(items, n):\n    result = []\n    for i in range(len(items) - n + 1, len(items) + 1):\n        result.append(items[i])\n    return result",
+      "expected_defects": [
+        { "category": "bug", "keywords": ["index", "out of range", "off-by-one", "bounds"] }
+      ]
+    },
+    {
+      "id": "bug_null_deref",
+      "language": "python",
+      "code": "def get_name(user):\n    profile = user.get('profile')\n    return profile['name'].upper()",
+      "expected_defects": [
+        { "category": "bug", "keywords": ["none", "null", "nonetype", "missing key", "keyerror"] }
+      ]
+    },
+    {
+      "id": "bug_mutable_default",
+      "language": "python",
+      "code": "def append_item(item, items=[]):\n    items.append(item)\n    return items",
+      "expected_defects": [
+        { "category": "bug", "keywords": ["mutable default", "default argument", "shared", "mutable"] }
+      ]
+    },
+    {
+      "id": "bug_unclosed_file",
+      "language": "python",
+      "code": "def read_config(path):\n    f = open(path)\n    data = f.read()\n    return data",
+      "expected_defects": [
+        { "category": "bug", "keywords": ["close", "resource", "leak", "context manager", "with"] }
+      ]
+    },
+    {
+      "id": "bug_int_division",
+      "language": "python",
+      "code": "def average(nums):\n    total = 0\n    for n in nums:\n        total += n\n    return total / len(nums)",
+      "expected_defects": [
+        { "category": "bug", "keywords": ["zero", "division", "empty", "len"] }
+      ]
+    },
+    {
+      "id": "bug_empty_edge",
+      "language": "python",
+      "code": "def first_even(nums):\n    evens = [n for n in nums if n % 2 == 0]\n    return evens[0]",
+      "expected_defects": [
+        { "category": "bug", "keywords": ["empty", "index", "out of range", "no even"] }
+      ]
+    },
+    {
+      "id": "smell_long_function",
+      "language": "python",
+      "code": "def process(order):\n    if order['type'] == 'a':\n        x = order['v'] * 2\n        y = x + 1\n        z = y * 3\n        order['r'] = z\n    elif order['type'] == 'b':\n        x = order['v'] * 5\n        y = x - 2\n        z = y / 2\n        order['r'] = z\n    elif order['type'] == 'c':\n        x = order['v'] + 10\n        y = x * x\n        z = y - 4\n        order['r'] = z\n    log(order)\n    save(order)\n    notify(order)\n    return order",
+      "expected_defects": [
+        { "category": "code_smell", "keywords": ["too long", "single responsibility", "complex", "refactor", "multiple"] }
+      ]
+    },
+    {
+      "id": "smell_nested_conditionals",
+      "language": "python",
+      "code": "def check(u):\n    if u:\n        if u.active:\n            if u.role == 'admin':\n                if u.verified:\n                    return True\n    return False",
+      "expected_defects": [
+        { "category": "code_smell", "keywords": ["nested", "nesting", "deep", "complexity", "guard"] }
+      ]
+    },
+    {
+      "id": "smell_magic_numbers",
+      "language": "python",
+      "code": "def price(weight):\n    return weight * 4.75 + 12.5 + (weight * 0.08)",
+      "expected_defects": [
+        { "category": "code_smell", "keywords": ["magic number", "magic", "constant", "hardcoded number"] }
+      ]
+    },
+    {
+      "id": "smell_bare_except",
+      "language": "python",
+      "code": "def fetch(url):\n    try:\n        return download(url)\n    except:\n        return None",
+      "expected_defects": [
+        { "category": "code_smell", "keywords": ["bare except", "broad except", "swallow", "exception"] }
+      ]
+    },
+    {
+      "id": "smell_duplicate_logic",
+      "language": "python",
+      "code": "def area_a(w, h):\n    if w <= 0 or h <= 0:\n        raise ValueError('bad')\n    return w * h\n\ndef area_b(w, h):\n    if w <= 0 or h <= 0:\n        raise ValueError('bad')\n    return w * h",
+      "expected_defects": [
+        { "category": "code_smell", "keywords": ["duplicate", "duplication", "repeated", "dry"] }
+      ]
+    },
+    {
+      "id": "sec_sql_injection",
+      "language": "python",
+      "code": "def get_user(db, username):\n    query = \"SELECT * FROM users WHERE name = '\" + username + \"'\"\n    return db.execute(query).fetchone()",
+      "expected_defects": [
+        { "category": "security", "keywords": ["sql injection", "injection", "parameterize", "sanitize"] }
+      ]
+    },
+    {
+      "id": "sec_hardcoded_secret",
+      "language": "python",
+      "code": "API_KEY = 'sk_live_9f8a7b6c5d4e3f2a1b0c'\n\ndef connect():\n    return Client(api_key=API_KEY)",
+      "expected_defects": [
+        { "category": "security", "keywords": ["hardcoded", "secret", "credential", "api key", "environment"] }
+      ]
+    },
+    {
+      "id": "sec_eval_user_input",
+      "language": "python",
+      "code": "def calculate(expr):\n    return eval(expr)",
+      "expected_defects": [
+        { "category": "security", "keywords": ["eval", "arbitrary", "code execution", "injection", "untrusted"] }
+      ]
+    },
+    {
+      "id": "sec_path_traversal",
+      "language": "python",
+      "code": "def serve_file(filename):\n    with open('/var/data/' + filename) as f:\n        return f.read()",
+      "expected_defects": [
+        { "category": "security", "keywords": ["path traversal", "traversal", "directory", "sanitize", "unsanitized"] }
+      ]
+    },
+    {
+      "id": "clean_add",
+      "language": "python",
+      "code": "def add(a, b):\n    \"\"\"Return the sum of two numbers.\"\"\"\n    return a + b",
+      "expected_defects": []
+    },
+    {
+      "id": "clean_guarded_divide",
+      "language": "python",
+      "code": "def safe_divide(a, b):\n    \"\"\"Divide a by b, returning None if b is zero.\"\"\"\n    if b == 0:\n        return None\n    return a / b",
+      "expected_defects": []
+    },
+    {
+      "id": "clean_comprehension",
+      "language": "python",
+      "code": "def squares(nums):\n    \"\"\"Return a list of squares for the given numbers.\"\"\"\n    return [n * n for n in nums]",
+      "expected_defects": []
+    },
+    {
+      "id": "clean_validated_input",
+      "language": "python",
+      "code": "def set_age(person, age):\n    \"\"\"Set a person's age after validating it is non-negative.\"\"\"\n    if not isinstance(age, int) or age < 0:\n        raise ValueError('age must be a non-negative integer')\n    person['age'] = age\n    return person",
+      "expected_defects": []
+    }
+  ]
+}

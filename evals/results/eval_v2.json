@@ -1,0 +1,184 @@
+{
+  "version": "v2",
+  "timestamp": "2026-05-29T03:45:28.833054+00:00",
+  "n_cases": 19,
+  "total_expected_defects": 15,
+  "total_caught": 14,
+  "catch_rate_pct": 93.3,
+  "clean_cases": 4,
+  "total_false_positives": 5,
+  "false_positive_rate_pct": 125.0,
+  "per_case": [
+    {
+      "id": "bug_off_by_one",
+      "is_clean": false,
+      "expected_count": 1,
+      "caught": 1,
+      "n_findings": 4,
+      "false_positives": 0,
+      "exec_ms": 1423
+    },
+    {
+      "id": "bug_null_deref",
+      "is_clean": false,
+      "expected_count": 1,
+      "caught": 1,
+      "n_findings": 3,
+      "false_positives": 0,
+      "exec_ms": 787
+    },
+    {
+      "id": "bug_mutable_default",
+      "is_clean": false,
+      "expected_count": 1,
+      "caught": 1,
+      "n_findings": 2,
+      "false_positives": 0,
+      "exec_ms": 581
+    },
+    {
+      "id": "bug_unclosed_file",
+      "is_clean": false,
+      "expected_count": 1,
+      "caught": 1,
+      "n_findings": 5,
+      "false_positives": 0,
+      "exec_ms": 1271
+    },
+    {
+      "id": "bug_int_division",
+      "is_clean": false,
+      "expected_count": 1,
+      "caught": 1,
+      "n_findings": 3,
+      "false_positives": 0,
+      "exec_ms": 834
+    },
+    {
+      "id": "bug_empty_edge",
+      "is_clean": false,
+      "expected_count": 1,
+      "caught": 1,
+      "n_findings": 3,
+      "false_positives": 0,
+      "exec_ms": 1029
+    },
+    {
+      "id": "smell_long_function",
+      "is_clean": false,
+      "expected_count": 1,
+      "caught": 0,
+      "n_findings": 6,
+      "false_positives": 0,
+      "exec_ms": 1241
+    },
+    {
+      "id": "smell_nested_conditionals",
+      "is_clean": false,
+      "expected_count": 1,
+      "caught": 1,
+      "n_findings": 2,
+      "false_positives": 0,
+      "exec_ms": 615
+    },
+    {
+      "id": "smell_magic_numbers",
+      "is_clean": false,
+      "expected_count": 1,
+      "caught": 1,
+      "n_findings": 1,
+      "false_positives": 0,
+      "exec_ms": 565
+    },
+    {
+      "id": "smell_bare_except",
+      "is_clean": false,
+      "expected_count": 1,
+      "caught": 1,
+      "n_findings": 5,
+      "false_positives": 0,
+      "exec_ms": 1161
+    },
+    {
+      "id": "smell_duplicate_logic",
+      "is_clean": false,
+      "expected_count": 1,
+      "caught": 1,
+      "n_findings": 2,
+      "false_positives": 0,
+      "exec_ms": 838
+    },
+    {
+      "id": "sec_sql_injection",
+      "is_clean": false,
+      "expected_count": 1,
+      "caught": 1,
+      "n_findings": 2,
+      "false_positives": 0,
+      "exec_ms": 629
+    },
+    {
+      "id": "sec_hardcoded_secret",
+      "is_clean": false,
+      "expected_count": 1,
+      "caught": 1,
+      "n_findings": 2,
+      "false_positives": 0,
+      "exec_ms": 517
+    },
+    {
+      "id": "sec_eval_user_input",
+      "is_clean": false,
+      "expected_count": 1,
+      "caught": 1,
+      "n_findings": 4,
+      "false_positives": 0,
+      "exec_ms": 888
+    },
+    {
+      "id": "sec_path_traversal",
+      "is_clean": false,
+      "expected_count": 1,
+      "caught": 1,
+      "n_findings": 4,
+      "false_positives": 0,
+      "exec_ms": 987
+    },
+    {
+      "id": "clean_add",
+      "is_clean": true,
+      "expected_count": 0,
+      "caught": 0,
+      "n_findings": 0,
+      "false_positives": 0,
+      "exec_ms": 422
+    },
+    {
+      "id": "clean_guarded_divide",
+      "is_clean": true,
+      "expected_count": 0,
+      "caught": 0,
+      "n_findings": 2,
+      "false_positives": 2,
+      "exec_ms": 841
+    },
+    {
+      "id": "clean_comprehension",
+      "is_clean": true,
+      "expected_count": 0,
+      "caught": 0,
+      "n_findings": 1,
+      "false_positives": 1,
+      "exec_ms": 486
+    },
+    {
+      "id": "clean_validated_input",
+      "is_clean": true,
+      "expected_count": 0,
+      "caught": 0,
+      "n_findings": 2,
+      "false_positives": 2,
+      "exec_ms": 735
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "repo_url": "https://github.com/psf/requests",
+  "commit_sha": "4ed3d1b3204caa6806a36125a39589044a02e807",
+  "user_id": "eval-requests-user",
+  "repo_name": "requests",
+  "collection": "pcr-requests-a90b6a169993fa83",
+  "chunks_embedded": 287,
+  "func_chunks_count": 268,
+  "retrieval_verified": true,
+  "retrieval_files": 3,
+  "retrieval_funcs": 5,
+  "fingerprint": {
+    "avg_function_length": 14.6,
+    "max_function_length": 101,
+    "docstring_coverage": 0.246,
+    "naming_convention": "snake_case",
+    "error_handling_rate": 0.131,
+    "type_hint_usage": 0.993,
+    "avg_complexity": 5.22,
+    "common_patterns": [
+      "custom_exceptions",
+      "early_return"
+    ],
+    "pattern_frequency": {
+      "custom_exceptions": 25,
+      "early_return": 12
+    },
+    "languages": [
+      "python"
+    ],
+    "language_distribution": {
+      "python": 268
+    },
+    "total_functions": 268,
+    "comment_density": 0.145,
+    "inline_comment_ratio": 0.118,
+    "comment_to_code_ratio": 0.222,
+    "conditional_density": 0.09,
+    "conditionals_per_100_lines": 8.98,
+    "loop_density": 0.05,
+    "for_to_while_ratio": 0.937,
+    "comprehension_ratio": 0.016,
+    "change_concentration_gini": 0.533,
+    "indentation_consistency": 1.0,
+    "primary_indent_depth": 7.4,
+    "avg_line_length": 43.9,
+    "max_line_length": 139,
+    "std_line_length": 18.8,
+    "lines_over_80": 0.033,
+    "lines_over_120": 0.002,
+    "import_density": 0.001,
+    "wildcard_import_ratio": 0.0
+  }
+}

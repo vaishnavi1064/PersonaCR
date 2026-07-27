@@ -1,0 +1,52 @@
+{
+  "written_at": "2026-07-27T22:19:14.601129+00:00",
+  "severity_penalty": {
+    "high": 25.0,
+    "medium": 12.0,
+    "low": 5.0
+  },
+  "rescored": [
+    {
+      "key": "pair_1_merge_headers/in_style/generic",
+      "old_style_score": 50.0,
+      "new_style_score": 78.0,
+      "n_findings_before": 3,
+      "n_findings_after": 3,
+      "dropped": 0
+    },
+    {
+      "key": "pair_1_merge_headers/in_style/personalized",
+      "old_style_score": 80.0,
+      "new_style_score": 88.0,
+      "n_findings_before": 3,
+      "n_findings_after": 1,
+      "dropped": 2
+    },
+    {
+      "key": "pair_1_merge_headers/off_style/generic",
+      "old_style_score": 50.0,
+      "new_style_score": 78.0,
+      "n_findings_before": 3,
+      "n_findings_after": 3,
+      "dropped": 0
+    },
+    {
+      "key": "pair_1_merge_headers/off_style/personalized",
+      "old_style_score": 80.0,
+      "new_style_score": 58.0,
+      "n_findings_before": 3,
+      "n_findings_after": 3,
+      "dropped": 0
+    }
+  ],
+  "missing_evidence_need_groq": [
+    "pair_2_build_url/in_style/generic",
+    "pair_2_build_url/in_style/personalized",
+    "pair_2_build_url/off_style/generic",
+    "pair_2_build_url/off_style/personalized",
+    "pair_3_parse_status/in_style/generic",
+    "pair_3_parse_status/in_style/personalized",
+    "pair_3_parse_status/off_style/generic",
+    "pair_3_parse_status/off_style/personalized"
+  ]
+}

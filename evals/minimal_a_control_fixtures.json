@@ -1,0 +1,37 @@
+{
+  "_README": "POSITIVE CONTROL FIXTURES — NOT part of the main minimal-A case set. Engineered extremes against psf/requests fingerprint (type_hint_usage=0.993, naming=snake_case, docstring_coverage=0.246 LOW, error_handling_rate=0.131 LOW, comprehension_ratio=0.016). Purpose: diagnose whether the N=6 null is broken measurement (A) or mild perturbations (B) or flat mechanism (C).",
+  "fingerprint_repo": "psf/requests",
+  "fingerprint_source": "evals/results/minimal_a_fingerprint.json",
+  "user_id": "eval-requests-user",
+  "repo_name": "requests",
+  "cases": [
+    {
+      "id": "control_max_in_style",
+      "label": "MAX-IN-STYLE",
+      "task": "Normalize an HTTP header name to Title-Case hyphenated form",
+      "design_notes": [
+        "snake_case name (matches fingerprint naming_convention)",
+        "full type hints (fingerprint type_hint_usage≈0.993)",
+        "NO docstring (fingerprint docstring_coverage is LOW ~0.25)",
+        "NO try/except (fingerprint error_handling_rate is LOW ~0.13)",
+        "explicit for-loop, no comprehensions (fingerprint comprehension_ratio≈0.016)",
+        "length near fingerprint avg (~14 lines)"
+      ],
+      "code": "def normalize_header_name(name: str) -> str:\n    parts = name.split('-')\n    out = []\n    for p in parts:\n        if not p:\n            continue\n        out.append(p[0].upper() + p[1:].lower() if len(p) > 1 else p.upper())\n    return '-'.join(out)\n"
+    },
+    {
+      "id": "control_max_off_style",
+      "label": "MAX-OFF-STYLE",
+      "task": "Normalize an HTTP header name to Title-Case hyphenated form",
+      "design_notes": [
+        "PascalCase name (opposite of snake_case)",
+        "ZERO type hints (against ~99% typed fingerprint)",
+        "verbose multi-paragraph docstring (against LOW docstring coverage)",
+        "nested try/except wrapping everything (against LOW error_handling_rate)",
+        "list comprehension (against rare comprehension_ratio)",
+        "camelCase parameter name"
+      ],
+      "code": "def NormalizeHeaderName(inputName):\n    \"\"\"Normalize an HTTP header field name to canonical Title-Case form.\n\n    This helper converts arbitrary header names into the conventional\n    hyphen-separated Title-Case representation used by many HTTP stacks.\n\n    Args:\n        inputName: Raw header name string, possibly lower-case or mixed.\n\n    Returns:\n        A Title-Case hyphenated header name string.\n\n    Raises:\n        RuntimeError: If normalization fails for any reason.\n\n    Example:\n        >>> NormalizeHeaderName('content-type')\n        'Content-Type'\n    \"\"\"\n    try:\n        try:\n            return '-'.join([p.capitalize() for p in inputName.split('-') if p])\n        except Exception as inner:\n            raise RuntimeError(f'inner normalize failed: {inner}')\n    except Exception as outer:\n        try:\n            return str(inputName)\n        except Exception:\n            return ''\n"
+    }
+  ]
+}

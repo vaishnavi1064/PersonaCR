@@ -1,0 +1,702 @@
+{
+  "meta": {
+    "timestamp": "2026-06-29T00:01:06.806905+00:00",
+    "n_cases": 19,
+    "arms_differ_only_by": "fingerprint dict (personalized=BENCHMARK_FINGERPRINT, generic={})",
+    "code_path": "orchestrator.run_review() called identically for both arms; fingerprint={} triggers .get() defaults in planner and empty JSON to style_analyst; ChromaDB returns [] for nonexistent collection",
+    "fingerprint_source": "PersonaCR backend/src/**/*.py \u2014 computed via pattern_extractor.extract_fingerprint() and inlined in benchmark script (deterministic, no Supabase/GitHub needed)"
+  },
+  "aggregate": {
+    "personalized": {
+      "comprehensiveness": 0.057,
+      "conciseness": 0.0351,
+      "relevance": 0.0418,
+      "style_score": 50.0,
+      "defect_score": 70.0
+    },
+    "generic": {
+      "comprehensiveness": 0.057,
+      "conciseness": 0.0351,
+      "relevance": 0.0418,
+      "style_score": 50.0,
+      "defect_score": 70.0
+    },
+    "delta": {
+      "comprehensiveness": 0.0,
+      "conciseness": 0.0,
+      "relevance": 0.0
+    },
+    "pct_change": {
+      "comprehensiveness": 0.0,
+      "conciseness": 0.0,
+      "relevance": 0.0
+    }
+  },
+  "per_case": [
+    {
+      "id": "bug_off_by_one",
+      "language": "python",
+      "personalized": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 10524,
+        "error": null
+      },
+      "generic": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 0,
+        "status": "low_confidence",
+        "exec_ms": 57071,
+        "error": null
+      },
+      "delta": {
+        "comprehensiveness": 0.0,
+        "conciseness": 0.0,
+        "relevance": 0.0
+      }
+    },
+    {
+      "id": "bug_null_deref",
+      "language": "python",
+      "personalized": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 1859,
+        "error": null
+      },
+      "generic": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 2469,
+        "error": null
+      },
+      "delta": {
+        "comprehensiveness": 0.0,
+        "conciseness": 0.0,
+        "relevance": 0.0
+      }
+    },
+    {
+      "id": "bug_mutable_default",
+      "language": "python",
+      "personalized": {
+        "scores": {
+          "comprehensiveness": 0.75,
+          "conciseness": 0.333,
+          "relevance": 0.462
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 3,
+        "status": "passed",
+        "exec_ms": 948,
+        "error": null
+      },
+      "generic": {
+        "scores": {
+          "comprehensiveness": 0.75,
+          "conciseness": 0.333,
+          "relevance": 0.462
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 3,
+        "status": "passed",
+        "exec_ms": 1234,
+        "error": null
+      },
+      "delta": {
+        "comprehensiveness": 0.0,
+        "conciseness": 0.0,
+        "relevance": 0.0
+      }
+    },
+    {
+      "id": "bug_unclosed_file",
+      "language": "python",
+      "personalized": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 1901,
+        "error": null
+      },
+      "generic": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 2473,
+        "error": null
+      },
+      "delta": {
+        "comprehensiveness": 0.0,
+        "conciseness": 0.0,
+        "relevance": 0.0
+      }
+    },
+    {
+      "id": "bug_int_division",
+      "language": "python",
+      "personalized": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 1891,
+        "error": null
+      },
+      "generic": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 2543,
+        "error": null
+      },
+      "delta": {
+        "comprehensiveness": 0.0,
+        "conciseness": 0.0,
+        "relevance": 0.0
+      }
+    },
+    {
+      "id": "bug_empty_edge",
+      "language": "python",
+      "personalized": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 2059,
+        "error": null
+      },
+      "generic": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 2665,
+        "error": null
+      },
+      "delta": {
+        "comprehensiveness": 0.0,
+        "conciseness": 0.0,
+        "relevance": 0.0
+      }
+    },
+    {
+      "id": "smell_long_function",
+      "language": "python",
+      "personalized": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 2160,
+        "error": null
+      },
+      "generic": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 2641,
+        "error": null
+      },
+      "delta": {
+        "comprehensiveness": 0.0,
+        "conciseness": 0.0,
+        "relevance": 0.0
+      }
+    },
+    {
+      "id": "smell_nested_conditionals",
+      "language": "python",
+      "personalized": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 3,
+        "status": "quality_gate_failed",
+        "exec_ms": 2029,
+        "error": null
+      },
+      "generic": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 3,
+        "status": "quality_gate_failed",
+        "exec_ms": 2626,
+        "error": null
+      },
+      "delta": {
+        "comprehensiveness": 0.0,
+        "conciseness": 0.0,
+        "relevance": 0.0
+      }
+    },
+    {
+      "id": "smell_magic_numbers",
+      "language": "python",
+      "personalized": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 1988,
+        "error": null
+      },
+      "generic": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 2569,
+        "error": null
+      },
+      "delta": {
+        "comprehensiveness": 0.0,
+        "conciseness": 0.0,
+        "relevance": 0.0
+      }
+    },
+    {
+      "id": "smell_bare_except",
+      "language": "python",
+      "personalized": {
+        "scores": {
+          "comprehensiveness": 0.333,
+          "conciseness": 0.333,
+          "relevance": 0.333
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 3,
+        "status": "quality_gate_failed",
+        "exec_ms": 1989,
+        "error": null
+      },
+      "generic": {
+        "scores": {
+          "comprehensiveness": 0.333,
+          "conciseness": 0.333,
+          "relevance": 0.333
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 3,
+        "status": "quality_gate_failed",
+        "exec_ms": 2554,
+        "error": null
+      },
+      "delta": {
+        "comprehensiveness": 0.0,
+        "conciseness": 0.0,
+        "relevance": 0.0
+      }
+    },
+    {
+      "id": "smell_duplicate_logic",
+      "language": "python",
+      "personalized": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 1982,
+        "error": null
+      },
+      "generic": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 2634,
+        "error": null
+      },
+      "delta": {
+        "comprehensiveness": 0.0,
+        "conciseness": 0.0,
+        "relevance": 0.0
+      }
+    },
+    {
+      "id": "sec_sql_injection",
+      "language": "python",
+      "personalized": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 2014,
+        "error": null
+      },
+      "generic": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 2514,
+        "error": null
+      },
+      "delta": {
+        "comprehensiveness": 0.0,
+        "conciseness": 0.0,
+        "relevance": 0.0
+      }
+    },
+    {
+      "id": "sec_hardcoded_secret",
+      "language": "python",
+      "personalized": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 1954,
+        "error": null
+      },
+      "generic": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 2523,
+        "error": null
+      },
+      "delta": {
+        "comprehensiveness": 0.0,
+        "conciseness": 0.0,
+        "relevance": 0.0
+      }
+    },
+    {
+      "id": "sec_eval_user_input",
+      "language": "python",
+      "personalized": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 2045,
+        "error": null
+      },
+      "generic": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 2554,
+        "error": null
+      },
+      "delta": {
+        "comprehensiveness": 0.0,
+        "conciseness": 0.0,
+        "relevance": 0.0
+      }
+    },
+    {
+      "id": "sec_path_traversal",
+      "language": "python",
+      "personalized": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 2020,
+        "error": null
+      },
+      "generic": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 2601,
+        "error": null
+      },
+      "delta": {
+        "comprehensiveness": 0.0,
+        "conciseness": 0.0,
+        "relevance": 0.0
+      }
+    },
+    {
+      "id": "clean_add",
+      "language": "python",
+      "personalized": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 1965,
+        "error": null
+      },
+      "generic": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 2607,
+        "error": null
+      },
+      "delta": {
+        "comprehensiveness": 0.0,
+        "conciseness": 0.0,
+        "relevance": 0.0
+      }
+    },
+    {
+      "id": "clean_guarded_divide",
+      "language": "python",
+      "personalized": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 2046,
+        "error": null
+      },
+      "generic": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 2648,
+        "error": null
+      },
+      "delta": {
+        "comprehensiveness": 0.0,
+        "conciseness": 0.0,
+        "relevance": 0.0
+      }
+    },
+    {
+      "id": "clean_comprehension",
+      "language": "python",
+      "personalized": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 2085,
+        "error": null
+      },
+      "generic": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 2476,
+        "error": null
+      },
+      "delta": {
+        "comprehensiveness": 0.0,
+        "conciseness": 0.0,
+        "relevance": 0.0
+      }
+    },
+    {
+      "id": "clean_validated_input",
+      "language": "python",
+      "personalized": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 2006,
+        "error": null
+      },
+      "generic": {
+        "scores": {
+          "comprehensiveness": 0.0,
+          "conciseness": 0.0,
+          "relevance": 0.0
+        },
+        "style_score": 50.0,
+        "defect_score": 70.0,
+        "n_issues": 2,
+        "status": "quality_gate_failed",
+        "exec_ms": 2548,
+        "error": null
+      },
+      "delta": {
+        "comprehensiveness": 0.0,
+        "conciseness": 0.0,
+        "relevance": 0.0
+      }
+    }
+  ]
+}

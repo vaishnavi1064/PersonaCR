@@ -1,0 +1,390 @@
+{
+  "meta": {
+    "timestamp": "2026-07-27T22:19:07.486262+00:00",
+    "fingerprint_repo": "psf/requests",
+    "fixtures": "D:\\agentic_project\\evals\\minimal_a_control_fixtures.json"
+  },
+  "cases": [
+    {
+      "id": "control_max_in_style",
+      "label": "MAX-IN-STYLE",
+      "task": "Normalize an HTTP header name to Title-Case hyphenated form",
+      "design_notes": [
+        "snake_case name (matches fingerprint naming_convention)",
+        "full type hints (fingerprint type_hint_usage\u22480.993)",
+        "NO docstring (fingerprint docstring_coverage is LOW ~0.25)",
+        "NO try/except (fingerprint error_handling_rate is LOW ~0.13)",
+        "explicit for-loop, no comprehensions (fingerprint comprehension_ratio\u22480.016)",
+        "length near fingerprint avg (~14 lines)"
+      ],
+      "instrumentation": {
+        "retrieval_files": [
+          {
+            "file_path": "src/requests/compat.py",
+            "distance": 0.7041745185852051
+          },
+          {
+            "file_path": "src/requests/_internal_utils.py",
+            "distance": 0.7151774168014526
+          },
+          {
+            "file_path": "src/requests/__version__.py",
+            "distance": 0.7673497200012207
+          }
+        ],
+        "retrieval_functions": [
+          {
+            "rank": 1,
+            "function_name": "unicode_is_ascii",
+            "file_path": "src/requests/_internal_utils.py",
+            "distance": 0.7993708252906799,
+            "source_preview": "def unicode_is_ascii(u_string: str) -> bool:\n    \"\"\"Determine if unicode string only contains ASCII characters.\n\n    :param str u_string: unicode string to check. Must be unicode\n        and not Pytho"
+          },
+          {
+            "rank": 2,
+            "function_name": "to_native_string",
+            "file_path": "src/requests/_internal_utils.py",
+            "distance": 0.8505102396011353,
+            "source_preview": "def to_native_string(string: str | bytes, encoding: str = \"ascii\") -> str:\n    \"\"\"Given a string object, regardless of type, returns a representation of\n    that string in the native string type, enco"
+          },
+          {
+            "rank": 3,
+            "function_name": "_resolve_char_detection",
+            "file_path": "src/requests/compat.py",
+            "distance": 0.8980391025543213,
+            "source_preview": "def _resolve_char_detection() -> ModuleType | None:\n    \"\"\"Find supported character detection libraries.\"\"\"\n    chardet = None\n    for lib in (\"chardet\", \"charset_normalizer\"):\n        if chardet is N"
+          }
+        ],
+        "n_retrieved_functions": 3,
+        "similar_snippets_nonempty": true,
+        "similar_snippets_chars": 1397,
+        "prompt_would_include_similar": true,
+        "style_analyst_ms": 3299,
+        "style_score": 85.0,
+        "similar_functions_found_field": 3,
+        "raw_findings": [
+          {
+            "category": "type_safety",
+            "severity": "low",
+            "description": "The submitted code uses type hints, which is consistent with this developer's pattern.",
+            "fingerprint_value": "0.993 (COMMON)",
+            "submitted_value": "Type hints are present"
+          },
+          {
+            "category": "naming",
+            "severity": "low",
+            "description": "The submitted code uses snake_case naming convention, which is consistent with this developer's pattern.",
+            "fingerprint_value": "snake_case",
+            "submitted_value": "snake_case naming convention used"
+          },
+          {
+            "category": "complexity",
+            "severity": "low",
+            "description": "The submitted code has a low complexity, which is consistent with this developer's pattern of having an average complexity of 5.22.",
+            "fingerprint_value": "5.22",
+            "submitted_value": "Low complexity"
+          }
+        ],
+        "n_raw_findings_ex_error": 3,
+        "n_raw_findings_total": 3
+      },
+      "arms": {
+        "personalized": {
+          "arm": "personalized",
+          "n_style_findings": 1,
+          "style_score": 95.0,
+          "similar_functions_found": 3,
+          "comprehensiveness": 0.9,
+          "conciseness": 1.0,
+          "relevance": 0.947,
+          "status": "passed",
+          "exec_ms": 14898,
+          "attempt": 1,
+          "throttled": false,
+          "error": null
+        },
+        "personalized_meta": {
+          "from_checkpoint": false,
+          "issues": [
+            {
+              "type": "style",
+              "category": "naming",
+              "severity": "low",
+              "description": "The function name 'normalize_header_name' follows the snake_case convention, which is consistent with the developer's naming convention."
+            },
+            {
+              "type": "defect",
+              "category": "smell",
+              "severity": "low",
+              "description": "The function does not handle the case where the input is not a string. It would be better to add a type check at the beginning of the function."
+            },
+            {
+              "type": "defect",
+              "category": "smell",
+              "severity": "low",
+              "description": "The variable names 'p' and 'out' are not very descriptive. It would be better to use more descriptive names."
+            }
+          ]
+        },
+        "generic": {
+          "arm": "generic",
+          "n_style_findings": 0,
+          "style_score": 100.0,
+          "similar_functions_found": 0,
+          "comprehensiveness": 0.333,
+          "conciseness": 1.0,
+          "relevance": 0.5,
+          "status": "low_confidence",
+          "exec_ms": 3417,
+          "attempt": 1,
+          "throttled": false,
+          "error": null
+        },
+        "generic_meta": {
+          "from_checkpoint": false,
+          "issues": [
+            {
+              "type": "defect",
+              "category": "smell",
+              "severity": "low",
+              "description": "Variable names could be more descriptive"
+            },
+            {
+              "type": "defect",
+              "category": "smell",
+              "severity": "low",
+              "description": "Function could benefit from a docstring for better readability"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "control_max_off_style",
+      "label": "MAX-OFF-STYLE",
+      "task": "Normalize an HTTP header name to Title-Case hyphenated form",
+      "design_notes": [
+        "PascalCase name (opposite of snake_case)",
+        "ZERO type hints (against ~99% typed fingerprint)",
+        "verbose multi-paragraph docstring (against LOW docstring coverage)",
+        "nested try/except wrapping everything (against LOW error_handling_rate)",
+        "list comprehension (against rare comprehension_ratio)",
+        "camelCase parameter name"
+      ],
+      "instrumentation": {
+        "retrieval_files": [
+          {
+            "file_path": "src/requests/_internal_utils.py",
+            "distance": 0.599376916885376
+          },
+          {
+            "file_path": "src/requests/compat.py",
+            "distance": 0.6329792737960815
+          },
+          {
+            "file_path": "src/requests/auth.py",
+            "distance": 0.7067471146583557
+          }
+        ],
+        "retrieval_functions": [
+          {
+            "rank": 1,
+            "function_name": "_basic_auth_str",
+            "file_path": "src/requests/auth.py",
+            "distance": 0.6633821129798889,
+            "source_preview": "def _basic_auth_str(username: bytes | str, password: bytes | str) -> str:\n    \"\"\"Returns a Basic Auth string.\"\"\"\n\n    # \"I want us to put a big-ol' comment on top of it that\n    # says that this behav"
+          },
+          {
+            "rank": 2,
+            "function_name": "sha_utf8",
+            "file_path": "src/requests/auth.py",
+            "distance": 0.6932902336120605,
+            "source_preview": "            def sha_utf8(x: str | bytes) -> str:\n                if isinstance(x, str):\n                    x = x.encode(\"utf-8\")\n                return hashlib.sha1(x, usedforsecurity=False).hexdiges"
+          },
+          {
+            "rank": 3,
+            "function_name": "sha256_utf8",
+            "file_path": "src/requests/auth.py",
+            "distance": 0.7103345990180969,
+            "source_preview": "            def sha256_utf8(x: str | bytes) -> str:\n                if isinstance(x, str):\n                    x = x.encode(\"utf-8\")\n                return hashlib.sha256(x, usedforsecurity=False).hex"
+          },
+          {
+            "rank": 4,
+            "function_name": "sha512_utf8",
+            "file_path": "src/requests/auth.py",
+            "distance": 0.7106016278266907,
+            "source_preview": "            def sha512_utf8(x: str | bytes) -> str:\n                if isinstance(x, str):\n                    x = x.encode(\"utf-8\")\n                return hashlib.sha512(x, usedforsecurity=False).hex"
+          },
+          {
+            "rank": 5,
+            "function_name": "handle_401",
+            "file_path": "src/requests/auth.py",
+            "distance": 0.7394239902496338,
+            "source_preview": "    def handle_401(self, r: Response, **kwargs: Any) -> Response:\n        \"\"\"\n        Takes the given response and tries digest-auth, if needed.\n\n        :rtype: requests.Response\n        \"\"\"\n\n       "
+          }
+        ],
+        "n_retrieved_functions": 8,
+        "similar_snippets_nonempty": true,
+        "similar_snippets_chars": 1959,
+        "prompt_would_include_similar": true,
+        "style_analyst_ms": 2497,
+        "style_score": 63.0,
+        "similar_functions_found_field": 8,
+        "raw_findings": [
+          {
+            "category": "naming",
+            "severity": "high",
+            "description": "Function name does not follow snake_case convention",
+            "fingerprint_value": "snake_case",
+            "submitted_value": "CamelCase"
+          },
+          {
+            "category": "type_safety",
+            "severity": "medium",
+            "description": "Missing type hints for function parameters and return types",
+            "fingerprint_value": "0.993",
+            "submitted_value": "no type hints in function"
+          }
+        ],
+        "n_raw_findings_ex_error": 2,
+        "n_raw_findings_total": 2
+      },
+      "arms": {
+        "personalized": {
+          "arm": "personalized",
+          "n_style_findings": 1,
+          "style_score": 63.0,
+          "similar_functions_found": 8,
+          "comprehensiveness": 0.714,
+          "conciseness": 0.833,
+          "relevance": 0.769,
+          "status": "passed",
+          "exec_ms": 5549,
+          "attempt": 1,
+          "throttled": false,
+          "error": null
+        },
+        "personalized_meta": {
+          "from_checkpoint": false,
+          "issues": [
+            {
+              "type": "style",
+              "category": "naming",
+              "severity": "high",
+              "description": "Non-snake_case naming convention"
+            },
+            {
+              "type": "defect",
+              "category": "bug",
+              "severity": "medium",
+              "description": "The function does not handle the case where inputName is None. This could lead to a TypeError when trying to call split() on None."
+            },
+            {
+              "type": "defect",
+              "category": "bug",
+              "severity": "low",
+              "description": "The function does not handle the case where inputName is not a string. This could lead to a TypeError when trying to call split() on a non-string object."
+            },
+            {
+              "type": "defect",
+              "category": "smell",
+              "severity": "medium",
+              "description": "The function has a nested try-except block. This can make the code harder to read and understand. It would be better to handle the exceptions in a single try-except block."
+            },
+            {
+              "type": "defect",
+              "category": "smell",
+              "severity": "low",
+              "description": "The function raises a RuntimeError with a generic error message. It would be better to provide a more specific error message that indicates what went wrong."
+            },
+            {
+              "type": "defect",
+              "category": "smell",
+              "severity": "low",
+              "description": "The function returns an empty string if all else fails. This could lead to unexpected behavior downstream. It would be better to raise an exception in this case."
+            }
+          ]
+        },
+        "generic": {
+          "arm": "generic",
+          "n_style_findings": 3,
+          "style_score": 51.0,
+          "similar_functions_found": 0,
+          "comprehensiveness": 0.769,
+          "conciseness": 0.9,
+          "relevance": 0.829,
+          "status": "passed",
+          "exec_ms": 4679,
+          "attempt": 1,
+          "throttled": false,
+          "error": null
+        },
+        "generic_meta": {
+          "from_checkpoint": false,
+          "issues": [
+            {
+              "type": "style",
+              "category": "error_handling",
+              "severity": "high",
+              "description": "The submitted code has a complex error handling mechanism with nested try-except blocks, which may be unusual without a fingerprint to compare against."
+            },
+            {
+              "type": "style",
+              "category": "naming",
+              "severity": "medium",
+              "description": "The submitted code uses PascalCase for function names, which may be unusual without a fingerprint to compare against."
+            },
+            {
+              "type": "style",
+              "category": "complexity",
+              "severity": "medium",
+              "description": "The submitted code has a list comprehension with conditional statements, which may be unusual without a fingerprint to compare against."
+            },
+            {
+              "type": "defect",
+              "category": "bug",
+              "severity": "medium",
+              "description": "The function does not handle the case where inputName is None or not a string. This could lead to a TypeError or unexpected behavior."
+            },
+            {
+              "type": "defect",
+              "category": "bug",
+              "severity": "low",
+              "description": "The function catches all exceptions and raises a RuntimeError. This could mask other issues and make debugging more difficult."
+            },
+            {
+              "type": "defect",
+              "category": "bug",
+              "severity": "low",
+              "description": "The function has a nested try-except block. The inner try-except block does not add any value and can be removed."
+            },
+            {
+              "type": "defect",
+              "category": "smell",
+              "severity": "medium",
+              "description": "The function has a broad exception handling mechanism. It would be better to handle specific exceptions that could occur."
+            },
+            {
+              "type": "defect",
+              "category": "smell",
+              "severity": "low",
+              "description": "The function has a redundant try-except block. The outer try-except block is not necessary."
+            },
+            {
+              "type": "defect",
+              "category": "smell",
+              "severity": "low",
+              "description": "The variable name 'inputName' could be more descriptive. Consider renaming it to something like 'header_name'."
+            },
+            {
+              "type": "defect",
+              "category": "security",
+              "severity": "low",
+              "description": "The function does not validate or sanitize the input. This could potentially lead to security issues if the input is not trusted."
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
