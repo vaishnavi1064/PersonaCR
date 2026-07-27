@@ -188,15 +188,14 @@ export default function ChatPage() {
     chatIdRef.current = activeChatId
     setLoading(true)
 
-    // Restore selected repos for this chat
+    // Restore selected repos for this chat (async so we don't sync-setState in effect)
     const cached = selectedRepoUrlsByChatId[activeChatId]
-    if (cached) {
-      setSelectedRepoUrlsLocal(cached)
-    } else {
-      loadChatSelectedRepos(activeChatId).then((urls) => {
-        setSelectedRepoUrlsLocal(urls)
-      })
-    }
+    const selectedPromise = cached
+      ? Promise.resolve(cached)
+      : loadChatSelectedRepos(activeChatId)
+    selectedPromise.then((urls) => {
+      setSelectedRepoUrlsLocal(urls)
+    })
 
     loadChatMessages(activeChatId).then((persisted) => {
       persistedRef.current = persisted
