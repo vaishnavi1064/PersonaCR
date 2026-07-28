@@ -117,10 +117,18 @@ class ReviewResponse(BaseModel):
 
 
 class StatusResponse(BaseModel):
+    """Async review job status (wired by POST/GET /api/reviews)."""
+
     job_id: str
-    state: str
-    progress: int
+    state: str  # queued | running | completed | failed
+    progress: int = 0
     message: str | None = None
+    # Extended only where the original shape could not carry lifecycle data:
+    result: dict | None = None
+    error: str | None = None
+    review_id: str | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
 
 
 class ReportResponse(BaseModel):

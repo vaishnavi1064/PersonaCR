@@ -231,8 +231,8 @@ User asks free-form question
 | pylint integration | **Planned** | `requirements.txt:19` lists `pylint`, `models.py:261` references `"pylint"` as a source type, but no code actually calls pylint |
 | Documentation generation | **Planned** | `models.py:161-176` defines `DocRequest`, `DocContent`, `DocResponse`, `DocumentationOutput` (L250-254) — no route or agent implements this |
 | Analytics API endpoint | **Planned** | `models.py:136-157` defines `MonthlyScore`, `IssueCategory`, `AnalyticsResponse` — no backend route serves these; dashboard computes stats client-side |
-| Job status tracking | **Planned** | `models.py:120-125` defines `StatusResponse` with `job_id`/`state`/`progress` — never used |
-| Report generation endpoint | **Planned** | `models.py:127-132` defines `ReportResponse` — never used |
+| Job status tracking | **Built** | Async review via Redis/RQ: `POST /api/reviews` + `GET /api/reviews/{job_id}` wire `StatusResponse`; sync `POST /api/review` retained |
+| Report generation endpoint | **Built** | `GET /api/reviews/{job_id}/report` returns `ReportResponse` when job completed |
 | Old ChatRequest/ChatMessage models | **Planned** | `models.py:63-78` defines `ChatRequest` and `ChatMessage` — not used by any route (replaced by `InsightsChatRequest`) |
 
 ---
@@ -249,8 +249,6 @@ User asks free-form question
 | `ReviewScores` | `models.py:97` | Not imported or used anywhere |
 | `ReviewOutput` | `models.py:104` | Not imported or used anywhere |
 | `ReviewResponse` | `models.py:114` | Not imported or used anywhere |
-| `StatusResponse` | `models.py:120` | Not imported or used anywhere |
-| `ReportResponse` | `models.py:127` | Not imported or used anywhere |
 | `MonthlyScore` | `models.py:136` | Not imported or used anywhere |
 | `IssueCategory` | `models.py:142` | Not imported or used anywhere |
 | `AnalyticsResponse` | `models.py:148` | Not imported or used anywhere |

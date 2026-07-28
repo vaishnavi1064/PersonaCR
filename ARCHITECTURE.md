@@ -119,6 +119,7 @@ Loop 1 is driven by `confidence_evaluator.evaluate_confidence`; Loop 2 by `evalu
 | Embeddings / retrieval | `core/embedder.py` (`query_similar_staged` used by Style Analyst) |
 | Persistence | `db/supabase_rest.py` |
 | HTTP entry | `routes/analyze_routes.py`, `review_routes.py`, `chat_routes.py` |
+| Async review processing via Redis-backed job queue | `core/review_queue.py`, `core/job_store.py`, `workers/` (RQ, single-worker local/dev) |
 
 ---
 

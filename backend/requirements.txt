@@ -15,6 +15,10 @@ chromadb
 # LLM
 groq
 
+# Async review job queue (Redis + RQ — local/dev scale)
+redis
+rq
+
 # Static analysis
 pylint
 astroid
