@@ -1,16 +1,16 @@
 {
   "meta": {
-    "timestamp": "2026-07-27T22:23:36.874222+00:00",
+    "timestamp": "2026-07-28T00:41:40.262760+00:00",
     "repo_url": "https://github.com/psf/requests",
     "commit_sha": "4ed3d1b3204caa6806a36125a39589044a02e807",
     "user_id": "eval-requests-user",
     "repo_name": "requests",
     "collection": "pcr-requests-a90b6a169993fa83",
-    "n_pairs": 1,
-    "sleep_between_calls_s": 25.0,
-    "target_paired_clean": 6,
-    "n_paired_clean": 6,
-    "new_paired_this_run": 2,
+    "n_pairs": 7,
+    "sleep_between_calls_s": 55.0,
+    "target_paired_clean": 14,
+    "n_paired_clean": 10,
+    "new_paired_this_run": 0,
     "stop_reason": "completed_all_or_nothing_left",
     "checkpoint": "D:\\agentic_project\\evals\\minimal_a_checkpoint.jsonl",
     "arms_differ_by": "fingerprint (personalized=requests FP + live ChromaDB) vs generic (fingerprint={}, user_id=__benchmark_generic__, no collection)",
@@ -23,71 +23,77 @@
       "pair_2_build_url/in_style",
       "pair_2_build_url/off_style",
       "pair_3_parse_status/in_style",
-      "pair_3_parse_status/off_style"
+      "pair_3_parse_status/off_style",
+      "pair_4_extract_cookies/in_style",
+      "pair_4_extract_cookies/off_style",
+      "pair_5_redact_auth/in_style",
+      "pair_5_redact_auth/off_style"
     ],
-    "n_paired_clean": 6,
-    "incomplete_cases": [],
+    "n_paired_clean": 10,
+    "incomplete_cases": [
+      "pair_6_join_query/in_style"
+    ],
     "primary_metric": "style_score",
     "primary_metric_note": "overall_style_score from Style Analyst (0\u2013100). Separation = off \u2212 in; more negative \u21d2 off more deviant.",
     "personalized": {
-      "avg_style_score_in_style": 91.0,
-      "avg_style_score_off_style": 44.667,
-      "separation": -46.333,
+      "avg_style_score_in_style": 89.2,
+      "avg_style_score_off_style": 51.8,
+      "separation": -37.4,
       "separation_metric": "style_score_off_minus_in",
-      "avg_style_findings_in_style": 1.667,
-      "avg_style_findings_off_style": 1,
-      "separation_findings": -0.667,
-      "n_in": 3,
-      "n_off": 3,
+      "avg_style_findings_in_style": 1.4,
+      "avg_style_findings_off_style": 1.2,
+      "separation_findings": -0.2,
+      "n_in": 5,
+      "n_off": 5,
       "crscore": {
         "comprehensiveness": {
-          "avg_in_style": 0.411,
-          "avg_off_style": 0.855,
-          "n_in": 3,
-          "n_off": 3
+          "avg_in_style": 0.417,
+          "avg_off_style": 0.812,
+          "n_in": 5,
+          "n_off": 5
         },
         "conciseness": {
-          "avg_in_style": 0.917,
-          "avg_off_style": 1.0,
-          "n_in": 3,
-          "n_off": 3
+          "avg_in_style": 0.783,
+          "avg_off_style": 0.914,
+          "n_in": 5,
+          "n_off": 5
         },
         "relevance": {
-          "avg_in_style": 0.51,
-          "avg_off_style": 0.921,
-          "n_in": 3,
-          "n_off": 3
+          "avg_in_style": 0.499,
+          "avg_off_style": 0.852,
+          "n_in": 5,
+          "n_off": 5
         }
       }
     },
     "generic": {
-      "avg_style_score_in_style": 92.667,
-      "avg_style_score_off_style": 92.667,
+      "avg_style_score_in_style": 95.6,
+      "avg_style_score_off_style": 95.6,
       "separation": 0.0,
       "separation_metric": "style_score_off_minus_in",
-      "avg_style_findings_in_style": 0.667,
-      "avg_style_findings_off_style": 0.333,
-      "separation_findings": -0.334,
-      "n_in": 3,
-      "n_off": 3,
+      "avg_style_findings_in_style": 0.4,
+      "avg_style_findings_off_style": 0.2,
+      "separation_findings": -0.2,
+      "n_in": 5,
+      "n_off": 5,
       "crscore": {
         "comprehensiveness": {
-          "avg_in_style": 0.394,
-          "avg_off_style": 0.537,
-          "n_in": 3,
-          "n_off": 3
+          "avg_in_style": 0.52,
+          "avg_off_style": 0.572,
+          "n_in": 5,
+          "n_off": 5
         },
         "conciseness": {
-          "avg_in_style": 0.667,
-          "avg_off_style": 0.806,
-          "n_in": 3,
-          "n_off": 3
+          "avg_in_style": 0.8,
+          "avg_off_style": 0.793,
+          "n_in": 5,
+          "n_off": 5
         },
         "relevance": {
-          "avg_in_style": 0.494,
-          "avg_off_style": 0.644,
-          "n_in": 3,
-          "n_off": 3
+          "avg_in_style": 0.621,
+          "avg_off_style": 0.662,
+          "n_in": 5,
+          "n_off": 5
         }
       }
     },
@@ -213,6 +219,86 @@
       "relevance_personalized": 0.923,
       "relevance_generic": 0.824,
       "delta_relevance": 0.099
+    },
+    {
+      "case": "pair_4_extract_cookies/in_style",
+      "style_score_personalized": 78.0,
+      "style_score_generic": 100.0,
+      "delta_style_score": -22.0,
+      "n_style_findings_personalized": 2,
+      "n_style_findings_generic": 0,
+      "delta_style_findings": 2,
+      "style_categories_personalized": {},
+      "style_categories_generic": {},
+      "comprehensiveness_personalized": 0.6,
+      "comprehensiveness_generic": 0.917,
+      "delta_comprehensiveness": -0.317,
+      "conciseness_personalized": 0.667,
+      "conciseness_generic": 1.0,
+      "delta_conciseness": -0.333,
+      "relevance_personalized": 0.632,
+      "relevance_generic": 0.957,
+      "delta_relevance": -0.325
+    },
+    {
+      "case": "pair_4_extract_cookies/off_style",
+      "style_score_personalized": 50.0,
+      "style_score_generic": 100.0,
+      "delta_style_score": -50.0,
+      "n_style_findings_personalized": 2,
+      "n_style_findings_generic": 0,
+      "delta_style_findings": 2,
+      "style_categories_personalized": {},
+      "style_categories_generic": {},
+      "comprehensiveness_personalized": 0.769,
+      "comprehensiveness_generic": 0.667,
+      "delta_comprehensiveness": 0.102,
+      "conciseness_personalized": 0.571,
+      "conciseness_generic": 0.75,
+      "delta_conciseness": -0.179,
+      "relevance_personalized": 0.656,
+      "relevance_generic": 0.706,
+      "delta_relevance": -0.05
+    },
+    {
+      "case": "pair_5_redact_auth/in_style",
+      "style_score_personalized": 95.0,
+      "style_score_generic": 100.0,
+      "delta_style_score": -5.0,
+      "n_style_findings_personalized": 0,
+      "n_style_findings_generic": 0,
+      "delta_style_findings": 0,
+      "style_categories_personalized": {},
+      "style_categories_generic": {},
+      "comprehensiveness_personalized": 0.25,
+      "comprehensiveness_generic": 0.5,
+      "delta_comprehensiveness": -0.25,
+      "conciseness_personalized": 0.5,
+      "conciseness_generic": 1.0,
+      "delta_conciseness": -0.5,
+      "relevance_personalized": 0.333,
+      "relevance_generic": 0.667,
+      "delta_relevance": -0.334
+    },
+    {
+      "case": "pair_5_redact_auth/off_style",
+      "style_score_personalized": 75.0,
+      "style_score_generic": 100.0,
+      "delta_style_score": -25.0,
+      "n_style_findings_personalized": 1,
+      "n_style_findings_generic": 0,
+      "delta_style_findings": 1,
+      "style_categories_personalized": {},
+      "style_categories_generic": {},
+      "comprehensiveness_personalized": 0.727,
+      "comprehensiveness_generic": 0.583,
+      "delta_comprehensiveness": 0.144,
+      "conciseness_personalized": 1.0,
+      "conciseness_generic": 0.8,
+      "delta_conciseness": 0.2,
+      "relevance_personalized": 0.842,
+      "relevance_generic": 0.675,
+      "delta_relevance": 0.167
     }
   ]
 }

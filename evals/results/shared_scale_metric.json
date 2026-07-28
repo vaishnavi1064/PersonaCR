@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-07-27T22:52:37.806096+00:00",
+  "generated_at": "2026-07-28T00:47:32.849371+00:00",
   "framing": "a",
-  "framing_doc": "D:/agentic_project/evals/shared_scale_framing.md",
+  "framing_doc": "d:/agentic_project/evals/shared_scale_framing.md",
   "weights": {
     "type_hint_usage": 0.2,
     "naming_convention": 0.2,
@@ -11,7 +11,7 @@
   },
   "material_threshold": 0.35,
   "groq_cost": 0,
-  "note": "Feature-distance from pattern_extractor on submitted code vs requests FP. Tracking from stored Style Analyst evidence; personalized findings passed through filter_findings_by_fingerprint_direction (Defect B) to match post-fix production. No Groq calls.",
+  "note": "Feature-distance from pattern_extractor on submitted code vs requests FP. Tracking from stored Style Analyst evidence; personalized findings passed through filter_findings_by_fingerprint_direction (Defect B). Weights frozen \u2014 expand-N only adds cases.",
   "control": {
     "cases": {
       "control_max_in_style": {
@@ -249,9 +249,28 @@
       "gate_max_in_lt_max_off": true
     }
   },
-  "n6": {
-    "n_pairs": 3,
-    "n_cases": 6,
+  "n6": null,
+  "n_full": {
+    "n_pairs": 7,
+    "n_cases": 14,
+    "pair_ids": [
+      "pair_1_merge_headers",
+      "pair_2_build_url",
+      "pair_3_parse_status",
+      "pair_4_extract_cookies",
+      "pair_5_redact_auth",
+      "pair_6_join_query",
+      "pair_7_ensure_scheme"
+    ],
+    "missing_evidence": [
+      "pair_6_join_query/in_style/generic",
+      "pair_6_join_query/off_style/personalized",
+      "pair_6_join_query/off_style/generic",
+      "pair_7_ensure_scheme/in_style/personalized",
+      "pair_7_ensure_scheme/in_style/generic",
+      "pair_7_ensure_scheme/off_style/personalized",
+      "pair_7_ensure_scheme/off_style/generic"
+    ],
     "per_case": [
       {
         "pair_id": "pair_1_merge_headers",
@@ -930,6 +949,802 @@
             "n_findings_ex_error": 0
           }
         }
+      },
+      {
+        "pair_id": "pair_4_extract_cookies",
+        "version": "in_style",
+        "violations_designed": [],
+        "code_features_selected": {
+          "type_hint_usage": 1.0,
+          "naming_convention": "snake_case",
+          "docstring_coverage": 0.0,
+          "error_handling_rate": 0.0,
+          "comprehension_ratio": 0.0
+        },
+        "distance": {
+          "per_feature": {
+            "type_hint_usage": {
+              "code": 1.0,
+              "fingerprint": 0.993,
+              "distance": 0.007,
+              "weight": 0.2,
+              "weighted": 0.0014,
+              "material": false
+            },
+            "docstring_coverage": {
+              "code": 0.0,
+              "fingerprint": 0.246,
+              "distance": 0.246,
+              "weight": 0.2,
+              "weighted": 0.0492,
+              "material": false
+            },
+            "error_handling_rate": {
+              "code": 0.0,
+              "fingerprint": 0.131,
+              "distance": 0.131,
+              "weight": 0.2,
+              "weighted": 0.0262,
+              "material": false
+            },
+            "comprehension_ratio": {
+              "code": 0.0,
+              "fingerprint": 0.016,
+              "distance": 0.016,
+              "weight": 0.2,
+              "weighted": 0.0032,
+              "material": false
+            },
+            "naming_convention": {
+              "code": "snake_case",
+              "fingerprint": "snake_case",
+              "distance": 0.0,
+              "weight": 0.2,
+              "weighted": 0.0,
+              "material": false
+            }
+          },
+          "feature_distance": 0.08,
+          "feature_match_score": 92.0,
+          "material_deviations": [],
+          "n_material": 0,
+          "weights": {
+            "type_hint_usage": 0.2,
+            "naming_convention": 0.2,
+            "docstring_coverage": 0.2,
+            "error_handling_rate": 0.2,
+            "comprehension_ratio": 0.2
+          },
+          "material_threshold": 0.35
+        },
+        "tracking_by_arm": {
+          "personalized": {
+            "material_deviations": [],
+            "mentioned": {
+              "naming_convention": true,
+              "docstring_coverage": true,
+              "error_handling_rate": true
+            },
+            "true_positives": [],
+            "false_negatives": [],
+            "false_positives": [
+              "docstring_coverage",
+              "error_handling_rate",
+              "naming_convention"
+            ],
+            "recall_material": null,
+            "n_material": 0,
+            "n_tp": 0,
+            "n_fp": 3,
+            "n_findings_ex_error": 3
+          },
+          "generic": {
+            "material_deviations": [],
+            "mentioned": {},
+            "true_positives": [],
+            "false_negatives": [],
+            "false_positives": [],
+            "recall_material": null,
+            "n_material": 0,
+            "n_tp": 0,
+            "n_fp": 0,
+            "n_findings_ex_error": 0
+          }
+        }
+      },
+      {
+        "pair_id": "pair_4_extract_cookies",
+        "version": "off_style",
+        "violations_designed": [
+          "mixedCase parameter names instead of snake_case",
+          "missing type hints",
+          "verbose multi-paragraph docstring",
+          "uses list comprehension + dict() constructor instead of explicit for loop"
+        ],
+        "code_features_selected": {
+          "type_hint_usage": 0.0,
+          "naming_convention": "camelCase",
+          "docstring_coverage": 1.0,
+          "error_handling_rate": 0.0,
+          "comprehension_ratio": 1.0
+        },
+        "distance": {
+          "per_feature": {
+            "type_hint_usage": {
+              "code": 0.0,
+              "fingerprint": 0.993,
+              "distance": 0.993,
+              "weight": 0.2,
+              "weighted": 0.1986,
+              "material": true
+            },
+            "docstring_coverage": {
+              "code": 1.0,
+              "fingerprint": 0.246,
+              "distance": 0.754,
+              "weight": 0.2,
+              "weighted": 0.1508,
+              "material": true
+            },
+            "error_handling_rate": {
+              "code": 0.0,
+              "fingerprint": 0.131,
+              "distance": 0.131,
+              "weight": 0.2,
+              "weighted": 0.0262,
+              "material": false
+            },
+            "comprehension_ratio": {
+              "code": 1.0,
+              "fingerprint": 0.016,
+              "distance": 0.984,
+              "weight": 0.2,
+              "weighted": 0.1968,
+              "material": true
+            },
+            "naming_convention": {
+              "code": "camelCase",
+              "fingerprint": "snake_case",
+              "distance": 1.0,
+              "weight": 0.2,
+              "weighted": 0.2,
+              "material": true
+            }
+          },
+          "feature_distance": 0.7724,
+          "feature_match_score": 22.76,
+          "material_deviations": [
+            "type_hint_usage",
+            "docstring_coverage",
+            "comprehension_ratio",
+            "naming_convention"
+          ],
+          "n_material": 4,
+          "weights": {
+            "type_hint_usage": 0.2,
+            "naming_convention": 0.2,
+            "docstring_coverage": 0.2,
+            "error_handling_rate": 0.2,
+            "comprehension_ratio": 0.2
+          },
+          "material_threshold": 0.35
+        },
+        "tracking_by_arm": {
+          "personalized": {
+            "material_deviations": [
+              "comprehension_ratio",
+              "docstring_coverage",
+              "naming_convention",
+              "type_hint_usage"
+            ],
+            "mentioned": {
+              "type_hint_usage": true,
+              "naming_convention": true
+            },
+            "true_positives": [
+              "naming_convention",
+              "type_hint_usage"
+            ],
+            "false_negatives": [
+              "comprehension_ratio",
+              "docstring_coverage"
+            ],
+            "false_positives": [],
+            "recall_material": 0.5,
+            "n_material": 4,
+            "n_tp": 2,
+            "n_fp": 0,
+            "n_findings_ex_error": 2
+          },
+          "generic": {
+            "material_deviations": [
+              "comprehension_ratio",
+              "docstring_coverage",
+              "naming_convention",
+              "type_hint_usage"
+            ],
+            "mentioned": {},
+            "true_positives": [],
+            "false_negatives": [
+              "comprehension_ratio",
+              "docstring_coverage",
+              "naming_convention",
+              "type_hint_usage"
+            ],
+            "false_positives": [],
+            "recall_material": 0.0,
+            "n_material": 4,
+            "n_tp": 0,
+            "n_fp": 0,
+            "n_findings_ex_error": 0
+          }
+        }
+      },
+      {
+        "pair_id": "pair_5_redact_auth",
+        "version": "in_style",
+        "violations_designed": [],
+        "code_features_selected": {
+          "type_hint_usage": 1.0,
+          "naming_convention": "snake_case",
+          "docstring_coverage": 0.0,
+          "error_handling_rate": 0.0,
+          "comprehension_ratio": 0.0
+        },
+        "distance": {
+          "per_feature": {
+            "type_hint_usage": {
+              "code": 1.0,
+              "fingerprint": 0.993,
+              "distance": 0.007,
+              "weight": 0.2,
+              "weighted": 0.0014,
+              "material": false
+            },
+            "docstring_coverage": {
+              "code": 0.0,
+              "fingerprint": 0.246,
+              "distance": 0.246,
+              "weight": 0.2,
+              "weighted": 0.0492,
+              "material": false
+            },
+            "error_handling_rate": {
+              "code": 0.0,
+              "fingerprint": 0.131,
+              "distance": 0.131,
+              "weight": 0.2,
+              "weighted": 0.0262,
+              "material": false
+            },
+            "comprehension_ratio": {
+              "code": 0.0,
+              "fingerprint": 0.016,
+              "distance": 0.016,
+              "weight": 0.2,
+              "weighted": 0.0032,
+              "material": false
+            },
+            "naming_convention": {
+              "code": "snake_case",
+              "fingerprint": "snake_case",
+              "distance": 0.0,
+              "weight": 0.2,
+              "weighted": 0.0,
+              "material": false
+            }
+          },
+          "feature_distance": 0.08,
+          "feature_match_score": 92.0,
+          "material_deviations": [],
+          "n_material": 0,
+          "weights": {
+            "type_hint_usage": 0.2,
+            "naming_convention": 0.2,
+            "docstring_coverage": 0.2,
+            "error_handling_rate": 0.2,
+            "comprehension_ratio": 0.2
+          },
+          "material_threshold": 0.35
+        },
+        "tracking_by_arm": {
+          "personalized": {
+            "material_deviations": [],
+            "mentioned": {
+              "docstring_coverage": true
+            },
+            "true_positives": [],
+            "false_negatives": [],
+            "false_positives": [
+              "docstring_coverage"
+            ],
+            "recall_material": null,
+            "n_material": 0,
+            "n_tp": 0,
+            "n_fp": 1,
+            "n_findings_ex_error": 1
+          },
+          "generic": {
+            "material_deviations": [],
+            "mentioned": {},
+            "true_positives": [],
+            "false_negatives": [],
+            "false_positives": [],
+            "recall_material": null,
+            "n_material": 0,
+            "n_tp": 0,
+            "n_fp": 0,
+            "n_findings_ex_error": 0
+          }
+        }
+      },
+      {
+        "pair_id": "pair_5_redact_auth",
+        "version": "off_style",
+        "violations_designed": [
+          "camelCase name and parameter names instead of snake_case",
+          "no type hints",
+          "wraps in broad try/except with generic fallback (not requests pattern)",
+          "adds lengthy docstring"
+        ],
+        "code_features_selected": {
+          "type_hint_usage": 0.0,
+          "naming_convention": "camelCase",
+          "docstring_coverage": 1.0,
+          "error_handling_rate": 1.0,
+          "comprehension_ratio": 0.0
+        },
+        "distance": {
+          "per_feature": {
+            "type_hint_usage": {
+              "code": 0.0,
+              "fingerprint": 0.993,
+              "distance": 0.993,
+              "weight": 0.2,
+              "weighted": 0.1986,
+              "material": true
+            },
+            "docstring_coverage": {
+              "code": 1.0,
+              "fingerprint": 0.246,
+              "distance": 0.754,
+              "weight": 0.2,
+              "weighted": 0.1508,
+              "material": true
+            },
+            "error_handling_rate": {
+              "code": 1.0,
+              "fingerprint": 0.131,
+              "distance": 0.869,
+              "weight": 0.2,
+              "weighted": 0.1738,
+              "material": true
+            },
+            "comprehension_ratio": {
+              "code": 0.0,
+              "fingerprint": 0.016,
+              "distance": 0.016,
+              "weight": 0.2,
+              "weighted": 0.0032,
+              "material": false
+            },
+            "naming_convention": {
+              "code": "camelCase",
+              "fingerprint": "snake_case",
+              "distance": 1.0,
+              "weight": 0.2,
+              "weighted": 0.2,
+              "material": true
+            }
+          },
+          "feature_distance": 0.7264,
+          "feature_match_score": 27.36,
+          "material_deviations": [
+            "type_hint_usage",
+            "docstring_coverage",
+            "error_handling_rate",
+            "naming_convention"
+          ],
+          "n_material": 4,
+          "weights": {
+            "type_hint_usage": 0.2,
+            "naming_convention": 0.2,
+            "docstring_coverage": 0.2,
+            "error_handling_rate": 0.2,
+            "comprehension_ratio": 0.2
+          },
+          "material_threshold": 0.35
+        },
+        "tracking_by_arm": {
+          "personalized": {
+            "material_deviations": [
+              "docstring_coverage",
+              "error_handling_rate",
+              "naming_convention",
+              "type_hint_usage"
+            ],
+            "mentioned": {
+              "naming_convention": true
+            },
+            "true_positives": [
+              "naming_convention"
+            ],
+            "false_negatives": [
+              "docstring_coverage",
+              "error_handling_rate",
+              "type_hint_usage"
+            ],
+            "false_positives": [],
+            "recall_material": 0.25,
+            "n_material": 4,
+            "n_tp": 1,
+            "n_fp": 0,
+            "n_findings_ex_error": 1
+          },
+          "generic": {
+            "material_deviations": [
+              "docstring_coverage",
+              "error_handling_rate",
+              "naming_convention",
+              "type_hint_usage"
+            ],
+            "mentioned": {},
+            "true_positives": [],
+            "false_negatives": [
+              "docstring_coverage",
+              "error_handling_rate",
+              "naming_convention",
+              "type_hint_usage"
+            ],
+            "false_positives": [],
+            "recall_material": 0.0,
+            "n_material": 4,
+            "n_tp": 0,
+            "n_fp": 0,
+            "n_findings_ex_error": 0
+          }
+        }
+      },
+      {
+        "pair_id": "pair_6_join_query",
+        "version": "in_style",
+        "violations_designed": [],
+        "code_features_selected": {
+          "type_hint_usage": 1.0,
+          "naming_convention": "snake_case",
+          "docstring_coverage": 0.0,
+          "error_handling_rate": 0.0,
+          "comprehension_ratio": 0.0
+        },
+        "distance": {
+          "per_feature": {
+            "type_hint_usage": {
+              "code": 1.0,
+              "fingerprint": 0.993,
+              "distance": 0.007,
+              "weight": 0.2,
+              "weighted": 0.0014,
+              "material": false
+            },
+            "docstring_coverage": {
+              "code": 0.0,
+              "fingerprint": 0.246,
+              "distance": 0.246,
+              "weight": 0.2,
+              "weighted": 0.0492,
+              "material": false
+            },
+            "error_handling_rate": {
+              "code": 0.0,
+              "fingerprint": 0.131,
+              "distance": 0.131,
+              "weight": 0.2,
+              "weighted": 0.0262,
+              "material": false
+            },
+            "comprehension_ratio": {
+              "code": 0.0,
+              "fingerprint": 0.016,
+              "distance": 0.016,
+              "weight": 0.2,
+              "weighted": 0.0032,
+              "material": false
+            },
+            "naming_convention": {
+              "code": "snake_case",
+              "fingerprint": "snake_case",
+              "distance": 0.0,
+              "weight": 0.2,
+              "weighted": 0.0,
+              "material": false
+            }
+          },
+          "feature_distance": 0.08,
+          "feature_match_score": 92.0,
+          "material_deviations": [],
+          "n_material": 0,
+          "weights": {
+            "type_hint_usage": 0.2,
+            "naming_convention": 0.2,
+            "docstring_coverage": 0.2,
+            "error_handling_rate": 0.2,
+            "comprehension_ratio": 0.2
+          },
+          "material_threshold": 0.35
+        },
+        "tracking_by_arm": {
+          "personalized": {
+            "material_deviations": [],
+            "mentioned": {
+              "type_hint_usage": true,
+              "naming_convention": true
+            },
+            "true_positives": [],
+            "false_negatives": [],
+            "false_positives": [
+              "naming_convention",
+              "type_hint_usage"
+            ],
+            "recall_material": null,
+            "n_material": 0,
+            "n_tp": 0,
+            "n_fp": 2,
+            "n_findings_ex_error": 2
+          },
+          "generic": {
+            "error": "missing_evidence_findings"
+          }
+        }
+      },
+      {
+        "pair_id": "pair_6_join_query",
+        "version": "off_style",
+        "violations_designed": [
+          "camelCase function name instead of snake_case",
+          "missing type hints",
+          "verbose docstring (requests rarely has them)",
+          "list comprehension instead of explicit loop",
+          "broad try/except (requests rarely has error handling)"
+        ],
+        "code_features_selected": {
+          "type_hint_usage": 0.0,
+          "naming_convention": "camelCase",
+          "docstring_coverage": 1.0,
+          "error_handling_rate": 1.0,
+          "comprehension_ratio": 1.0
+        },
+        "distance": {
+          "per_feature": {
+            "type_hint_usage": {
+              "code": 0.0,
+              "fingerprint": 0.993,
+              "distance": 0.993,
+              "weight": 0.2,
+              "weighted": 0.1986,
+              "material": true
+            },
+            "docstring_coverage": {
+              "code": 1.0,
+              "fingerprint": 0.246,
+              "distance": 0.754,
+              "weight": 0.2,
+              "weighted": 0.1508,
+              "material": true
+            },
+            "error_handling_rate": {
+              "code": 1.0,
+              "fingerprint": 0.131,
+              "distance": 0.869,
+              "weight": 0.2,
+              "weighted": 0.1738,
+              "material": true
+            },
+            "comprehension_ratio": {
+              "code": 1.0,
+              "fingerprint": 0.016,
+              "distance": 0.984,
+              "weight": 0.2,
+              "weighted": 0.1968,
+              "material": true
+            },
+            "naming_convention": {
+              "code": "camelCase",
+              "fingerprint": "snake_case",
+              "distance": 1.0,
+              "weight": 0.2,
+              "weighted": 0.2,
+              "material": true
+            }
+          },
+          "feature_distance": 0.92,
+          "feature_match_score": 8.0,
+          "material_deviations": [
+            "type_hint_usage",
+            "docstring_coverage",
+            "error_handling_rate",
+            "comprehension_ratio",
+            "naming_convention"
+          ],
+          "n_material": 5,
+          "weights": {
+            "type_hint_usage": 0.2,
+            "naming_convention": 0.2,
+            "docstring_coverage": 0.2,
+            "error_handling_rate": 0.2,
+            "comprehension_ratio": 0.2
+          },
+          "material_threshold": 0.35
+        },
+        "tracking_by_arm": {
+          "personalized": {
+            "error": "missing_evidence_findings"
+          },
+          "generic": {
+            "error": "missing_evidence_findings"
+          }
+        }
+      },
+      {
+        "pair_id": "pair_7_ensure_scheme",
+        "version": "in_style",
+        "violations_designed": [],
+        "code_features_selected": {
+          "type_hint_usage": 1.0,
+          "naming_convention": "snake_case",
+          "docstring_coverage": 0.0,
+          "error_handling_rate": 0.0,
+          "comprehension_ratio": 0.0
+        },
+        "distance": {
+          "per_feature": {
+            "type_hint_usage": {
+              "code": 1.0,
+              "fingerprint": 0.993,
+              "distance": 0.007,
+              "weight": 0.2,
+              "weighted": 0.0014,
+              "material": false
+            },
+            "docstring_coverage": {
+              "code": 0.0,
+              "fingerprint": 0.246,
+              "distance": 0.246,
+              "weight": 0.2,
+              "weighted": 0.0492,
+              "material": false
+            },
+            "error_handling_rate": {
+              "code": 0.0,
+              "fingerprint": 0.131,
+              "distance": 0.131,
+              "weight": 0.2,
+              "weighted": 0.0262,
+              "material": false
+            },
+            "comprehension_ratio": {
+              "code": 0.0,
+              "fingerprint": 0.016,
+              "distance": 0.016,
+              "weight": 0.2,
+              "weighted": 0.0032,
+              "material": false
+            },
+            "naming_convention": {
+              "code": "snake_case",
+              "fingerprint": "snake_case",
+              "distance": 0.0,
+              "weight": 0.2,
+              "weighted": 0.0,
+              "material": false
+            }
+          },
+          "feature_distance": 0.08,
+          "feature_match_score": 92.0,
+          "material_deviations": [],
+          "n_material": 0,
+          "weights": {
+            "type_hint_usage": 0.2,
+            "naming_convention": 0.2,
+            "docstring_coverage": 0.2,
+            "error_handling_rate": 0.2,
+            "comprehension_ratio": 0.2
+          },
+          "material_threshold": 0.35
+        },
+        "tracking_by_arm": {
+          "personalized": {
+            "error": "missing_evidence_findings"
+          },
+          "generic": {
+            "error": "missing_evidence_findings"
+          }
+        }
+      },
+      {
+        "pair_id": "pair_7_ensure_scheme",
+        "version": "off_style",
+        "violations_designed": [
+          "PascalCase function name instead of snake_case",
+          "missing type hints",
+          "verbose docstring with examples",
+          "broad try/except where none is needed"
+        ],
+        "code_features_selected": {
+          "type_hint_usage": 0.0,
+          "naming_convention": "PascalCase",
+          "docstring_coverage": 1.0,
+          "error_handling_rate": 1.0,
+          "comprehension_ratio": 0.0
+        },
+        "distance": {
+          "per_feature": {
+            "type_hint_usage": {
+              "code": 0.0,
+              "fingerprint": 0.993,
+              "distance": 0.993,
+              "weight": 0.2,
+              "weighted": 0.1986,
+              "material": true
+            },
+            "docstring_coverage": {
+              "code": 1.0,
+              "fingerprint": 0.246,
+              "distance": 0.754,
+              "weight": 0.2,
+              "weighted": 0.1508,
+              "material": true
+            },
+            "error_handling_rate": {
+              "code": 1.0,
+              "fingerprint": 0.131,
+              "distance": 0.869,
+              "weight": 0.2,
+              "weighted": 0.1738,
+              "material": true
+            },
+            "comprehension_ratio": {
+              "code": 0.0,
+              "fingerprint": 0.016,
+              "distance": 0.016,
+              "weight": 0.2,
+              "weighted": 0.0032,
+              "material": false
+            },
+            "naming_convention": {
+              "code": "PascalCase",
+              "fingerprint": "snake_case",
+              "distance": 1.0,
+              "weight": 0.2,
+              "weighted": 0.2,
+              "material": true
+            }
+          },
+          "feature_distance": 0.7264,
+          "feature_match_score": 27.36,
+          "material_deviations": [
+            "type_hint_usage",
+            "docstring_coverage",
+            "error_handling_rate",
+            "naming_convention"
+          ],
+          "n_material": 4,
+          "weights": {
+            "type_hint_usage": 0.2,
+            "naming_convention": 0.2,
+            "docstring_coverage": 0.2,
+            "error_handling_rate": 0.2,
+            "comprehension_ratio": 0.2
+          },
+          "material_threshold": 0.35
+        },
+        "tracking_by_arm": {
+          "personalized": {
+            "error": "missing_evidence_findings"
+          },
+          "generic": {
+            "error": "missing_evidence_findings"
+          }
+        }
       }
     ],
     "per_pair": [
@@ -1039,7 +1854,24 @@
           }
         },
         "sep_off_minus_in": 0.6924,
-        "off_farther_than_in": true
+        "off_farther_than_in": true,
+        "per_case_arm_comparison": {
+          "personalized": {
+            "off_recall": 0.5,
+            "off_tp": 2,
+            "off_material": 4,
+            "in_fp": 0,
+            "in_n_material": 0
+          },
+          "generic": {
+            "off_recall": 0.5,
+            "off_tp": 2,
+            "off_material": 4,
+            "in_fp": 2,
+            "in_n_material": 0
+          },
+          "case_verdict": "mixed"
+        }
       },
       {
         "pair_id": "pair_2_build_url",
@@ -1138,7 +1970,24 @@
           }
         },
         "sep_off_minus_in": 0.6464,
-        "off_farther_than_in": true
+        "off_farther_than_in": true,
+        "per_case_arm_comparison": {
+          "personalized": {
+            "off_recall": 0.75,
+            "off_tp": 3,
+            "off_material": 4,
+            "in_fp": 0,
+            "in_n_material": 0
+          },
+          "generic": {
+            "off_recall": 0.0,
+            "off_tp": 0,
+            "off_material": 4,
+            "in_fp": 0,
+            "in_n_material": 0
+          },
+          "case_verdict": "personalized_better"
+        }
       },
       {
         "pair_id": "pair_3_parse_status",
@@ -1237,38 +2086,406 @@
           }
         },
         "sep_off_minus_in": 0.6464,
-        "off_farther_than_in": true
+        "off_farther_than_in": true,
+        "per_case_arm_comparison": {
+          "personalized": {
+            "off_recall": 0.75,
+            "off_tp": 3,
+            "off_material": 4,
+            "in_fp": 0,
+            "in_n_material": 0
+          },
+          "generic": {
+            "off_recall": 0.0,
+            "off_tp": 0,
+            "off_material": 4,
+            "in_fp": 0,
+            "in_n_material": 0
+          },
+          "case_verdict": "personalized_better"
+        }
+      },
+      {
+        "pair_id": "pair_4_extract_cookies",
+        "versions": {
+          "in_style": {
+            "feature_distance": 0.08,
+            "feature_match_score": 92.0,
+            "material_deviations": [],
+            "tracking_by_arm": {
+              "personalized": {
+                "material_deviations": [],
+                "mentioned": {
+                  "naming_convention": true,
+                  "docstring_coverage": true,
+                  "error_handling_rate": true
+                },
+                "true_positives": [],
+                "false_negatives": [],
+                "false_positives": [
+                  "docstring_coverage",
+                  "error_handling_rate",
+                  "naming_convention"
+                ],
+                "recall_material": null,
+                "n_material": 0,
+                "n_tp": 0,
+                "n_fp": 3,
+                "n_findings_ex_error": 3
+              },
+              "generic": {
+                "material_deviations": [],
+                "mentioned": {},
+                "true_positives": [],
+                "false_negatives": [],
+                "false_positives": [],
+                "recall_material": null,
+                "n_material": 0,
+                "n_tp": 0,
+                "n_fp": 0,
+                "n_findings_ex_error": 0
+              }
+            }
+          },
+          "off_style": {
+            "feature_distance": 0.7724,
+            "feature_match_score": 22.76,
+            "material_deviations": [
+              "type_hint_usage",
+              "docstring_coverage",
+              "comprehension_ratio",
+              "naming_convention"
+            ],
+            "tracking_by_arm": {
+              "personalized": {
+                "material_deviations": [
+                  "comprehension_ratio",
+                  "docstring_coverage",
+                  "naming_convention",
+                  "type_hint_usage"
+                ],
+                "mentioned": {
+                  "type_hint_usage": true,
+                  "naming_convention": true
+                },
+                "true_positives": [
+                  "naming_convention",
+                  "type_hint_usage"
+                ],
+                "false_negatives": [
+                  "comprehension_ratio",
+                  "docstring_coverage"
+                ],
+                "false_positives": [],
+                "recall_material": 0.5,
+                "n_material": 4,
+                "n_tp": 2,
+                "n_fp": 0,
+                "n_findings_ex_error": 2
+              },
+              "generic": {
+                "material_deviations": [
+                  "comprehension_ratio",
+                  "docstring_coverage",
+                  "naming_convention",
+                  "type_hint_usage"
+                ],
+                "mentioned": {},
+                "true_positives": [],
+                "false_negatives": [
+                  "comprehension_ratio",
+                  "docstring_coverage",
+                  "naming_convention",
+                  "type_hint_usage"
+                ],
+                "false_positives": [],
+                "recall_material": 0.0,
+                "n_material": 4,
+                "n_tp": 0,
+                "n_fp": 0,
+                "n_findings_ex_error": 0
+              }
+            }
+          }
+        },
+        "sep_off_minus_in": 0.6924,
+        "off_farther_than_in": true,
+        "per_case_arm_comparison": {
+          "personalized": {
+            "off_recall": 0.5,
+            "off_tp": 2,
+            "off_material": 4,
+            "in_fp": 3,
+            "in_n_material": 0
+          },
+          "generic": {
+            "off_recall": 0.0,
+            "off_tp": 0,
+            "off_material": 4,
+            "in_fp": 0,
+            "in_n_material": 0
+          },
+          "case_verdict": "mixed"
+        }
+      },
+      {
+        "pair_id": "pair_5_redact_auth",
+        "versions": {
+          "in_style": {
+            "feature_distance": 0.08,
+            "feature_match_score": 92.0,
+            "material_deviations": [],
+            "tracking_by_arm": {
+              "personalized": {
+                "material_deviations": [],
+                "mentioned": {
+                  "docstring_coverage": true
+                },
+                "true_positives": [],
+                "false_negatives": [],
+                "false_positives": [
+                  "docstring_coverage"
+                ],
+                "recall_material": null,
+                "n_material": 0,
+                "n_tp": 0,
+                "n_fp": 1,
+                "n_findings_ex_error": 1
+              },
+              "generic": {
+                "material_deviations": [],
+                "mentioned": {},
+                "true_positives": [],
+                "false_negatives": [],
+                "false_positives": [],
+                "recall_material": null,
+                "n_material": 0,
+                "n_tp": 0,
+                "n_fp": 0,
+                "n_findings_ex_error": 0
+              }
+            }
+          },
+          "off_style": {
+            "feature_distance": 0.7264,
+            "feature_match_score": 27.36,
+            "material_deviations": [
+              "type_hint_usage",
+              "docstring_coverage",
+              "error_handling_rate",
+              "naming_convention"
+            ],
+            "tracking_by_arm": {
+              "personalized": {
+                "material_deviations": [
+                  "docstring_coverage",
+                  "error_handling_rate",
+                  "naming_convention",
+                  "type_hint_usage"
+                ],
+                "mentioned": {
+                  "naming_convention": true
+                },
+                "true_positives": [
+                  "naming_convention"
+                ],
+                "false_negatives": [
+                  "docstring_coverage",
+                  "error_handling_rate",
+                  "type_hint_usage"
+                ],
+                "false_positives": [],
+                "recall_material": 0.25,
+                "n_material": 4,
+                "n_tp": 1,
+                "n_fp": 0,
+                "n_findings_ex_error": 1
+              },
+              "generic": {
+                "material_deviations": [
+                  "docstring_coverage",
+                  "error_handling_rate",
+                  "naming_convention",
+                  "type_hint_usage"
+                ],
+                "mentioned": {},
+                "true_positives": [],
+                "false_negatives": [
+                  "docstring_coverage",
+                  "error_handling_rate",
+                  "naming_convention",
+                  "type_hint_usage"
+                ],
+                "false_positives": [],
+                "recall_material": 0.0,
+                "n_material": 4,
+                "n_tp": 0,
+                "n_fp": 0,
+                "n_findings_ex_error": 0
+              }
+            }
+          }
+        },
+        "sep_off_minus_in": 0.6464,
+        "off_farther_than_in": true,
+        "per_case_arm_comparison": {
+          "personalized": {
+            "off_recall": 0.25,
+            "off_tp": 1,
+            "off_material": 4,
+            "in_fp": 1,
+            "in_n_material": 0
+          },
+          "generic": {
+            "off_recall": 0.0,
+            "off_tp": 0,
+            "off_material": 4,
+            "in_fp": 0,
+            "in_n_material": 0
+          },
+          "case_verdict": "mixed"
+        }
+      },
+      {
+        "pair_id": "pair_6_join_query",
+        "versions": {
+          "in_style": {
+            "feature_distance": 0.08,
+            "feature_match_score": 92.0,
+            "material_deviations": [],
+            "tracking_by_arm": {
+              "personalized": {
+                "material_deviations": [],
+                "mentioned": {
+                  "type_hint_usage": true,
+                  "naming_convention": true
+                },
+                "true_positives": [],
+                "false_negatives": [],
+                "false_positives": [
+                  "naming_convention",
+                  "type_hint_usage"
+                ],
+                "recall_material": null,
+                "n_material": 0,
+                "n_tp": 0,
+                "n_fp": 2,
+                "n_findings_ex_error": 2
+              },
+              "generic": {
+                "error": "missing_evidence_findings"
+              }
+            }
+          },
+          "off_style": {
+            "feature_distance": 0.92,
+            "feature_match_score": 8.0,
+            "material_deviations": [
+              "type_hint_usage",
+              "docstring_coverage",
+              "error_handling_rate",
+              "comprehension_ratio",
+              "naming_convention"
+            ],
+            "tracking_by_arm": {
+              "personalized": {
+                "error": "missing_evidence_findings"
+              },
+              "generic": {
+                "error": "missing_evidence_findings"
+              }
+            }
+          }
+        },
+        "sep_off_minus_in": 0.84,
+        "off_farther_than_in": true,
+        "per_case_arm_comparison": {
+          "personalized": {
+            "error": "missing_evidence"
+          },
+          "generic": {
+            "error": "missing_evidence"
+          },
+          "case_verdict": "missing_evidence"
+        }
+      },
+      {
+        "pair_id": "pair_7_ensure_scheme",
+        "versions": {
+          "in_style": {
+            "feature_distance": 0.08,
+            "feature_match_score": 92.0,
+            "material_deviations": [],
+            "tracking_by_arm": {
+              "personalized": {
+                "error": "missing_evidence_findings"
+              },
+              "generic": {
+                "error": "missing_evidence_findings"
+              }
+            }
+          },
+          "off_style": {
+            "feature_distance": 0.7264,
+            "feature_match_score": 27.36,
+            "material_deviations": [
+              "type_hint_usage",
+              "docstring_coverage",
+              "error_handling_rate",
+              "naming_convention"
+            ],
+            "tracking_by_arm": {
+              "personalized": {
+                "error": "missing_evidence_findings"
+              },
+              "generic": {
+                "error": "missing_evidence_findings"
+              }
+            }
+          }
+        },
+        "sep_off_minus_in": 0.6464,
+        "off_farther_than_in": true,
+        "per_case_arm_comparison": {
+          "personalized": {
+            "error": "missing_evidence"
+          },
+          "generic": {
+            "error": "missing_evidence"
+          },
+          "case_verdict": "missing_evidence"
+        }
       }
     ],
     "distance_summary": {
       "avg_in_distance": 0.08,
-      "avg_off_distance": 0.7417,
-      "sep_off_minus_in": 0.6617,
-      "pairs_off_farther_than_in": 3,
-      "n_pairs": 3
+      "avg_off_distance": 0.7672,
+      "sep_off_minus_in": 0.6872,
+      "pairs_off_farther_than_in": 7,
+      "n_pairs": 7
     },
     "tracking_summary": {
       "personalized": {
         "in_style": {
-          "n_cases": 3,
+          "n_cases": 6,
           "mean_recall_material": null,
           "total_material": 0,
           "total_tp": 0,
-          "total_fp": 0,
+          "total_fp": 6,
           "pooled_recall": null
         },
         "off_style": {
-          "n_cases": 3,
-          "mean_recall_material": 0.6667,
-          "total_material": 12,
-          "total_tp": 8,
+          "n_cases": 5,
+          "mean_recall_material": 0.55,
+          "total_material": 20,
+          "total_tp": 11,
           "total_fp": 0,
-          "pooled_recall": 0.6667
+          "pooled_recall": 0.55
         }
       },
       "generic": {
         "in_style": {
-          "n_cases": 3,
+          "n_cases": 5,
           "mean_recall_material": null,
           "total_material": 0,
           "total_tp": 0,
@@ -1276,22 +2493,32 @@
           "pooled_recall": null
         },
         "off_style": {
-          "n_cases": 3,
-          "mean_recall_material": 0.1667,
-          "total_material": 12,
+          "n_cases": 5,
+          "mean_recall_material": 0.1,
+          "total_material": 20,
           "total_tp": 2,
           "total_fp": 0,
-          "pooled_recall": 0.1667
+          "pooled_recall": 0.1
         }
       }
     },
+    "robustness": {
+      "personalized_better_pairs": [
+        "pair_2_build_url",
+        "pair_3_parse_status"
+      ],
+      "generic_better_wrong_way_pairs": [],
+      "n_personalized_better": 2,
+      "n_generic_better": 0,
+      "n_pairs_scored": 5
+    },
     "framing_a_verdict": {
-      "verdict": "yes",
-      "reason": "personalized OFF material-recall 0.6667 > generic 0.1667; IN false-alarm rate 0.00 <= generic 0.67",
-      "personalized_off_pooled_recall": 0.6667,
-      "generic_off_pooled_recall": 0.1667,
-      "personalized_in_fp_rate": 0.0,
-      "generic_in_fp_rate": 0.6667
+      "verdict": "inconclusive",
+      "reason": "mixed: OFF recall p=0.55 g=0.1; IN FP-rate p=1.00 g=0.40",
+      "personalized_off_pooled_recall": 0.55,
+      "generic_off_pooled_recall": 0.1,
+      "personalized_in_fp_rate": 1.0,
+      "generic_in_fp_rate": 0.4
     }
   }
 }

@@ -1,6 +1,6 @@
 {
   "pair_id": "pair_2_build_url",
-  "written_at": "2026-07-27T22:21:28.864489+00:00",
+  "written_at": "2026-07-28T00:41:40.258394+00:00",
   "note": "Additive instrumentation from live run_review wrappers. Style Analyst JSON schema only emits findings + overall_style_score; finding descriptions are the reasoning.",
   "arms": {
     "in_style/personalized": {

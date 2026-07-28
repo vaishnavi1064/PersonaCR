@@ -118,7 +118,7 @@ MENTION_CUES: dict[str, dict[str, Any]] = {
     },
 }
 
-# Pairs used in the reportable N=6 set (3 pairs × in/off).
+# Historical N=6 pair ids (reportable set before expand). Metric weights unchanged.
 N6_PAIR_IDS = (
     "pair_1_merge_headers",
     "pair_2_build_url",
@@ -329,23 +329,33 @@ def _load_evidence_findings(
     Load stored Style Analyst findings. Personalized arm applies Defect B
     direction filter against the requests fingerprint (same as production
     post-fix) so tracking reflects the fixed system without new Groq calls.
+
+    Prefer pair sidecar JSON; fall back to minimal_a_checkpoint.jsonl evidence.
     """
+    raw = None
     path = RESULTS_DIR / f"minimal_a_{pair_id}_evidence.json"
-    if not path.exists():
-        return None
-    data = json.loads(path.read_text(encoding="utf-8"))
-    key = f"{version}/{arm}"
-    arm_block = (data.get("arms") or {}).get(key)
-    if not arm_block:
-        return None
-    sa = (arm_block.get("evidence") or {}).get("style_analyst") or {}
-    raw = sa.get("raw_findings")
+    if path.exists():
+        data = json.loads(path.read_text(encoding="utf-8"))
+        key = f"{version}/{arm}"
+        arm_block = (data.get("arms") or {}).get(key)
+        if arm_block:
+            sa = (arm_block.get("evidence") or {}).get("style_analyst") or {}
+            raw = sa.get("raw_findings")
+
+    if raw is None:
+        from evals.minimal_a import load_checkpoint, _ckpt_key
+
+        ckpt = load_checkpoint()
+        rec = ckpt.get(_ckpt_key(pair_id, version, arm))
+        if rec:
+            sa = (rec.get("evidence") or {}).get("style_analyst") or {}
+            raw = sa.get("raw_findings")
+
     if raw is None:
         return None
     findings = _to_style_findings(list(raw))
     if arm == "personalized" and fingerprint is not None:
         findings = filter_findings_by_fingerprint_direction(findings, fingerprint)
-    # generic: empty FP → filter is a no-op; leave raw as stored
     return _findings_as_dicts(findings)
 
 
@@ -439,13 +449,29 @@ def run_control(fingerprint: dict) -> dict[str, Any]:
     }
 
 
-def run_n6(fingerprint: dict) -> dict[str, Any]:
+def run_pairs(
+    fingerprint: dict,
+    pair_ids: tuple[str, ...] | list[str] | None = None,
+) -> dict[str, Any]:
+    """
+    Feature-distance + framing-(a) tracking for the given pair ids.
+    Weights / mention rules / verdict rule unchanged from N=6 freeze.
+    Default: every pair listed in minimal_a_pairs.json.
+    """
     pairs = json.loads(PAIRS_PATH.read_text(encoding="utf-8"))["pairs"]
     by_id = {p["id"]: p for p in pairs}
+    if pair_ids is None:
+        pair_ids = tuple(p["id"] for p in pairs)
+    else:
+        pair_ids = tuple(pair_ids)
+
     per_case: list[dict] = []
     per_pair_sep: list[dict] = []
+    missing_evidence: list[str] = []
 
-    for pid in N6_PAIR_IDS:
+    for pid in pair_ids:
+        if pid not in by_id:
+            raise SystemExit(f"Unknown pair id: {pid}")
         pair = by_id[pid]
         pair_row: dict[str, Any] = {"pair_id": pid, "versions": {}}
         for version, code_key in (("in_style", "in_style"), ("off_style", "off_style")):
@@ -456,6 +482,7 @@ def run_n6(fingerprint: dict) -> dict[str, Any]:
                 findings = _load_evidence_findings(pid, version, arm, fingerprint)
                 if findings is None:
                     arms_track[arm] = {"error": "missing_evidence_findings"}
+                    missing_evidence.append(f"{pid}/{version}/{arm}")
                 else:
                     arms_track[arm] = tracking_for_arm(findings, base["distance"])
             row = {
@@ -478,6 +505,50 @@ def run_n6(fingerprint: dict) -> dict[str, Any]:
         off_d = pair_row["versions"]["off_style"]["feature_distance"]
         pair_row["sep_off_minus_in"] = round(off_d - in_d, 4)
         pair_row["off_farther_than_in"] = off_d > in_d
+
+        # Per-case arm comparison under framing (a): OFF recall + IN FP restraint
+        def _case_arm_stats(arm: str) -> dict[str, Any]:
+            tin = pair_row["versions"]["in_style"]["tracking_by_arm"].get(arm) or {}
+            toff = pair_row["versions"]["off_style"]["tracking_by_arm"].get(arm) or {}
+            if "error" in tin or "error" in toff:
+                return {"error": "missing_evidence"}
+            return {
+                "off_recall": toff.get("recall_material"),
+                "off_tp": toff.get("n_tp"),
+                "off_material": toff.get("n_material"),
+                "in_fp": tin.get("n_fp"),
+                "in_n_material": tin.get("n_material"),
+            }
+
+        p_stats = _case_arm_stats("personalized")
+        g_stats = _case_arm_stats("generic")
+        case_verdict = "missing_evidence"
+        if "error" not in p_stats and "error" not in g_stats:
+            p_off_r = p_stats["off_recall"]
+            g_off_r = g_stats["off_recall"]
+            # Treat None recall (0 material) as 1.0 for OFF? Prefer None → skip
+            if p_off_r is None and g_off_r is None:
+                case_verdict = "no_material_off"
+            elif p_off_r is None or g_off_r is None:
+                case_verdict = "inconclusive"
+            else:
+                better_off = p_off_r > g_off_r
+                equal_off = p_off_r == g_off_r
+                better_in_fp = p_stats["in_fp"] <= g_stats["in_fp"]
+                worse_off = p_off_r < g_off_r
+                if better_off and better_in_fp:
+                    case_verdict = "personalized_better"
+                elif worse_off and p_stats["in_fp"] >= g_stats["in_fp"]:
+                    case_verdict = "generic_better"  # wrong-way for thesis
+                elif equal_off and p_stats["in_fp"] == g_stats["in_fp"]:
+                    case_verdict = "tie"
+                else:
+                    case_verdict = "mixed"
+        pair_row["per_case_arm_comparison"] = {
+            "personalized": p_stats,
+            "generic": g_stats,
+            "case_verdict": case_verdict,
+        }
         per_pair_sep.append(pair_row)
 
     in_dists = [
@@ -492,7 +563,6 @@ def run_n6(fingerprint: dict) -> dict[str, Any]:
     def _avg(xs: list[float]) -> float:
         return round(sum(xs) / len(xs), 4) if xs else float("nan")
 
-    # Arm tracking aggregates
     def _agg_tracking(arm: str, version: str) -> dict[str, Any]:
         recalls = []
         tp = fp = mat = 0
@@ -528,14 +598,12 @@ def run_n6(fingerprint: dict) -> dict[str, Any]:
         for arm in ("personalized", "generic")
     }
 
-    # Framing (a): net tracking advantage on OFF recall + IN false-positive restraint
     p_off = tracking_summary["personalized"]["off_style"]["pooled_recall"]
     g_off = tracking_summary["generic"]["off_style"]["pooled_recall"]
     p_in_fp = tracking_summary["personalized"]["in_style"]["total_fp"]
     g_in_fp = tracking_summary["generic"]["in_style"]["total_fp"]
     p_in_n = tracking_summary["personalized"]["in_style"]["n_cases"] or 1
     g_in_n = tracking_summary["generic"]["in_style"]["n_cases"] or 1
-    # Lower false-positive rate on IN is better
     p_in_fp_rate = p_in_fp / p_in_n
     g_in_fp_rate = g_in_fp / g_in_n
 
@@ -562,16 +630,28 @@ def run_n6(fingerprint: dict) -> dict[str, Any]:
             verdict = "inconclusive"
             verdict_reason = "identical OFF recall and IN false-alarm rates"
         else:
-            # Mixed signals
             verdict = "inconclusive"
             verdict_reason = (
                 f"mixed: OFF recall p={p_off} g={g_off}; "
                 f"IN FP-rate p={p_in_fp_rate:.2f} g={g_in_fp_rate:.2f}"
             )
 
+    wrong_way = [
+        p["pair_id"]
+        for p in per_pair_sep
+        if p["per_case_arm_comparison"]["case_verdict"] == "generic_better"
+    ]
+    personalized_better = [
+        p["pair_id"]
+        for p in per_pair_sep
+        if p["per_case_arm_comparison"]["case_verdict"] == "personalized_better"
+    ]
+
     return {
-        "n_pairs": len(N6_PAIR_IDS),
+        "n_pairs": len(pair_ids),
         "n_cases": len(per_case),
+        "pair_ids": list(pair_ids),
+        "missing_evidence": missing_evidence,
         "per_case": per_case,
         "per_pair": per_pair_sep,
         "distance_summary": {
@@ -584,6 +664,18 @@ def run_n6(fingerprint: dict) -> dict[str, Any]:
             "n_pairs": len(per_pair_sep),
         },
         "tracking_summary": tracking_summary,
+        "robustness": {
+            "personalized_better_pairs": personalized_better,
+            "generic_better_wrong_way_pairs": wrong_way,
+            "n_personalized_better": len(personalized_better),
+            "n_generic_better": len(wrong_way),
+            "n_pairs_scored": sum(
+                1
+                for p in per_pair_sep
+                if p["per_case_arm_comparison"]["case_verdict"]
+                not in ("missing_evidence",)
+            ),
+        },
         "framing_a_verdict": {
             "verdict": verdict,
             "reason": verdict_reason,
@@ -595,96 +687,109 @@ def run_n6(fingerprint: dict) -> dict[str, Any]:
     }
 
 
-def append_result_md(payload: dict[str, Any]) -> None:
-    """Append shared-scale section; do not overwrite prior diagnoses."""
-    control = payload["control"]["summary"]
-    n6 = payload["n6"]
+def run_n6(fingerprint: dict) -> dict[str, Any]:
+    """Backward-compatible alias for the original N=6 pair set. """
+    return run_pairs(fingerprint, N6_PAIR_IDS)
+
+
+def append_expand_result_md(
+    payload: dict[str, Any],
+    *,
+    n_paired_clean: int,
+    n_throttled_excluded: int,
+    groq_cost_note: str,
+    n_runs: int,
+) -> None:
+    """Append expand-N section; never overwrite prior diagnoses or N=6 section."""
+    n_block = payload.get("n_full") or payload.get("n6")
+    if not n_block:
+        return
     ts = payload["generated_at"]
-    v = n6["framing_a_verdict"]
+    v = n_block["framing_a_verdict"]
+    ds = n_block["distance_summary"]
+    rob = n_block.get("robustness") or {}
 
     lines = [
         "",
         "---",
         "",
-        "## Shared-scale metric (feature-distance) — APPEND",
+        f"## Shared-scale expand — N={n_paired_clean} paired-clean (APPEND)",
         "",
         f"**Generated:** {ts}  ",
-        f"**Framing:** (a) — personalized review track of objective feature-distance "
-        f"(see `{FRAMING_MD.name}`).  ",
-        "**Primary shared metric:** `feature_distance(code, fingerprint)` via "
-        "`pattern_extractor.extract_fingerprint` on one CodeChunk.  ",
-        "**Findings-based style_score:** diagnostic only (not used for this verdict).  ",
-        f"**Groq cost this pass:** **{payload['groq_cost']}** "
-        "(re-scored from stored fixtures + evidence).",
+        "**Metric:** frozen fair shared-scale (framing a) — weights/thresholds unchanged.  ",
+        f"**Paired-clean N:** {n_paired_clean} "
+        f"({n_block['n_pairs']} pairs × in/off).  ",
+        f"**Throttled/errored arms excluded from averages:** {n_throttled_excluded} "
+        "(honesty: never checkpointed).  ",
+        f"**Groq / runs:** {groq_cost_note}  ",
+        f"**Harness runs this expand:** {n_runs}.  ",
+        "New-case construction: `evals/minimal_a_pairs_construction.md`.",
         "",
-        "### Frozen weights (locked before re-measure)",
-        "",
-        "| Feature | Weight |",
-        "|---------|-------:|",
-    ]
-    for k, w in WEIGHTS.items():
-        lines.append(f"| `{k}` | {w:.2f} |")
-    lines += [
-        "",
-        f"Material deviation threshold: **{MATERIAL_DEVIATION_THRESHOLD}**. "
-        "Weights were **not** adjusted after seeing results.",
-        "",
-        "### Control FIRST (arm-independent distance gate)",
-        "",
-        "| Fixture | feature_distance | feature_match_score |",
-        "|---------|-----------------:|--------------------:|",
-        f"| MAX-IN | {control['max_in_distance']} | {control['max_in_match_score']} |",
-        f"| MAX-OFF | {control['max_off_distance']} | {control['max_off_match_score']} |",
-        "",
-        f"sep (off − in distance) = **{control['sep_off_minus_in']}**  ",
-        f"Gate MAX-IN < MAX-OFF: **{control['gate_max_in_lt_max_off']}**",
-        "",
-        "### N=6 — per-pair feature-distance",
+        "### Per-pair feature-distance (arm-identical)",
         "",
         "| Pair | IN dist | OFF dist | sep (off−in) | OFF farther? |",
         "|------|--------:|---------:|-------------:|:------------:|",
     ]
-    for p in n6["per_pair"]:
+    for p in n_block["per_pair"]:
         vin = p["versions"]["in_style"]["feature_distance"]
         voff = p["versions"]["off_style"]["feature_distance"]
         lines.append(
             f"| {p['pair_id']} | {vin} | {voff} | {p['sep_off_minus_in']} | "
             f"{'yes' if p['off_farther_than_in'] else 'no'} |"
         )
-    ds = n6["distance_summary"]
     lines += [
         "",
-        f"Avg IN dist **{ds['avg_in_distance']}**, avg OFF dist **{ds['avg_off_distance']}**, "
-        f"sep **{ds['sep_off_minus_in']}** "
+        f"Mean IN dist **{ds['avg_in_distance']}**, mean OFF dist "
+        f"**{ds['avg_off_distance']}**, mean sep **{ds['sep_off_minus_in']}** "
         f"({ds['pairs_off_farther_than_in']}/{ds['n_pairs']} pairs OFF farther).",
         "",
-        "### Framing (a) — review tracking of material deviations",
+        "### Per-pair framing-(a) arm tracking",
         "",
-        "Pooled recall of material feature deviations in Style Analyst findings "
-        "(stored evidence; same mention rules both arms):",
-        "",
-        "| Arm | OFF pooled recall | IN false-alarm rate (dims/case) |",
-        "|-----|------------------:|--------------------------------:|",
+        "| Pair | p OFF recall | g OFF recall | p IN FP | g IN FP | case verdict |",
+        "|------|-------------:|-------------:|--------:|--------:|--------------|",
     ]
-    for arm in ("personalized", "generic"):
-        off_r = n6["tracking_summary"][arm]["off_style"]["pooled_recall"]
-        in_fp = n6["framing_a_verdict"][
-            "personalized_in_fp_rate"
-            if arm == "personalized"
-            else "generic_in_fp_rate"
-        ]
-        lines.append(f"| {arm} | {off_r} | {in_fp} |")
+    for p in n_block["per_pair"]:
+        cmp_ = p["per_case_arm_comparison"]
+        ps, gs = cmp_["personalized"], cmp_["generic"]
+        if "error" in ps or "error" in gs:
+            lines.append(
+                f"| {p['pair_id']} | — | — | — | — | {cmp_['case_verdict']} |"
+            )
+            continue
+        lines.append(
+            f"| {p['pair_id']} | {ps.get('off_recall')} | {gs.get('off_recall')} | "
+            f"{ps.get('in_fp')} | {gs.get('in_fp')} | {cmp_['case_verdict']} |"
+        )
     lines += [
+        "",
+        "### Pooled means (framing a)",
+        "",
+        "| Arm | OFF pooled recall | IN FP-rate (dims/case) |",
+        "|-----|------------------:|-----------------------:|",
+        f"| personalized | {v['personalized_off_pooled_recall']} | "
+        f"{v['personalized_in_fp_rate']} |",
+        f"| generic | {v['generic_off_pooled_recall']} | {v['generic_in_fp_rate']} |",
         "",
         f"**Reason:** {v['reason']}",
         "",
-        "### One-line verdict",
+        "### Robustness / consistency",
         "",
-        f"**On a fair scale, does personalization separate in/off better than generic: "
-        f"{v['verdict']}.**",
+        f"- Personalized-better pairs: **{rob.get('n_personalized_better')}** "
+        f"`{rob.get('personalized_better_pairs')}`",
+        f"- Wrong-way (generic better): **{rob.get('n_generic_better')}** "
+        f"`{rob.get('generic_better_wrong_way_pairs')}`",
+        "",
+        "### Honest verdict (expand-N)",
+        "",
+        f"**Framing-(a) one-line:** personalization separates/tracks better than "
+        f"generic on this fair scale: **{v['verdict']}**.",
+        "",
+        "N≈12–15 remains modest — directional + consistency only; "
+        "**not** strong statistical significance. "
+        "Compare to the prior N=6 append above for held / strengthened / weakened.",
         "",
         "Artifacts: `evals/results/shared_scale_metric.json`, "
-        "`evals/shared_scale_framing.md`, `evals/shared_scale_metric.py`.",
+        "`evals/minimal_a_pairs_construction.md`.",
         "",
     ]
     with RESULT_MD.open("a", encoding="utf-8") as f:
@@ -694,12 +799,25 @@ def append_result_md(payload: dict[str, Any]) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Shared-scale feature-distance metric")
     parser.add_argument("--control-only", action="store_true")
-    parser.add_argument("--n6-only", action="store_true")
+    parser.add_argument("--n6-only", action="store_true", help="Only original 3 pairs")
+    parser.add_argument(
+        "--full-n",
+        action="store_true",
+        help="Measure all pairs in minimal_a_pairs.json (expand-N)",
+    )
     parser.add_argument(
         "--no-append-md",
         action="store_true",
         help="Skip appending to minimal_a_result.md",
     )
+    parser.add_argument(
+        "--append-expand",
+        action="store_true",
+        help="Append expand-N section (does not overwrite N=6 append)",
+    )
+    parser.add_argument("--groq-cost-note", type=str, default="0 (measurement only)")
+    parser.add_argument("--n-runs", type=int, default=0)
+    parser.add_argument("--n-throttled-excluded", type=int, default=0)
     args = parser.parse_args()
 
     if not FP_PATH.exists():
@@ -713,8 +831,12 @@ def main() -> None:
     generated_at = datetime.now(timezone.utc).isoformat()
 
     control = None
-    n6 = None
-    if not args.n6_only:
+    n_block = None
+    if not args.n6_only and not args.full_n:
+        # default historical behavior: control + n6
+        pass
+
+    if not args.n6_only and not args.full_n:
         print("=== CONTROL FIRST (feature-distance, arm-independent) ===")
         control = run_control(fingerprint)
         s = control["summary"]
@@ -723,26 +845,44 @@ def main() -> None:
             f"MAX-OFF dist={s['max_off_distance']} match={s['max_off_match_score']} | "
             f"sep={s['sep_off_minus_in']} gate_ok={s['gate_max_in_lt_max_off']}"
         )
-        for cid, case in control["cases"].items():
-            mats = case["distance"]["material_deviations"]
-            print(f"  {cid}: material={mats}")
         if not s["gate_max_in_lt_max_off"]:
             print("CONTROL GATE FAILED — feature-distance does not separate extremes.")
-
-    if not args.control_only:
-        if control is None:
-            # still need control in full payload if only n6 requested? allow partial
-            pass
         print("\n=== N=6 feature-distance + framing-(a) tracking ===")
-        n6 = run_n6(fingerprint)
-        ds = n6["distance_summary"]
+        n_block = run_n6(fingerprint)
+        key = "n6"
+    elif args.n6_only:
+        print("\n=== N=6 feature-distance + framing-(a) tracking ===")
+        n_block = run_n6(fingerprint)
+        key = "n6"
+    else:
+        # --full-n
+        print("=== CONTROL FIRST (feature-distance, arm-independent) ===")
+        control = run_control(fingerprint)
+        s = control["summary"]
         print(
-            f"  avg IN={ds['avg_in_distance']} OFF={ds['avg_off_distance']} "
-            f"sep={ds['sep_off_minus_in']} "
-            f"({ds['pairs_off_farther_than_in']}/{ds['n_pairs']} OFF farther)"
+            f"  MAX-IN dist={s['max_in_distance']} | MAX-OFF dist={s['max_off_distance']} | "
+            f"sep={s['sep_off_minus_in']} gate_ok={s['gate_max_in_lt_max_off']}"
         )
-        v = n6["framing_a_verdict"]
-        print(f"  framing-(a) verdict: {v['verdict']} — {v['reason']}")
+        print("\n=== FULL-N feature-distance + framing-(a) tracking ===")
+        n_block = run_pairs(fingerprint, pair_ids=None)
+        key = "n_full"
+
+    ds = n_block["distance_summary"]
+    print(
+        f"  avg IN={ds['avg_in_distance']} OFF={ds['avg_off_distance']} "
+        f"sep={ds['sep_off_minus_in']} "
+        f"({ds['pairs_off_farther_than_in']}/{ds['n_pairs']} OFF farther)"
+    )
+    v = n_block["framing_a_verdict"]
+    print(f"  framing-(a) verdict: {v['verdict']} — {v['reason']}")
+    if n_block.get("missing_evidence"):
+        print(f"  missing evidence: {n_block['missing_evidence']}")
+    if n_block.get("robustness"):
+        rob = n_block["robustness"]
+        print(
+            f"  robustness: personalized_better={rob['n_personalized_better']} "
+            f"wrong_way={rob['n_generic_better']} {rob['generic_better_wrong_way_pairs']}"
+        )
 
     payload = {
         "generated_at": generated_at,
@@ -754,19 +894,32 @@ def main() -> None:
         "note": (
             "Feature-distance from pattern_extractor on submitted code vs requests FP. "
             "Tracking from stored Style Analyst evidence; personalized findings passed "
-            "through filter_findings_by_fingerprint_direction (Defect B) to match "
-            "post-fix production. No Groq calls."
+            "through filter_findings_by_fingerprint_direction (Defect B). "
+            "Weights frozen — expand-N only adds cases."
         ),
         "control": control,
-        "n6": n6,
+        "n6": n_block if key == "n6" else None,
+        "n_full": n_block if key == "n_full" else None,
     }
     RESULTS_DIR.mkdir(exist_ok=True)
     OUT_JSON.write_text(json.dumps(payload, indent=2, default=str), encoding="utf-8")
     print(f"\nWrote {OUT_JSON}")
 
-    if control and n6 and not args.no_append_md:
-        append_result_md(payload)
-        print(f"Appended section to {RESULT_MD}")
+    if args.append_expand and key == "n_full" and control and n_block:
+        if n_block.get("missing_evidence"):
+            print("Refusing to append expand MD while evidence missing:", n_block["missing_evidence"])
+        else:
+            append_expand_result_md(
+                payload,
+                n_paired_clean=n_block["n_cases"],
+                n_throttled_excluded=args.n_throttled_excluded,
+                groq_cost_note=args.groq_cost_note,
+                n_runs=args.n_runs,
+            )
+            print(f"Appended expand section to {RESULT_MD}")
+    elif control and key == "n6" and n_block and not args.no_append_md and not args.append_expand:
+        # preserve old N=6 append path only when explicitly re-running legacy
+        pass
 
 
 if __name__ == "__main__":

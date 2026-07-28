@@ -1,5 +1,5 @@
 {
-  "_README": "5 function pairs grounded in the real psf/requests style fingerprint (computed from 268 functions, commit 4ed3d1b). Each pair: same task, IN-STYLE follows requests conventions, OFF-STYLE violates them on named dimensions. Fingerprint key facts: type_hint_usage=0.993, naming=snake_case, docstring_coverage=0.246 (LOW), error_handling_rate=0.131, avg_length=14.6, comprehension_ratio=0.016 (rare).",
+  "_README": "7 function pairs grounded in the real psf/requests style fingerprint (computed from 268 functions, commit 4ed3d1b). Each pair: same task, IN-STYLE follows requests conventions, OFF-STYLE violates them on named dimensions. Fingerprint key facts: type_hint_usage=0.993, naming=snake_case, docstring_coverage=0.246 (LOW), error_handling_rate=0.131, avg_length=14.6, comprehension_ratio=0.016 (rare). Construction notes: evals/minimal_a_pairs_construction.md. Target expand N=14 paired-clean (7×in/off).",
   "user_id": "eval-requests-user",
   "repo_name": "requests",
   "pairs": [
@@ -62,6 +62,31 @@
       ],
       "in_style": "def redact_auth(url: str) -> str:\n    if '@' not in url:\n        return url\n    scheme_rest = url.split('@', 1)\n    if '//' in scheme_rest[0] and ':' in scheme_rest[0].split('//')[-1]:\n        prefix = scheme_rest[0].rsplit(':', 1)[0]\n        return f'{prefix}:***@{scheme_rest[1]}'\n    return url\n",
       "off_style": "def redactAuth(inputUrl):\n    \"\"\"Redact password credentials from a URL string.\n\n    Searches for user:password@ credentials in the URL and replaces\n    the password with *** to avoid logging sensitive information.\n    Returns the original URL unchanged if no credentials are found.\n\n    Args:\n        inputUrl: A URL string that may contain embedded credentials.\n\n    Returns:\n        The URL with the password portion replaced by ***.\n    \"\"\"\n    try:\n        if '@' not in inputUrl:\n            return inputUrl\n        parts = inputUrl.split('@', 1)\n        if '//' in parts[0] and ':' in parts[0].split('//')[-1]:\n            userPart = parts[0].rsplit(':', 1)[0]\n            return userPart + ':***@' + parts[1]\n        return inputUrl\n    except Exception:\n        return inputUrl\n"
+    },
+    {
+      "id": "pair_6_join_query",
+      "task": "Join a dict of query parameters into a k=v&k=v query string",
+      "violations_in_off_style": [
+        "camelCase function name instead of snake_case",
+        "missing type hints",
+        "verbose docstring (requests rarely has them)",
+        "list comprehension instead of explicit loop",
+        "broad try/except (requests rarely has error handling)"
+      ],
+      "in_style": "def join_query(params: dict) -> str:\n    parts = []\n    for key, value in params.items():\n        parts.append(f'{key}={value}')\n    return '&'.join(parts)\n",
+      "off_style": "def joinQuery(params):\n    \"\"\"Join query parameters into a single query string.\n\n    Args:\n        params: Mapping of parameter names to values.\n\n    Returns:\n        A string of k=v pairs joined by '&'.\n    \"\"\"\n    try:\n        return '&'.join([f'{k}={v}' for k, v in params.items()])\n    except Exception as e:\n        raise ValueError(f'query join failed: {e}')\n"
+    },
+    {
+      "id": "pair_7_ensure_scheme",
+      "task": "If a URL has no scheme, prepend https://; otherwise return unchanged",
+      "violations_in_off_style": [
+        "PascalCase function name instead of snake_case",
+        "missing type hints",
+        "verbose docstring with examples",
+        "broad try/except where none is needed"
+      ],
+      "in_style": "def ensure_scheme(url: str) -> str:\n    if '://' in url:\n        return url\n    return f'https://{url}'\n",
+      "off_style": "def EnsureScheme(url):\n    \"\"\"Ensure the URL includes an http(s) scheme.\n\n    If the URL already contains '://', it is returned unchanged.\n    Otherwise 'https://' is prepended.\n\n    Args:\n        url: A URL string that may lack a scheme.\n\n    Returns:\n        The URL with a scheme present.\n\n    Example:\n        >>> EnsureScheme('example.com')\n        'https://example.com'\n    \"\"\"\n    try:\n        if '://' in url:\n            return url\n        return 'https://' + url\n    except Exception:\n        return url\n"
     }
   ]
 }

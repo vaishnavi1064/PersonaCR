@@ -2,6 +2,10 @@
 backend/.venv/
 __pycache__/
 *.pyc
+.coverage
+.coverage.*
+htmlcov/
+backend/.coverage
 
 # Local vector store (regenerated per machine)
 backend/.chroma/

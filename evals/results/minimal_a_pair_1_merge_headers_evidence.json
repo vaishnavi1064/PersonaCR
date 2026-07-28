@@ -1,14 +1,14 @@
 {
   "pair_id": "pair_1_merge_headers",
-  "written_at": "2026-07-27T21:16:04.571554+00:00",
+  "written_at": "2026-07-28T00:41:40.257442+00:00",
   "note": "Additive instrumentation from live run_review wrappers. Style Analyst JSON schema only emits findings + overall_style_score; finding descriptions are the reasoning.",
   "arms": {
     "in_style/personalized": {
-      "style_score": 80.0,
+      "style_score": 88.0,
       "n_style_findings": 3,
       "similar_functions_found": 8,
       "throttled": false,
-      "timestamp": "2026-07-27T21:14:10.520149+00:00",
+      "timestamp": "2026-07-27T22:19:14.599934+00:00",
       "evidence": {
         "retrieval": {
           "retrieval_files": [
@@ -74,34 +74,22 @@
           "prompt_would_include_similar": true
         },
         "style_analyst": {
-          "style_score": 80.0,
+          "style_score": 88.0,
           "similar_functions_found_field": 8,
           "style_analyst_ms": 5681,
           "raw_findings": [
-            {
-              "category": "naming",
-              "severity": "low",
-              "description": "The submitted code uses 'merge_headers' as the function name, which is in snake_case, but it does not follow the conventional naming pattern of having a docstring or type hints for the dictionary values.",
-              "fingerprint_value": "snake_case with type hints and docstrings",
-              "submitted_value": "snake_case without type hints for dictionary values and no docstring"
-            },
             {
               "category": "complexity",
               "severity": "medium",
               "description": "The submitted code has a complexity that is lower than the developer's average complexity of 5.22, but it can be simplified further.",
               "fingerprint_value": "avg_complexity: 5.22",
               "submitted_value": "simpler implementation possible"
-            },
-            {
-              "category": "documentation",
-              "severity": "high",
-              "description": "The submitted code lacks a docstring, which is not consistent with the developer's pattern of having a docstring coverage of 0.246.",
-              "fingerprint_value": "docstring_coverage: 0.246",
-              "submitted_value": "no docstring"
             }
           ],
-          "n_raw_findings_ex_error": 3,
-          "n_raw_findings_total": 3
+          "n_raw_findings_ex_error": 1,
+          "n_raw_findings_total": 1,
+          "style_score_before_rescore": 80.0,
+          "findings_dropped_by_direction": 2
         },
         "pipeline_issues": [
           {
@@ -129,15 +117,15 @@
             "description": "The function can be simplified using the built-in dictionary update method or the {**base, **override} syntax."
           }
         ],
-        "note": "Evidence captured from the live run_review path via wrappers; scoring/retrieval/agent logic unchanged."
+        "note": "Re-scored from stored evidence with Defect A/B fixes (direction filter + severity-weighted score). No Groq call."
       }
     },
     "in_style/generic": {
-      "style_score": 50.0,
+      "style_score": 78.0,
       "n_style_findings": 2,
       "similar_functions_found": 0,
       "throttled": false,
-      "timestamp": "2026-07-27T21:14:40.286915+00:00",
+      "timestamp": "2026-07-27T22:19:14.597905+00:00",
       "evidence": {
         "retrieval": {
           "retrieval_files": [],
@@ -149,7 +137,7 @@
           "prompt_would_include_similar": false
         },
         "style_analyst": {
-          "style_score": 50.0,
+          "style_score": 78.0,
           "similar_functions_found_field": 0,
           "style_analyst_ms": 1472,
           "raw_findings": [
@@ -176,7 +164,9 @@
             }
           ],
           "n_raw_findings_ex_error": 3,
-          "n_raw_findings_total": 3
+          "n_raw_findings_total": 3,
+          "style_score_before_rescore": 50.0,
+          "findings_dropped_by_direction": 0
         },
         "pipeline_issues": [
           {
@@ -198,15 +188,15 @@
             "description": "The function can be simplified using the built-in dictionary update method or the {**base, **override} syntax."
           }
         ],
-        "note": "Evidence captured from the live run_review path via wrappers; scoring/retrieval/agent logic unchanged."
+        "note": "Re-scored from stored evidence with Defect A/B fixes (direction filter + severity-weighted score). No Groq call."
       }
     },
     "off_style/personalized": {
-      "style_score": 80.0,
+      "style_score": 58.0,
       "n_style_findings": 2,
       "similar_functions_found": 8,
       "throttled": false,
-      "timestamp": "2026-07-27T21:15:10.609025+00:00",
+      "timestamp": "2026-07-27T22:19:14.600867+00:00",
       "evidence": {
         "retrieval": {
           "retrieval_files": [
@@ -272,7 +262,7 @@
           "prompt_would_include_similar": true
         },
         "style_analyst": {
-          "style_score": 80.0,
+          "style_score": 58.0,
           "similar_functions_found_field": 8,
           "style_analyst_ms": 2255,
           "raw_findings": [
@@ -299,7 +289,9 @@
             }
           ],
           "n_raw_findings_ex_error": 3,
-          "n_raw_findings_total": 3
+          "n_raw_findings_total": 3,
+          "style_score_before_rescore": 80.0,
+          "findings_dropped_by_direction": 0
         },
         "pipeline_issues": [
           {
@@ -327,15 +319,15 @@
             "description": "The dictionary comprehension is unnecessary and can be simplified."
           }
         ],
-        "note": "Evidence captured from the live run_review path via wrappers; scoring/retrieval/agent logic unchanged."
+        "note": "Re-scored from stored evidence with Defect A/B fixes (direction filter + severity-weighted score). No Groq call."
       }
     },
     "off_style/generic": {
-      "style_score": 50.0,
+      "style_score": 78.0,
       "n_style_findings": 1,
       "similar_functions_found": 0,
       "throttled": false,
-      "timestamp": "2026-07-27T21:15:39.562709+00:00",
+      "timestamp": "2026-07-27T22:19:14.600297+00:00",
       "evidence": {
         "retrieval": {
           "retrieval_files": [],
@@ -347,7 +339,7 @@
           "prompt_would_include_similar": false
         },
         "style_analyst": {
-          "style_score": 50.0,
+          "style_score": 78.0,
           "similar_functions_found_field": 0,
           "style_analyst_ms": 1325,
           "raw_findings": [
@@ -374,7 +366,9 @@
             }
           ],
           "n_raw_findings_ex_error": 3,
-          "n_raw_findings_total": 3
+          "n_raw_findings_total": 3,
+          "style_score_before_rescore": 50.0,
+          "findings_dropped_by_direction": 0
         },
         "pipeline_issues": [
           {
@@ -396,7 +390,7 @@
             "description": "Redundant dictionary unpacking"
           }
         ],
-        "note": "Evidence captured from the live run_review path via wrappers; scoring/retrieval/agent logic unchanged."
+        "note": "Re-scored from stored evidence with Defect A/B fixes (direction filter + severity-weighted score). No Groq call."
       }
     }
   }

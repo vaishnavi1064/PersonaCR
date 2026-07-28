@@ -1110,6 +1110,16 @@ async def main() -> None:
 
     if args.only_pair:
         _write_pair_evidence_sidecar(checkpoint, args.only_pair)
+    else:
+        # Write/refresh evidence sidecars for every pair that has checkpoint evidence
+        pair_ids = sorted({rec.get("pair_id") for rec in checkpoint.values() if rec.get("pair_id")})
+        for pid in pair_ids:
+            keys = [
+                k for k in checkpoint
+                if k.startswith(f"{pid}/") and (checkpoint[k].get("evidence") or {}).get("style_analyst")
+            ]
+            if len(keys) >= 1:
+                _write_pair_evidence_sidecar(checkpoint, pid)
 
     agg = _aggregate_from_checkpoint(checkpoint)
 
