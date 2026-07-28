@@ -18,6 +18,8 @@ groq
 # Async review job queue (Redis + RQ — local/dev scale)
 redis
 rq
+# Queue tests (CI clean install; pinned from local pip show)
+fakeredis==2.37.0
 
 # Static analysis
 pylint
