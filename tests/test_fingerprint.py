@@ -53,15 +53,33 @@ class TestFingerprintEdgeCases:
         assert _has_docstring(bad.source) is False
 
     def test_docstring_uses_ast_constant_not_ast_str(self):
-        """Regression guard for Python 3.8+ ast.Constant (ast.Str removed)."""
+        """
+        Fingerprinter must detect docstrings via ast.Constant (Python 3.8+).
+
+        Note: on 3.12, ast.Str still exists as a compatibility alias and
+        isinstance(ast.Constant(...), ast.Str) can be True — so we must not
+        assert "not isinstance(..., ast.Str)". Assert Constant + string value,
+        and that _has_docstring's implementation keys off ast.Constant.
+        """
+        import inspect
+
+        from backend.src.core import pattern_extractor
+
         src = 'def documented():\n    """hello"""\n    return 1'
         assert _has_docstring(src) is True
 
         tree = ast.parse(src)
         fn = tree.body[0]
+        assert isinstance(fn, ast.FunctionDef)
         doc_expr = fn.body[0]
+        assert isinstance(doc_expr, ast.Expr)
         assert isinstance(doc_expr.value, ast.Constant)
-        assert not hasattr(ast, "Str") or not isinstance(doc_expr.value, getattr(ast, "Str", ()))
+        assert isinstance(doc_expr.value.value, str)
+        assert doc_expr.value.value == "hello"
+
+        impl = inspect.getsource(pattern_extractor._has_docstring)
+        assert "ast.Constant" in impl
+        assert "ast.Str" not in impl
 
     def test_match_statement_function_still_fingerprinted(self):
         """Python 3.10+ match must not break extract_fingerprint."""

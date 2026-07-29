@@ -1,43 +1,48 @@
+# Pinned to locally verified versions (pip show / freeze) so CI clean installs
+# do not pull breaking majors (e.g. mcp 2.x broke fastapi-mcp smoke).
+
 # API framework
-fastapi
-uvicorn[standard]
-python-dotenv
-httpx
-pydantic
+fastapi==0.135.3
+uvicorn[standard]==0.44.0
+python-dotenv==1.2.2
+httpx==0.28.1
+pydantic==2.12.5
 
 # GitHub access
-PyGithub
+PyGithub==2.9.0
 
 # Embeddings + vector store
-fastembed
-chromadb
+fastembed==0.8.0
+chromadb==1.5.7
 
 # LLM
-groq
+groq==1.1.2
 
 # Async review job queue (Redis + RQ — local/dev scale)
-redis
-rq
+redis==8.0.1
+rq==2.10.0
 # Queue tests (CI clean install; pinned from local pip show)
 fakeredis==2.37.0
 
 # Static analysis
-pylint
-astroid
+pylint==4.0.5
+astroid==4.0.4
 
 # ML evaluation (STS scoring)
 # all-MiniLM-L6-v2 loaded via sentence-transformers
-sentence-transformers==5.2.3
-numpy==2.3.5
+# Local freeze has 5.3.0; keep CI aligned with working env
+sentence-transformers==5.3.0
+numpy==2.4.4
 
 # PDF report generation
-reportlab
+reportlab==4.4.10
 
-# MCP server
-fastapi-mcp
+# MCP server — pin BOTH; fastapi-mcp 0.4.0 requires mcp 1.x (mcp 2.0 breaks Server.__init__)
+fastapi-mcp==0.4.0
+mcp==1.27.0
 
 # Async support
-anyio
+anyio==4.13.0
 
 # Operator metrics export (Prometheus scrape target)
 prometheus-client==0.26.0
