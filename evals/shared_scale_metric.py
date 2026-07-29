@@ -30,7 +30,7 @@ else:
 
 from backend.src.core.github_ingestor import CodeChunk
 from backend.src.core.pattern_extractor import extract_fingerprint
-from backend.src.agents.style_analyst import filter_findings_by_fingerprint_direction
+from backend.src.agents.style_analyst import filter_style_findings
 from backend.src.core.models import StyleFinding
 
 HERE = Path(__file__).parent
@@ -355,14 +355,19 @@ def _load_evidence_findings(
         return None
     findings = _to_style_findings(list(raw))
     if arm == "personalized" and fingerprint is not None:
-        findings = filter_findings_by_fingerprint_direction(findings, fingerprint)
+        findings = filter_style_findings(findings, fingerprint)
     return _findings_as_dicts(findings)
 
 
-def _control_findings_from_raw(arm: str, case_id: str) -> list[dict] | None:
+def _control_findings_from_raw(
+    arm: str,
+    case_id: str,
+    fingerprint: dict | None = None,
+) -> list[dict] | None:
     """
     Pull findings from control raw JSON.
-    Personalized Style Analyst probe → cases[].instrumentation.raw_findings.
+    Personalized Style Analyst probe → cases[].instrumentation.raw_findings
+    (post-filtered with filter_style_findings, same as N=14 evidence path).
     Generic arm → style issues under cases[].arms.generic_meta.issues.
     """
     if not CONTROL_RAW.exists():
@@ -373,7 +378,12 @@ def _control_findings_from_raw(arm: str, case_id: str) -> list[dict] | None:
             continue
         if arm == "personalized":
             raw = (block.get("instrumentation") or {}).get("raw_findings")
-            return list(raw) if raw is not None else None
+            if raw is None:
+                return None
+            findings = _to_style_findings(list(raw))
+            if fingerprint is not None:
+                findings = filter_style_findings(findings, fingerprint)
+            return _findings_as_dicts(findings)
         if arm == "generic":
             issues = (block.get("arms") or {}).get("generic_meta", {}).get("issues")
             if issues is None:
@@ -417,7 +427,7 @@ def run_control(fingerprint: dict) -> dict[str, Any]:
         # Arm-independent distance; optional tracking from stored control raw
         tracking_by_arm = {}
         for arm in ("personalized", "generic"):
-            findings = _control_findings_from_raw(arm, cid)
+            findings = _control_findings_from_raw(arm, cid, fingerprint)
             if findings is not None:
                 tracking_by_arm[arm] = tracking_for_arm(
                     findings, measured["distance"]
@@ -894,7 +904,7 @@ def main() -> None:
         "note": (
             "Feature-distance from pattern_extractor on submitted code vs requests FP. "
             "Tracking from stored Style Analyst evidence; personalized findings passed "
-            "through filter_findings_by_fingerprint_direction (Defect B). "
+            "through filter_style_findings (Defect B direction + non-deviation suppress). "
             "Weights frozen — expand-N only adds cases."
         ),
         "control": control,

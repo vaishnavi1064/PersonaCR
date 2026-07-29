@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-29T00:42:27.146972+00:00",
+  "generated_at": "2026-07-29T01:18:04.667694+00:00",
   "framing": "a",
   "framing_doc": "D:/agentic_project/evals/shared_scale_framing.md",
   "weights": {
@@ -11,7 +11,7 @@
   },
   "material_threshold": 0.35,
   "groq_cost": 0,
-  "note": "Feature-distance from pattern_extractor on submitted code vs requests FP. Tracking from stored Style Analyst evidence; personalized findings passed through filter_findings_by_fingerprint_direction (Defect B). Weights frozen \u2014 expand-N only adds cases.",
+  "note": "Feature-distance from pattern_extractor on submitted code vs requests FP. Tracking from stored Style Analyst evidence; personalized findings passed through filter_style_findings (Defect B direction + non-deviation suppress). Weights frozen \u2014 expand-N only adds cases.",
   "control": {
     "cases": {
       "control_max_in_style": {
@@ -91,7 +91,7 @@
             "n_material": 0,
             "n_tp": 0,
             "n_fp": 0,
-            "n_findings_ex_error": 3
+            "n_findings_ex_error": 0
           },
           "generic": {
             "material_deviations": [],
@@ -342,7 +342,7 @@
             "n_material": 0,
             "n_tp": 0,
             "n_fp": 0,
-            "n_findings_ex_error": 1
+            "n_findings_ex_error": 0
           },
           "generic": {
             "material_deviations": [],
@@ -466,7 +466,7 @@
             "n_material": 4,
             "n_tp": 2,
             "n_fp": 0,
-            "n_findings_ex_error": 3
+            "n_findings_ex_error": 2
           },
           "generic": {
             "material_deviations": [
@@ -574,7 +574,7 @@
             "n_material": 0,
             "n_tp": 0,
             "n_fp": 0,
-            "n_findings_ex_error": 1
+            "n_findings_ex_error": 0
           },
           "generic": {
             "material_deviations": [],
@@ -797,7 +797,7 @@
             "n_material": 0,
             "n_tp": 0,
             "n_fp": 0,
-            "n_findings_ex_error": 2
+            "n_findings_ex_error": 0
           },
           "generic": {
             "material_deviations": [],
@@ -1013,22 +1013,18 @@
           "personalized": {
             "material_deviations": [],
             "mentioned": {
-              "naming_convention": true,
-              "docstring_coverage": true,
-              "error_handling_rate": true
+              "docstring_coverage": true
             },
             "true_positives": [],
             "false_negatives": [],
             "false_positives": [
-              "docstring_coverage",
-              "error_handling_rate",
-              "naming_convention"
+              "docstring_coverage"
             ],
             "recall_material": null,
             "n_material": 0,
             "n_tp": 0,
-            "n_fp": 3,
-            "n_findings_ex_error": 3
+            "n_fp": 1,
+            "n_findings_ex_error": 1
           },
           "generic": {
             "material_deviations": [],
@@ -1468,20 +1464,18 @@
           "personalized": {
             "material_deviations": [],
             "mentioned": {
-              "type_hint_usage": true,
               "naming_convention": true
             },
             "true_positives": [],
             "false_negatives": [],
             "false_positives": [
-              "naming_convention",
-              "type_hint_usage"
+              "naming_convention"
             ],
             "recall_material": null,
             "n_material": 0,
             "n_tp": 0,
-            "n_fp": 2,
-            "n_findings_ex_error": 2
+            "n_fp": 1,
+            "n_findings_ex_error": 1
           },
           "generic": {
             "material_deviations": [],
@@ -1700,19 +1694,15 @@
         "tracking_by_arm": {
           "personalized": {
             "material_deviations": [],
-            "mentioned": {
-              "docstring_coverage": true
-            },
+            "mentioned": {},
             "true_positives": [],
             "false_negatives": [],
-            "false_positives": [
-              "docstring_coverage"
-            ],
+            "false_positives": [],
             "recall_material": null,
             "n_material": 0,
             "n_tp": 0,
-            "n_fp": 1,
-            "n_findings_ex_error": 1
+            "n_fp": 0,
+            "n_findings_ex_error": 0
           },
           "generic": {
             "material_deviations": [],
@@ -1879,7 +1869,7 @@
                 "n_material": 0,
                 "n_tp": 0,
                 "n_fp": 0,
-                "n_findings_ex_error": 1
+                "n_findings_ex_error": 0
               },
               "generic": {
                 "material_deviations": [],
@@ -1935,7 +1925,7 @@
                 "n_material": 4,
                 "n_tp": 2,
                 "n_fp": 0,
-                "n_findings_ex_error": 3
+                "n_findings_ex_error": 2
               },
               "generic": {
                 "material_deviations": [
@@ -2004,7 +1994,7 @@
                 "n_material": 0,
                 "n_tp": 0,
                 "n_fp": 0,
-                "n_findings_ex_error": 1
+                "n_findings_ex_error": 0
               },
               "generic": {
                 "material_deviations": [],
@@ -2120,7 +2110,7 @@
                 "n_material": 0,
                 "n_tp": 0,
                 "n_fp": 0,
-                "n_findings_ex_error": 2
+                "n_findings_ex_error": 0
               },
               "generic": {
                 "material_deviations": [],
@@ -2229,22 +2219,18 @@
               "personalized": {
                 "material_deviations": [],
                 "mentioned": {
-                  "naming_convention": true,
-                  "docstring_coverage": true,
-                  "error_handling_rate": true
+                  "docstring_coverage": true
                 },
                 "true_positives": [],
                 "false_negatives": [],
                 "false_positives": [
-                  "docstring_coverage",
-                  "error_handling_rate",
-                  "naming_convention"
+                  "docstring_coverage"
                 ],
                 "recall_material": null,
                 "n_material": 0,
                 "n_tp": 0,
-                "n_fp": 3,
-                "n_findings_ex_error": 3
+                "n_fp": 1,
+                "n_findings_ex_error": 1
               },
               "generic": {
                 "material_deviations": [],
@@ -2328,7 +2314,7 @@
             "off_recall": 0.5,
             "off_tp": 2,
             "off_material": 4,
-            "in_fp": 3,
+            "in_fp": 1,
             "in_n_material": 0
           },
           "generic": {
@@ -2470,20 +2456,18 @@
               "personalized": {
                 "material_deviations": [],
                 "mentioned": {
-                  "type_hint_usage": true,
                   "naming_convention": true
                 },
                 "true_positives": [],
                 "false_negatives": [],
                 "false_positives": [
-                  "naming_convention",
-                  "type_hint_usage"
+                  "naming_convention"
                 ],
                 "recall_material": null,
                 "n_material": 0,
                 "n_tp": 0,
-                "n_fp": 2,
-                "n_findings_ex_error": 2
+                "n_fp": 1,
+                "n_findings_ex_error": 1
               },
               "generic": {
                 "material_deviations": [],
@@ -2571,7 +2555,7 @@
             "off_recall": 0.2,
             "off_tp": 1,
             "off_material": 5,
-            "in_fp": 2,
+            "in_fp": 1,
             "in_n_material": 0
           },
           "generic": {
@@ -2594,19 +2578,15 @@
             "tracking_by_arm": {
               "personalized": {
                 "material_deviations": [],
-                "mentioned": {
-                  "docstring_coverage": true
-                },
+                "mentioned": {},
                 "true_positives": [],
                 "false_negatives": [],
-                "false_positives": [
-                  "docstring_coverage"
-                ],
+                "false_positives": [],
                 "recall_material": null,
                 "n_material": 0,
                 "n_tp": 0,
-                "n_fp": 1,
-                "n_findings_ex_error": 1
+                "n_fp": 0,
+                "n_findings_ex_error": 0
               },
               "generic": {
                 "material_deviations": [],
@@ -2693,7 +2673,7 @@
             "off_recall": 0.25,
             "off_tp": 1,
             "off_material": 4,
-            "in_fp": 1,
+            "in_fp": 0,
             "in_n_material": 0
           },
           "generic": {
@@ -2721,7 +2701,7 @@
           "mean_recall_material": null,
           "total_material": 0,
           "total_tp": 0,
-          "total_fp": 7,
+          "total_fp": 3,
           "pooled_recall": null
         },
         "off_style": {
@@ -2766,10 +2746,10 @@
     },
     "framing_a_verdict": {
       "verdict": "inconclusive",
-      "reason": "mixed: OFF recall p=0.4483 g=0.1379; IN FP-rate p=1.00 g=0.29",
+      "reason": "mixed: OFF recall p=0.4483 g=0.1379; IN FP-rate p=0.43 g=0.29",
       "personalized_off_pooled_recall": 0.4483,
       "generic_off_pooled_recall": 0.1379,
-      "personalized_in_fp_rate": 1.0,
+      "personalized_in_fp_rate": 0.4286,
       "generic_in_fp_rate": 0.2857
     }
   }

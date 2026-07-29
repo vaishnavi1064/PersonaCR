@@ -154,3 +154,66 @@ At N=14: inconclusive; personalized_better **2**/7; wrong-way **1** (pair_7_ensu
 Pooled OFF recall still favors personalized (0.45 vs 0.14), but IN FP-rate also favors generic (p=1.0 vs g=0.29) — same mixed pattern. Consistency **weakened** slightly (first wrong-way case). Overall vs N=10: signal **held as inconclusive** (did not strengthen).
 
 **One-line (fair scale, N=14):** personalization separates in/off better than generic — **inconclusive**.
+
+---
+
+## IN over-flagging fix — Defect B widen + non-deviation suppress (APPEND)
+
+**Generated:** 2026-07-29 (post-filter re-score from stored evidence; **0 Groq**)  
+**Scope:** Style Analyst finding-generation / direction-filter only. Metric, arms, retrieval, honesty guards unchanged. Thresholds not tuned to hit a target separation.
+
+### What changed (three parts)
+
+1. **Widen Defect B direction handling** (ackend/src/agents/style_analyst.py): broader under/over paraphrase patterns per rate feature (e.g. `does not handle potential errors`, docstring `higher than average`). Rare + under-use → drop; common + over-use → drop; rare + *relative* over-claim (`higher than average` / `above the developer's`) → drop. Rare + *absolute* over-use (`excessive docstring`, `has a try-except`) **kept** so OFF detection is preserved.
+2. **Suppress non-deviation findings:** praise/consistency (`follows … convention`, `consistent with`) and generic best-practice nits (`more descriptive`, runtime type checks, `simplified further`) dropped via `suppress_non_deviation_findings`.
+3. **Empty findings OK:** system prompt tells the analyst to return `findings: []` when there is no material fingerprint deviation; production path uses `filter_style_findings` (direction + suppress). Evidence re-score and control tracking use the same filter (0 new LLM calls).
+
+### Control re-run (stored raw + new post-filter)
+
+| Case | Feature dist | Personalized after filter |
+|------|-------------:|---------------------------|
+| MAX-IN | 0.08 | **0 findings / 0 FP dims** (was praise-as-findings on in-style) |
+| MAX-OFF | 0.92 | Still flagged (naming + type hints); material recall **0.4** |
+
+Gate: MAX-IN ≪ MAX-OFF (sep=0.84). **OFF detection intact — proceed.**
+
+### N=14 before → after (frozen fair metric, evidence re-score)
+
+| Arm | OFF pooled recall (before → after) | IN FP-rate dims/case (before → after) |
+|-----|-----------------------------------:|--------------------------------------:|
+| personalized | **0.4483 → 0.4483** (unchanged) | **1.0 → 0.4286** |
+| generic | 0.1379 → 0.1379 | 0.2857 → 0.2857 |
+
+**Guardrail:** personalized OFF recall did **not** drop (pass). IN over-flagging reduced substantially; still slightly above generic (~0.43 vs ~0.29) — residual FPs are mostly hallucinated naming/docstring-style nits that are neither praise nor clear rare-under paraphrases.
+
+### Per-pair framing-(a) after fix
+
+| Pair | p OFF recall | g OFF recall | p IN FP | g IN FP | case verdict |
+|------|-------------:|-------------:|--------:|--------:|--------------|
+| pair_1_merge_headers | 0.5 | 0.5 | 0 | 2 | mixed |
+| pair_2_build_url | 0.75 | 0.0 | 0 | 0 | personalized_better |
+| pair_3_parse_status | 0.75 | 0.0 | 0 | 0 | personalized_better |
+| pair_4_extract_cookies | 0.5 | 0.0 | 1 | 0 | mixed |
+| pair_5_redact_auth | 0.25 | 0.0 | 1 | 0 | mixed |
+| pair_6_join_query | 0.2 | 0.0 | 1 | 0 | mixed |
+| pair_7_ensure_scheme | 0.25 | 0.5 | 0 | 0 | generic_better |
+
+- Personalized-better: **2** [pair_2_build_url, pair_3_parse_status]
+- Wrong-way: **1** [pair_7_ensure_scheme] (unchanged vs pre-fix N=14)
+
+### Did the thesis verdict move?
+
+**No.** Framing-(a) remains **inconclusive** (mixed: better OFF recall for personalized, still higher IN FP-rate than generic). Personalized-better count and wrong-way count unchanged. Any cleaner IN side is a **side effect of fixing over-flagging**, not a goal of the change.
+
+### Honest verdict at N=14 post-fix
+
+Personalization still separates OFF better than generic on recall (0.45 vs 0.14) with IN FP improved (1.0 → 0.43) but not yet at/below generic. Signal remains **directional-only at N=14** — inconclusive, not a claim that personalization “wins.”
+
+**Regression check:** OFF recall drop? **No** (0.4483 held).
+
+### Cost / tests
+
+- **Groq cost:** 0 (re-score from stored Style Analyst evidence + control raw)
+- **pytest -m "not groq":** 52 passed, 1 deselected
+
+Artifacts: vals/results/shared_scale_metric.json; filter in ackend/src/agents/style_analyst.py (ilter_style_findings).
