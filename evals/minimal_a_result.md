@@ -1,10 +1,10 @@
 # Minimal-A Result (real checkpoint only)
 
-**Generated:** 2026-07-28T00:41:40.263728+00:00
+**Generated:** 2026-07-29T00:42:15.944815+00:00
 **Target N (paired-clean):** 14
-**Achieved N:** 10
-**Incomplete / unpaired cases in checkpoint:** 1 (`pair_6_join_query/in_style`)
-**Status:** INCOMPLETE — need more quota windows
+**Achieved N:** 14
+**Incomplete / unpaired cases in checkpoint:** 0
+**Status:** TARGET MET — reportable
 **Primary metric:** `style_score` (Style Analyst `overall_style_score`, 0–100). Separation = off − in (more negative ⇒ off more deviant).
 
 ## Step 0 budget (context)
@@ -17,8 +17,8 @@ Source: `review_output.style_score` ← Style Analyst `overall_style_score` (det
 
 | Arm | Avg score IN-STYLE | Avg score OFF-STYLE | Separation (off − in) | n_in | n_off |
 |-----|-------------------:|--------------------:|----------------------:|-----:|------:|
-| Personalized | 89.2 | 51.8 | **-37.4** | 5 | 5 |
-| Generic | 95.6 | 95.6 | **0.0** | 5 | 5 |
+| Personalized | 89.143 | 60.286 | **-28.857** | 7 | 7 |
+| Generic | 96.857 | 91.714 | **-5.143** | 7 | 7 |
 
 ## Diagnostic — finding-count separation (demoted; do not judge on this)
 
@@ -26,8 +26,8 @@ Count of Style Analyst findings with `category != "error"`. Kept for visibility 
 
 | Arm | Avg findings IN | Avg findings OFF | Separation_findings (off − in) |
 |-----|----------------:|-----------------:|-------------------------------:|
-| Personalized | 1.4 | 1.2 | -0.2 |
-| Generic | 0.4 | 0.2 | -0.2 |
+| Personalized | 1.286 | 1.143 | -0.143 |
+| Generic | 0.286 | 0.429 | 0.143 |
 
 ## Per-feature deviation (personalized style issue categories, when checkpointed)
 
@@ -37,21 +37,21 @@ _No per-feature issue texts in main checkpoint (control runner stores issues; ma
 
 ### comprehensiveness
 
-- Personalized: in=0.417, off=0.812 (n_in=5, n_off=5)
-- Generic: in=0.52, off=0.572 (n_in=5, n_off=5)
-- Separation (personalized − generic), mean over cases with scores: **0.0687**
+- Personalized: in=0.488, off=0.827 (n_in=7, n_off=7)
+- Generic: in=0.589, off=0.628 (n_in=7, n_off=7)
+- Separation (personalized − generic), mean over cases with scores: **0.0491**
 
 ### conciseness
 
-- Personalized: in=0.783, off=0.914 (n_in=5, n_off=5)
-- Generic: in=0.8, off=0.793 (n_in=5, n_off=5)
-- Separation (personalized − generic), mean over cases with scores: **0.0521**
+- Personalized: in=0.845, off=0.882 (n_in=7, n_off=7)
+- Generic: in=0.857, off=0.852 (n_in=7, n_off=7)
+- Separation (personalized − generic), mean over cases with scores: **0.0086**
 
 ### relevance
 
-- Personalized: in=0.499, off=0.852 (n_in=5, n_off=5)
-- Generic: in=0.621, off=0.662 (n_in=5, n_off=5)
-- Separation (personalized − generic), mean over cases with scores: **0.0339**
+- Personalized: in=0.584, off=0.845 (n_in=7, n_off=7)
+- Generic: in=0.689, off=0.72 (n_in=7, n_off=7)
+- Separation (personalized − generic), mean over cases with scores: **0.0096**
 
 ## Per-case raw deltas
 
@@ -67,10 +67,14 @@ _No per-feature issue texts in main checkpoint (control runner stores issues; ma
 | `pair_4_extract_cookies/off_style` | -50.0 | 2 | 0.102 | -0.179 | -0.05 |
 | `pair_5_redact_auth/in_style` | -5.0 | 0 | -0.25 | -0.5 | -0.334 |
 | `pair_5_redact_auth/off_style` | -25.0 | 1 | 0.144 | 0.2 | 0.167 |
+| `pair_6_join_query/in_style` | -17.0 | 2 | 0.142 | 0.0 | 0.097 |
+| `pair_6_join_query/off_style` | -12.0 | 1 | 0.091 | -0.2 | -0.016 |
+| `pair_7_ensure_scheme/in_style` | -5.0 | 0 | -0.333 | 0.0 | -0.227 |
+| `pair_7_ensure_scheme/off_style` | 11.0 | -1 | 0.1 | -0.2 | -0.058 |
 
 ## Statistical power
 
-N=10 paired-clean cases is below the predeclared target of 14. At this sample size the result is directional / preliminary — do not claim statistical significance.
+N=14 paired-clean cases is at/above the predeclared target of 14. At this sample size the result is directional / preliminary — do not claim statistical significance.
 
 ## What this does and does not demonstrate
 
@@ -78,6 +82,75 @@ This report shows observed **style_score** separation (primary) and finding-coun
 
 ## Quota / remaining work
 
-Need **4** more paired-clean cases to hit target 14. At ~1–2 clean cases per careful quota window (TPM-limited), expect roughly **4–8** additional runs with `--max-cases 2` (or wait for daily reset if RPD exhausted).
+Target 14 reached; further runs optional to grow N toward all 10 cases.
 
 Checkpoint file: `D:/agentic_project/evals/minimal_a_checkpoint.jsonl`
+
+---
+
+## Shared-scale expand — N=14 paired-clean (APPEND)
+
+**Generated:** 2026-07-29T00:42:27.146972+00:00  
+**Metric:** frozen fair shared-scale (framing a) — weights/thresholds unchanged.  
+**Paired-clean N:** 14 (7 pairs × in/off).  
+**Throttled/errored arms excluded from averages:** 0 (honesty: never checkpointed).  
+**Groq / runs:** free-tier (pace=60s); 4 new paired-clean this run, 0 throttled  
+**Harness runs this expand:** 4.  
+New-case construction: `evals/minimal_a_pairs_construction.md`.
+
+### Per-pair feature-distance (arm-identical)
+
+| Pair | IN dist | OFF dist | sep (off−in) | OFF farther? |
+|------|--------:|---------:|-------------:|:------------:|
+| pair_1_merge_headers | 0.08 | 0.7724 | 0.6924 | yes |
+| pair_2_build_url | 0.08 | 0.7264 | 0.6464 | yes |
+| pair_3_parse_status | 0.08 | 0.7264 | 0.6464 | yes |
+| pair_4_extract_cookies | 0.08 | 0.7724 | 0.6924 | yes |
+| pair_5_redact_auth | 0.08 | 0.7264 | 0.6464 | yes |
+| pair_6_join_query | 0.08 | 0.92 | 0.84 | yes |
+| pair_7_ensure_scheme | 0.08 | 0.7264 | 0.6464 | yes |
+
+Mean IN dist **0.08**, mean OFF dist **0.7672**, mean sep **0.6872** (7/7 pairs OFF farther).
+
+### Per-pair framing-(a) arm tracking
+
+| Pair | p OFF recall | g OFF recall | p IN FP | g IN FP | case verdict |
+|------|-------------:|-------------:|--------:|--------:|--------------|
+| pair_1_merge_headers | 0.5 | 0.5 | 0 | 2 | mixed |
+| pair_2_build_url | 0.75 | 0.0 | 0 | 0 | personalized_better |
+| pair_3_parse_status | 0.75 | 0.0 | 0 | 0 | personalized_better |
+| pair_4_extract_cookies | 0.5 | 0.0 | 3 | 0 | mixed |
+| pair_5_redact_auth | 0.25 | 0.0 | 1 | 0 | mixed |
+| pair_6_join_query | 0.2 | 0.0 | 2 | 0 | mixed |
+| pair_7_ensure_scheme | 0.25 | 0.5 | 1 | 0 | generic_better |
+
+### Pooled means (framing a)
+
+| Arm | OFF pooled recall | IN FP-rate (dims/case) |
+|-----|------------------:|-----------------------:|
+| personalized | 0.4483 | 1.0 |
+| generic | 0.1379 | 0.2857 |
+
+**Reason:** mixed: OFF recall p=0.4483 g=0.1379; IN FP-rate p=1.00 g=0.29
+
+### Robustness / consistency
+
+- Personalized-better pairs: **2** `['pair_2_build_url', 'pair_3_parse_status']`
+- Wrong-way (generic better): **1** `['pair_7_ensure_scheme']`
+
+### Honest verdict (expand-N)
+
+**Framing-(a) one-line:** personalization separates/tracks better than generic on this fair scale: **inconclusive**.
+
+N≈12–15 remains modest — directional + consistency only; **not** strong statistical significance. Compare to the prior N=6 append above for held / strengthened / weakened.
+
+Artifacts: `evals/results/shared_scale_metric.json`, `evals/minimal_a_pairs_construction.md`.
+
+### Vs prior N=10 (same frozen metric)
+
+At N=10: inconclusive; personalized_better **2**/5; wrong-way **0**.  
+At N=14: inconclusive; personalized_better **2**/7; wrong-way **1** (pair_7_ensure_scheme).
+
+Pooled OFF recall still favors personalized (0.45 vs 0.14), but IN FP-rate also favors generic (p=1.0 vs g=0.29) — same mixed pattern. Consistency **weakened** slightly (first wrong-way case). Overall vs N=10: signal **held as inconclusive** (did not strengthen).
+
+**One-line (fair scale, N=14):** personalization separates in/off better than generic — **inconclusive**.

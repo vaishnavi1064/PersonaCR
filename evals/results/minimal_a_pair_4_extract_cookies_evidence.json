@@ -1,6 +1,6 @@
 {
   "pair_id": "pair_4_extract_cookies",
-  "written_at": "2026-07-28T00:41:40.260090+00:00",
+  "written_at": "2026-07-29T00:42:15.940340+00:00",
   "note": "Additive instrumentation from live run_review wrappers. Style Analyst JSON schema only emits findings + overall_style_score; finding descriptions are the reasoning.",
   "arms": {
     "in_style/personalized": {
