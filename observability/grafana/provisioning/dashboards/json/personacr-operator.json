@@ -1,0 +1,121 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "Per-agent latency p50 / p95",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "drawStyle": "line", "fillOpacity": 10 }
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (le, agent) (rate(personacr_review_latency_seconds_bucket[5m])))",
+          "legendFormat": "p50 {{agent}}",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, agent) (rate(personacr_review_latency_seconds_bucket[5m])))",
+          "legendFormat": "p95 {{agent}}",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "title": "Review throughput (by outcome)",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": { "drawStyle": "bars", "fillOpacity": 40, "stacking": { "mode": "normal" } }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (outcome) (rate(personacr_review_total[5m]))",
+          "legendFormat": "{{outcome}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Self-correction Loop 2 revert rate",
+      "description": "reverted / (improved + reverted + failed) for loop=2 — Loop 2 floor-rule health",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(personacr_self_correction_total{loop=\"2\",result=\"reverted\"}[15m])) / clamp_min(sum(rate(personacr_self_correction_total{loop=\"2\"}[15m])), 1e-9)",
+          "legendFormat": "loop2 revert rate",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(personacr_self_correction_total{loop=\"2\",result=\"failed\"}[15m])) / clamp_min(sum(rate(personacr_self_correction_total{loop=\"2\"}[15m])), 1e-9)",
+          "legendFormat": "loop2 failed rate",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "title": "Groq throttle rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": { "drawStyle": "line", "fillOpacity": 15 }
+        }
+      },
+      "targets": [
+        {
+          "expr": "rate(personacr_groq_throttled_total[5m])",
+          "legendFormat": "throttles/sec",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Self-correction totals (loops 1 & 2)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 17 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+      "targets": [
+        {
+          "expr": "sum by (loop, result) (personacr_self_correction_total)",
+          "legendFormat": "loop{{loop}} {{result}}",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": ["personacr", "observability"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "timezone": "browser",
+  "title": "PersonaCR operator metrics",
+  "uid": "personacr-operator",
+  "version": 1
+}

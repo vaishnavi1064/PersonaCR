@@ -424,6 +424,9 @@ def analyze_style(
                 similar_functions_found=similar_count,
             )
     except Exception as e:
+        from backend.src.core.metrics import maybe_record_groq_throttle
+
+        maybe_record_groq_throttle(e)
         result = StyleAnalysisOutput(
             findings=[
                 StyleFinding(

@@ -146,6 +146,9 @@ def plan_review(code: str, language: str, fingerprint: dict) -> tuple[PlannerOut
                 strategy_notes="LLM response parsing failed, using defaults",
             )
     except Exception as e:
+        from backend.src.core.metrics import maybe_record_groq_throttle
+
+        maybe_record_groq_throttle(e)
         result = PlannerOutput(
             focus_areas=["style", "error_handling"],
             review_depth="standard",

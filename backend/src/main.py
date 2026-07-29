@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.src.routes.analyze_routes import router as analyze_router
@@ -48,6 +48,19 @@ app.include_router(chat_router)
 def health() -> dict:
     """Check if the PersonaCR server is running and responsive."""
     return {"status": "ok", "service": "personacr-backend", "version": "2.0.0"}
+
+
+@app.get("/metrics", operation_id="prometheus_metrics")
+def metrics() -> Response:
+    """
+    Prometheus metrics export for operator observability (dev/portfolio scale).
+
+    Scraped by local Prometheus when docker compose is up — not a production SRE claim.
+    """
+    from backend.src.core.metrics import render_metrics
+
+    payload, content_type = render_metrics()
+    return Response(content=payload, media_type=content_type)
 
 
 # ── MCP Server ────────────────────────────────────────────────────────────────

@@ -178,6 +178,9 @@ def hunt_defects(code: str, language: str) -> tuple[DefectHunterOutput, int]:
             llm_bugs, llm_smells, llm_security = [], [], []
             defect_score = 70.0
     except Exception as e:
+        from backend.src.core.metrics import maybe_record_groq_throttle
+
+        maybe_record_groq_throttle(e)
         llm_bugs = [DefectFinding(
             severity="low",
             description=f"LLM analysis error: {str(e)[:100]}",

@@ -63,6 +63,9 @@ def process_review_job(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
                 payload.get("repo_url", ""),
                 payload.get("language", "python"),
             )
+            from backend.src.core.metrics import record_mock_review
+
+            record_mock_review(sleep_s)
         else:
             fingerprint = payload.get("fingerprint")
             if not fingerprint:

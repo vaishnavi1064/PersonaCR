@@ -1,5 +1,5 @@
-# Local development only — single Redis for the RQ review queue.
-# Not a production/HA setup.
+# Local development only — Redis queue + Prometheus/Grafana operator stack.
+# Not a production/HA observability deployment.
 services:
   redis:
     image: redis:7-alpine
@@ -9,5 +9,37 @@ services:
       - personacr_redis:/data
     command: ["redis-server", "--appendonly", "yes"]
 
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - personacr_prom:/prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - personacr_grafana:/var/lib/grafana
+    depends_on:
+      - prometheus
+
 volumes:
   personacr_redis:
+  personacr_prom:
+  personacr_grafana:

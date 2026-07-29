@@ -120,6 +120,7 @@ Loop 1 is driven by `confidence_evaluator.evaluate_confidence`; Loop 2 by `evalu
 | Persistence | `db/supabase_rest.py` |
 | HTTP entry | `routes/analyze_routes.py`, `review_routes.py`, `chat_routes.py` |
 | Async review processing via Redis-backed job queue | `core/review_queue.py`, `core/job_store.py`, `workers/` (RQ, single-worker local/dev) |
+| Prometheus metrics export + Grafana dashboard for operator observability | `GET /metrics` (`core/metrics.py`), `observability/` + compose Prometheus/Grafana (dev/portfolio scale) |
 
 ---
 

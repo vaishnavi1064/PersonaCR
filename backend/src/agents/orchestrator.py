@@ -24,10 +24,17 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 
 from backend.src.core.models import (
     AgentTrace,
     ReviewResult,
+)
+from backend.src.core.metrics import (
+    observe_from_trace,
+    record_review_outcome,
+    record_self_correction,
+    track_agent_latency,
 )
 from backend.src.agents.planner import plan_review
 from backend.src.agents.style_analyst import analyze_style
@@ -45,6 +52,13 @@ async def _run_in_executor(func, *args):
     """Run a blocking (sync) function inside asyncio without blocking the event loop."""
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, func, *args)
+
+
+def _trace(agent_name: str, **kwargs) -> AgentTrace:
+    """Build AgentTrace and observe the same execution_time_ms into Prometheus."""
+    t = AgentTrace(agent_name=agent_name, **kwargs)
+    observe_from_trace(agent_name, t.execution_time_ms)
+    return t
 
 
 async def run_review(
@@ -68,6 +82,8 @@ async def run_review(
     """
     traces: list[AgentTrace] = []
     iteration = 0
+    loop1_triggered = False
+    orch_t0 = time.perf_counter()
 
     # These are set inside the loop; initialise so the type checker is happy.
     plan_output = None
@@ -81,8 +97,8 @@ async def run_review(
 
         # ── Step 1: Planner ───────────────────────────────────────────────────
         plan_output, plan_ms = plan_review(code, language, fingerprint)
-        traces.append(AgentTrace(
-            agent_name="planner",
+        traces.append(_trace(
+            "planner",
             input_summary=f"{language} code, {len(code.splitlines())} lines",
             output_summary=f"Focus: {plan_output.focus_areas}, Depth: {plan_output.review_depth}",
             decision=plan_output.strategy_notes,
@@ -91,23 +107,31 @@ async def run_review(
         ))
 
         # ── Step 2: Style Analyst + Defect Hunter IN PARALLEL ─────────────────
-        style_future = _run_in_executor(
-            analyze_style,
-            code,
-            language,
-            fingerprint,
-            user_id,
-            repo_name,
-            plan_output.focus_areas,
-        )
-        defect_future = _run_in_executor(hunt_defects, code, language)
+        # CM wraps each gather branch so wall-clock is attributed per agent even
+        # when overlapping; Prometheus observes AgentTrace.execution_time_ms
+        # (same values the product dashboard aggregates) via _trace below.
+        async def _style_branch():
+            async with track_agent_latency("style", observe=False):
+                return await _run_in_executor(
+                    analyze_style,
+                    code,
+                    language,
+                    fingerprint,
+                    user_id,
+                    repo_name,
+                    plan_output.focus_areas,
+                )
+
+        async def _defect_branch():
+            async with track_agent_latency("defect", observe=False):
+                return await _run_in_executor(hunt_defects, code, language)
 
         (style_output, style_ms), (defect_output, defect_ms) = await asyncio.gather(
-            style_future, defect_future
+            _style_branch(), _defect_branch()
         )
 
-        traces.append(AgentTrace(
-            agent_name="style_analyst",
+        traces.append(_trace(
+            "style_analyst",
             input_summary=(
                 f"Code + {style_output.similar_functions_found} similar functions from ChromaDB"
             ),
@@ -118,8 +142,8 @@ async def run_review(
             execution_time_ms=style_ms,
             iteration=iteration,
         ))
-        traces.append(AgentTrace(
-            agent_name="defect_hunter",
+        traces.append(_trace(
+            "defect_hunter",
             input_summary=f"{language} code, {len(code.splitlines())} lines",
             output_summary=(
                 f"Bugs={len(defect_output.bugs)}, "
@@ -142,8 +166,8 @@ async def run_review(
             defect_score=defect_output.defect_score,
         )
 
-        traces.append(AgentTrace(
-            agent_name="qa_checker",
+        traces.append(_trace(
+            "qa_checker",
             input_summary=(
                 f"Style: {len(style_output.findings)} findings, "
                 f"Defect: {len(defect_output.bugs)} bugs"
@@ -160,8 +184,8 @@ async def run_review(
             execution_time_ms=qa_ms,
             iteration=iteration,
         ))
-        traces.append(AgentTrace(
-            agent_name="confidence_evaluator",
+        traces.append(_trace(
+            "confidence_evaluator",
             input_summary=(
                 f"Similar funcs={style_output.similar_functions_found}, "
                 f"Style={style_output.overall_style_score}, "
@@ -179,7 +203,14 @@ async def run_review(
         # ── Step 4: Agentic Loop 1 check ─────────────────────────────────────
         if conf_output.is_confident or iteration >= max_iterations:
             break
+        loop1_triggered = True
         # Low confidence → loop back; Planner will see suggestion on next pass
+
+    if loop1_triggered:
+        if conf_output and conf_output.is_confident:
+            record_self_correction(1, "improved")
+        else:
+            record_self_correction(1, "failed")
 
     # ── Build issue list (needed by Layer 3 before we return) ────────────────
     all_issues: list[dict] = []
@@ -288,8 +319,8 @@ async def run_review(
         enriched_fp["_previous_focus"] = plan_output.focus_areas if plan_output else []
 
         plan_output, plan_ms = plan_review(code, language, enriched_fp)
-        traces.append(AgentTrace(
-            agent_name="planner",
+        traces.append(_trace(
+            "planner",
             input_summary=f"Re-plan with quality feedback: {quality_feedback[:60]}",
             output_summary=f"Focus: {plan_output.focus_areas}, Depth: {plan_output.review_depth}",
             decision=f"Re-plan after quality gate failure: {plan_output.strategy_notes[:80]}",
@@ -298,24 +329,30 @@ async def run_review(
         ))
 
         # Re-run Style + Defect in parallel
-        style_future = _run_in_executor(
-            analyze_style, code, language, fingerprint, user_id, repo_name,
-            plan_output.focus_areas,
-        )
-        defect_future = _run_in_executor(hunt_defects, code, language)
+        async def _style_reloop():
+            async with track_agent_latency("style", observe=False):
+                return await _run_in_executor(
+                    analyze_style, code, language, fingerprint, user_id, repo_name,
+                    plan_output.focus_areas,
+                )
+
+        async def _defect_reloop():
+            async with track_agent_latency("defect", observe=False):
+                return await _run_in_executor(hunt_defects, code, language)
+
         (style_output, style_ms), (defect_output, defect_ms) = await asyncio.gather(
-            style_future, defect_future
+            _style_reloop(), _defect_reloop()
         )
-        traces.append(AgentTrace(
-            agent_name="style_analyst",
+        traces.append(_trace(
+            "style_analyst",
             input_summary=f"Re-review iteration {iteration}",
             output_summary=f"{len(style_output.findings)} findings, score={style_output.overall_style_score}",
             decision=f"Re-review found {len(style_output.findings)} style deviations",
             execution_time_ms=style_ms,
             iteration=iteration,
         ))
-        traces.append(AgentTrace(
-            agent_name="defect_hunter",
+        traces.append(_trace(
+            "defect_hunter",
             input_summary=f"Re-review iteration {iteration}",
             output_summary=f"Bugs={len(defect_output.bugs)}, Smells={len(defect_output.code_smells)}",
             decision=f"Re-review defect score: {defect_output.defect_score}",
@@ -331,16 +368,16 @@ async def run_review(
             style_score=style_output.overall_style_score,
             defect_score=defect_output.defect_score,
         )
-        traces.append(AgentTrace(
-            agent_name="qa_checker",
+        traces.append(_trace(
+            "qa_checker",
             input_summary=f"Re-review iteration {iteration}",
             output_summary=f"Flagged: {len(qa_output.issues_flagged)}",
             decision="Re-review QA check",
             execution_time_ms=qa_ms,
             iteration=iteration,
         ))
-        traces.append(AgentTrace(
-            agent_name="confidence_evaluator",
+        traces.append(_trace(
+            "confidence_evaluator",
             input_summary=f"Re-review iteration {iteration}",
             output_summary=f"Confidence={conf_output.confidence_score}",
             decision=conf_output.reason,
@@ -399,6 +436,7 @@ async def run_review(
         # Commit only if non-empty, non-error, and not clearly worse than first pass.
         if rereview_valid and sts_scores.relevance >= first_pass_sts.relevance:
             all_issues = rereview_issues
+            record_self_correction(2, "improved")
         else:
             # Floor rule: empty / error / worse re-review must not replace first pass.
             style_output = first_pass_style
@@ -412,8 +450,10 @@ async def run_review(
             all_issues = first_pass_issues
             if not rereview_issues or rereview_has_errors:
                 reason = "empty or error findings"
+                record_self_correction(2, "failed")
             else:
                 reason = "lower relevance than first pass"
+                record_self_correction(2, "reverted")
             logger.info("Loop 2 re-review discarded (%s); keeping first-pass findings", reason)
             traces.append(AgentTrace(
                 agent_name="quality_gate_reloop",
@@ -437,6 +477,9 @@ async def run_review(
         status = "quality_gate_failed"
     else:
         status = "passed"
+
+    observe_from_trace("orchestrator", (time.perf_counter() - orch_t0) * 1000.0)
+    record_review_outcome(status)
 
     return ReviewResult(
         review_output={

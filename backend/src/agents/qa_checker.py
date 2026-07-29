@@ -131,7 +131,10 @@ def check_quality(
                 filtered_style_findings=style_output.findings,
                 filtered_defect_findings=all_defects,
             )
-    except Exception:
+    except Exception as e:
+        from backend.src.core.metrics import maybe_record_groq_throttle
+
+        maybe_record_groq_throttle(e)
         all_defects = (
             defect_output.bugs + defect_output.code_smells + defect_output.security_issues
         )

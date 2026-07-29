@@ -38,3 +38,6 @@ fastapi-mcp
 
 # Async support
 anyio
+
+# Operator metrics export (Prometheus scrape target)
+prometheus-client==0.26.0
