@@ -301,6 +301,126 @@ class TestStyleAnalystScoring:
         ]
         assert len(filter_findings_by_fingerprint_direction(findings, {})) == 1
 
+    def test_rare_error_handling_underuse_paraphrase_dropped(self):
+        from backend.src.agents.style_analyst import filter_style_findings
+
+        fp = {
+            "docstring_coverage": 0.246,
+            "type_hint_usage": 0.993,
+            "error_handling_rate": 0.131,
+            "comprehension_ratio": 0.016,
+            "naming_convention": "snake_case",
+        }
+        findings = [
+            StyleFinding(
+                category="error_handling",
+                severity="medium",
+                description=(
+                    "The submitted code does not handle potential errors "
+                    "when parsing the 'Set-Cookie' header."
+                ),
+                fingerprint_value="error_handling_rate: 0.131",
+                submitted_value="no try/except",
+            ),
+            StyleFinding(
+                category="naming",
+                severity="high",
+                description="mergeHeaders does not follow snake_case",
+                fingerprint_value="snake_case",
+                submitted_value="camelCase",
+            ),
+        ]
+        kept = filter_style_findings(findings, fp)
+        assert len(kept) == 1
+        assert kept[0].category == "naming"
+
+    def test_rare_relative_overuse_dropped_absolute_kept(self):
+        from backend.src.agents.style_analyst import filter_style_findings
+
+        fp = {"docstring_coverage": 0.246, "type_hint_usage": 0.993}
+        relative = StyleFinding(
+            category="documentation",
+            severity="low",
+            description=(
+                "Docstring coverage is higher than average for this developer"
+            ),
+            fingerprint_value="0.246",
+            submitted_value="1.0",
+        )
+        absolute = StyleFinding(
+            category="documentation",
+            severity="medium",
+            description="Excessive docstring verbosity vs rare docstring habit",
+            fingerprint_value="0.246",
+            submitted_value="long module docstring on every function",
+        )
+        kept = filter_style_findings([relative, absolute], fp)
+        assert len(kept) == 1
+        assert "excessive" in kept[0].description.lower()
+
+    def test_praise_and_generic_prior_suppressed(self):
+        from backend.src.agents.style_analyst import filter_style_findings
+
+        fp = {
+            "docstring_coverage": 0.246,
+            "type_hint_usage": 0.993,
+            "error_handling_rate": 0.131,
+            "naming_convention": "snake_case",
+        }
+        findings = [
+            StyleFinding(
+                category="naming",
+                severity="low",
+                description=(
+                    "The submitted code's function name 'build_url' "
+                    "follows the snake_case convention."
+                ),
+            ),
+            StyleFinding(
+                category="error_handling",
+                severity="low",
+                description=(
+                    "No error handling, which is consistent with the "
+                    "developer's error_handling_rate of 0.131"
+                ),
+            ),
+            StyleFinding(
+                category="naming",
+                severity="low",
+                description="The variable name 'rest' could be more descriptive.",
+            ),
+            StyleFinding(
+                category="naming",
+                severity="high",
+                description="parseStatus uses camelCase not snake_case",
+                fingerprint_value="snake_case",
+                submitted_value="camelCase",
+            ),
+        ]
+        kept = filter_style_findings(findings, fp)
+        assert len(kept) == 1
+        assert "camelCase" in kept[0].description
+
+    def test_edge_case_handle_not_dropped_as_error_handling_underuse(self):
+        """'does not handle None' is not fingerprint under-use of try/except."""
+        from backend.src.agents.style_analyst import filter_style_findings
+
+        fp = {"error_handling_rate": 0.131, "type_hint_usage": 0.993}
+        findings = [
+            StyleFinding(
+                category="style",
+                severity="medium",
+                description=(
+                    "The function does not handle the case where the input "
+                    "URL is None or empty."
+                ),
+            )
+        ]
+        # Not praise / not rare-under-use of error_handling_rate → kept
+        # (may still be a nit; suppress is for descriptive/runtime/simplify).
+        kept = filter_style_findings(findings, fp)
+        assert len(kept) == 1
+
 class TestOrchestrator:
     @pytest.mark.asyncio
     async def test_parallel_style_and_defect_overlap_in_time(self):

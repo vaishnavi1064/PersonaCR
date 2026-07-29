@@ -51,89 +51,136 @@ COMMON_MIN = 0.65   # rate ≥ this → presence is the norm (do not flag "has X
 
 # Rate fingerprint keys + how "under-use" / "over-use" findings look in text.
 # Driven by fingerprint values generally — not a docstring special-case.
+# Patterns broadened for paraphrases observed in IN false-positive diagnosis
+# (e.g. "does not handle potential errors", "coverage higher than average").
 _RATE_FEATURE_SPECS: list[dict] = [
     {
         "fp_key": "docstring_coverage",
         "categories": {"documentation", "docstring_coverage", "docs"},
         "under_patterns": (
-            r"\bmissing\b.{0,40}\bdocstring",
-            r"\blacks?\b.{0,40}\bdocstring",
+            r"\bmissing\b.{0,60}\bdocstring",
+            r"\blacks?\b.{0,60}\bdocstring",
             r"\bno docstring\b",
             r"\bwithout (a )?docstring\b",
-            r"\bdocstring coverage\b.{0,40}\b(missing|no|lacks?|absent)",
+            r"\bdocstring coverage\b.{0,60}\b(missing|no|lacks?|absent|low|zero)",
+            r"\b(does not|doesn't|do not)\b.{0,40}\b(have|include|contain).{0,20}\bdocstring",
+            r"\babsent\b.{0,30}\bdocstring",
         ),
         "over_patterns": (
             r"\bverbose docstring\b",
             r"\bexcessive docstring\b",
             r"\btoo (much|many|long).{0,20}\bdocstring",
-            r"\bdocstring.{0,40}\b(verbose|excessive|unnecessary|over)",
+            r"\bdocstring.{0,60}\b(verbose|excessive|unnecessary|over-?use|overused|overly)",
             r"\bunnecessary docstring\b",
+            r"\bdocstring coverage\b.{0,60}\b(higher|above|more than|greater than|exceeds)",
+            r"\b(higher|above|more than|greater than).{0,40}\b(developer|fingerprint|average|usual|typical).{0,40}\bdocstring",
+            r"\bdocstring.{0,60}\b(higher|above|more than).{0,40}\b(average|usual|typical|developer)",
+            r"\boverused\b",
+            r"\bimplicit docstring coverage of 1",
         ),
     },
     {
         "fp_key": "type_hint_usage",
         "categories": {"type_safety", "type_hints", "typing"},
         "under_patterns": (
-            r"\bmissing\b.{0,40}\btype\s*hint",
+            r"\bmissing\b.{0,60}\btype\s*hint",
             r"\bno type\s*hint",
             r"\bwithout type\s*hint",
-            r"\blacks?\b.{0,40}\btype\s*hint",
+            r"\blacks?\b.{0,60}\btype\s*hint",
             r"\buntyped\b",
+            r"\b(does not|doesn't|do not)\b.{0,40}\b(use|have|include).{0,20}\btype\s*hint",
         ),
         "over_patterns": (
             r"\bexcessive type\s*hint",
             r"\bunnecessary type\s*hint",
             r"\bover-?(use|typed)\b",
+            r"\btype\s*hint.{0,40}\b(higher|above|more than|excessive)",
         ),
     },
     {
         "fp_key": "error_handling_rate",
         "categories": {"error_handling"},
         "under_patterns": (
-            r"\bmissing\b.{0,40}\b(error handling|try|except)",
+            r"\bmissing\b.{0,60}\b(error handling|try|except)",
             r"\bno (error handling|try/except|try\s*/\s*except)",
-            r"\blacks?\b.{0,40}\b(error handling|exception)",
+            r"\blacks?\b.{0,60}\b(error handling|exception handling)",
             r"\bwithout (error handling|try)",
+            # Paraphrases of under-use; require error/exception (not bare "potential").
+            r"\b(does not|doesn't|do not)\s+handle\b.{0,40}\b(potential\s+)?(errors?|exceptions?)",
+            r"\b(does not|doesn't|do not)\b.{0,30}\b(error handling|exception handling)",
+            r"\bno error handling\b",
+            r"\blacks? error handling\b",
+            r"\bassumes that .{0,80}\b(well-formed|always valid|never fails)",
         ),
         "over_patterns": (
-            r"\bunnecessary\b.{0,40}\b(try|except|error handling)",
+            r"\bunnecessary\b.{0,60}\b(try|except|error handling)",
             r"\bbroad try\b",
-            r"\bover-?(use|ly).{0,20}\b(except|error handling)",
-            r"\bexcessive\b.{0,40}\b(try|except|error handling)",
+            r"\bover-?(use|ly).{0,30}\b(except|error handling)",
+            r"\bexcessive\b.{0,60}\b(try|except|error handling)",
+            r"\b(higher|above|more than).{0,40}\berror handling",
         ),
     },
     {
         "fp_key": "comprehension_ratio",
         "categories": {"style", "complexity", "comprehension"},
         "under_patterns": (
-            r"\bmissing\b.{0,40}\bcomprehension",
+            r"\bmissing\b.{0,60}\bcomprehension",
             r"\bshould use (a )?(list |dict )?comprehension\b",
-            r"\bprefer.{0,20}\bcomprehension\b",
+            r"\bprefer.{0,30}\bcomprehension\b",
+            r"\b(does not|doesn't|do not)\b.{0,40}\bcomprehension",
         ),
         "over_patterns": (
-            r"\bunnecessary\b.{0,40}\bcomprehension",
-            r"\bexcessive\b.{0,40}\bcomprehension",
+            r"\bunnecessary\b.{0,60}\bcomprehension",
+            r"\bexcessive\b.{0,60}\bcomprehension",
             r"\buses (a )?(list |dict |set )?comprehension\b",
-            r"\bcomprehension.{0,40}\b(unnecessary|excessive|over)",
+            r"\bcomprehension.{0,60}\b(unnecessary|excessive|over)",
+            r"\b(higher|above|more than).{0,40}\bcomprehension",
         ),
     },
     {
         "fp_key": "comment_density",
         "categories": {"documentation", "style", "comments"},
         "under_patterns": (
-            r"\bmissing\b.{0,40}\bcomment",
+            r"\bmissing\b.{0,60}\bcomment",
             r"\bno comment",
-            r"\blacks?\b.{0,40}\bcomment",
+            r"\blacks?\b.{0,60}\bcomment",
             r"\bwithout comment",
+            r"\b(does not|doesn't|do not)\b.{0,40}\bcomment",
         ),
         "over_patterns": (
-            r"\bexcessive\b.{0,40}\bcomment",
+            r"\bexcessive\b.{0,60}\bcomment",
             r"\btoo many comment",
             r"\bverbose comment",
             r"\bunnecessary comment",
+            r"\b(higher|above|more than).{0,40}\bcomment",
         ),
     },
 ]
+
+# Praise / consistency notes are not deviations (same idea as fair-metric tracking).
+_PRAISE_PATTERNS: tuple[str, ...] = (
+    r"\bconsistent with\b",
+    r"\bwhich is consistent\b",
+    r"\bfollows the\b",
+    r"\bfollows\b.{0,40}\b(snake_case|camelCase|convention|pattern)\b",
+    r"\bmatches (the )?(developer|fingerprint|pattern)\b",
+    r"\bin line with\b",
+    r"\baligns with\b",
+    r"\bno deviation\b",
+)
+
+# Relative over-use claims (vs absolute "excessive X") — drop when feature is RARE:
+# fingerprint already expects low use; "higher than average" on in-style code is FP noise.
+# Absolute over-use ("excessive docstring", "uses a list comprehension") is KEPT for OFF.
+_RELATIVE_OVERUSE_PATTERNS: tuple[str, ...] = (
+    r"\bhigher than (the )?(developer|fingerprint|average|usual|typical)\b",
+    r"\babove (the )?(developer|fingerprint|'?s)?\s*(average|usual|typical|norm)\b",
+    r"\babove the developer'?s average\b",
+    r"\bmore than (the )?(usual|average|typical|developer)\b",
+    r"\bgreater than (the )?(average|usual|typical)\b",
+    r"\bexceeds (the )?(average|usual|typical|developer)\b",
+    r"\b(coverage|rate|usage).{0,40}\b(higher|above|more than|greater than).{0,40}\b(average|usual|typical|developer)\b",
+)
 
 
 def compute_style_score_from_findings(
@@ -244,8 +291,9 @@ def filter_findings_by_fingerprint_direction(
     """
     Defect B: drop findings that invert fingerprint direction.
 
-    If a rate feature is RARE, drop under-use ("missing X") findings for that feature.
-    If a rate feature is COMMON, drop over-use ("has / excessive X") findings.
+    If a rate feature is RARE, drop under-use findings (absence is the norm).
+    If a rate feature is COMMON, drop over-use findings (presence is the norm).
+    Rare + over-use is KEPT (real deviation — needed for OFF-style detection).
     Empty fingerprint → no filtering. category=error always kept (honesty path).
     """
     if not fingerprint:
@@ -270,7 +318,6 @@ def filter_findings_by_fingerprint_direction(
             except (TypeError, ValueError):
                 continue
 
-            # Only apply to findings that look like they concern this feature
             cat_hit = cat in spec["categories"] or key.replace("_", " ") in text
             under = _matches_any(text, spec["under_patterns"])
             over = _matches_any(text, spec["over_patterns"])
@@ -284,10 +331,108 @@ def filter_findings_by_fingerprint_direction(
             if direction == "common" and over and not under:
                 drop = True
                 break
+            # Rare + relative over-claim ("higher than average") — not a real
+            # absolute over-use. Absolute over-use stays (OFF detection).
+            if (
+                direction == "rare"
+                and over
+                and not under
+                and _matches_any(text, _RELATIVE_OVERUSE_PATTERNS)
+            ):
+                drop = True
+                break
 
         if not drop:
             kept.append(f)
     return kept
+
+
+def _is_praise_finding(f: StyleFinding | dict) -> bool:
+    desc = (
+        (f.get("description") if isinstance(f, dict) else f.description) or ""
+    ).lower()
+    return _matches_any(desc, _PRAISE_PATTERNS)
+
+
+def _is_generic_prior_nit(f: StyleFinding | dict) -> bool:
+    """
+    Best-practice nits that are not fingerprint deviations:
+    descriptive-naming advice, runtime type checks, simplify-further, etc.
+    """
+    text = _finding_text(f)
+    cat = _finding_category(f)
+
+    # Descriptive-naming advice (not a convention break).
+    if _matches_any(
+        text,
+        (
+            r"\bmore descriptive\b",
+            r"\bcould be more descriptive\b",
+            r"\bnot very descriptive\b",
+        ),
+    ):
+        return True
+
+    # Runtime type-checking / value-type checks ≠ type-hint deviations.
+    if _matches_any(
+        text,
+        (
+            r"\bcheck(s|ing)? the type(s)? of\b",
+            r"\btype checking for\b",
+            r"\bno type checking for\b",
+            r"\btype of the dictionary\b",
+            r"\bbefore concatenat",
+        ),
+    ):
+        return True
+
+    # Generic simplify nits.
+    if cat in {"complexity", "style"} and _matches_any(
+        text,
+        (
+            r"\bcan be simplified\b",
+            r"\bcould be simplified\b",
+            r"\bsimplified further\b",
+            r"\bsimpler implementation\b",
+        ),
+    ):
+        return True
+
+    return False
+
+
+def suppress_non_deviation_findings(
+    findings: Sequence[StyleFinding],
+    fingerprint: dict | None = None,
+) -> list[StyleFinding]:
+    """
+    Drop praise/consistency notes and generic best-practice nits.
+    These are never personal-pattern deviations.
+    """
+    del fingerprint  # reserved for future fingerprint-aware nit rules
+    kept: list[StyleFinding] = []
+    for f in findings:
+        if (f.category or "").lower() == "error":
+            kept.append(f)
+            continue
+        if _is_praise_finding(f):
+            continue
+        if _is_generic_prior_nit(f):
+            continue
+        kept.append(f)
+    return kept
+
+
+def filter_style_findings(
+    findings: Sequence[StyleFinding],
+    fingerprint: dict,
+) -> list[StyleFinding]:
+    """
+    Full post-filter: Defect B direction + non-deviation suppress.
+    Empty list is a valid outcome when code matches the fingerprint.
+    """
+    step = filter_findings_by_fingerprint_direction(findings, fingerprint)
+    return suppress_non_deviation_findings(step, fingerprint)
 
 
 
@@ -304,9 +449,10 @@ def analyze_style(
     Uses two-stage ChromaDB retrieval (Ringer 2025) + Groq LLM.
     Returns (StyleAnalysisOutput, execution_time_ms).
 
-    overall_style_score is computed from findings (Defect A), after direction
-    filtering against fingerprint rates (Defect B). The LLM's overall_style_score
-    field is ignored when present.
+    overall_style_score is computed from findings (Defect A), after
+    filter_style_findings (Defect B direction + non-deviation suppress).
+    The LLM's overall_style_score field is ignored when present.
+    Empty findings (score 100) is valid when code matches the fingerprint.
     """
     start = time.time()
 
@@ -361,11 +507,20 @@ def analyze_style(
         "FINGERPRINT DIRECTION (critical):\n"
         "Rate features are frequencies of what this developer ACTUALLY does — not ideals.\n"
         f"- If a rate is LOW (≤ {RARE_MAX}): the developer rarely does X. Do NOT flag "
-        "missing/absence of X. Only flag clear over-use of X.\n"
+        "missing/absence of X (including paraphrases like 'does not handle errors'). "
+        "Only flag clear over-use of X.\n"
         f"- If a rate is HIGH (≥ {COMMON_MIN}): the developer usually does X. Flag missing X. "
         "Do NOT flag presence of X as a deviation.\n"
         "- Mid-range: only flag clear departures in either direction.\n"
         "Deviation = departure from the repo's actual norm, in either direction.\n\n"
+        "IMPORTANT:\n"
+        "- If the submitted code matches the fingerprint (no real deviations), return "
+        '"findings": [] — an empty list is preferred. Do NOT invent nits.\n'
+        "- Do NOT emit praise or consistency notes as findings "
+        "(e.g. 'follows snake_case', 'consistent with type_hint_usage').\n"
+        "- Do NOT flag generic best-practice advice unrelated to the fingerprint "
+        "(e.g. 'more descriptive variable names', 'add runtime type checks', "
+        "'could be simplified further').\n\n"
         "Return ONLY valid JSON:\n"
         "{\n"
         '  "findings": [\n'
@@ -380,8 +535,7 @@ def analyze_style(
         '  "overall_style_score": 0-100\n'
         "}\n\n"
         "overall_style_score in the JSON is ignored by the system (score is computed from findings).\n"
-        "Only report DEVIATIONS from personal patterns, not generic code quality issues. "
-        "Do not report praise / consistency notes as findings."
+        "Only report DEVIATIONS from personal patterns."
     )
 
     user_prompt = (
@@ -392,7 +546,9 @@ def analyze_style(
         f"Submitted code ({language}):\n"
         f"```{language}\n{code[:3000]}\n```"
         f"{focus_hint}\n"
-        "Compare the submitted code against this developer's patterns. Return JSON only."
+        "Compare the submitted code against this developer's patterns. "
+        "Return JSON only. If there are no real deviations from the fingerprint, "
+        "return an empty findings list."
     )
 
     try:
@@ -410,7 +566,7 @@ def analyze_style(
         if json_match:
             data = json.loads(json_match.group())
             findings = [StyleFinding(**f) for f in data.get("findings", [])]
-            findings = filter_findings_by_fingerprint_direction(findings, fingerprint)
+            findings = filter_style_findings(findings, fingerprint)
             score = compute_style_score_from_findings(findings)
             result = StyleAnalysisOutput(
                 findings=findings,
