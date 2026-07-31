@@ -78,7 +78,7 @@ flowchart TB
 | **Cache-Aside** | `cache_manager` + Supabase | SHA match → reuse fingerprint; else ingest → extract → embed → save |
 | **Feedback / Retry** | Two agentic loops in the orchestrator | Confidence re-plan; quality-gate re-review (max 2 iterations default) |
 
-Redis/RQ async review jobs and Prometheus `/metrics` + Grafana are **local/dev (portfolio) scale**, not a production HA claim. See [ARCHITECTURE.md](ARCHITECTURE.md).
+Redis/RQ async review jobs and Prometheus `/metrics` + Grafana **run and are verified via local Docker Compose** (dev/portfolio scale — not a production HA or multi-node claim). See [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ---
 
@@ -205,7 +205,7 @@ Reporting an inconclusive result after fixing metric and scorer bugs is intentio
 
 - **Python:** CI and smoke use **3.12**. Local **3.14** can work (fastembed/ONNX path); prefer 3.12 for parity with CI.
 - **Node:** **24** (aligned with CI) for the frontend.
-- **Docker** (optional): only needed for Redis queue and/or Prometheus/Grafana via Compose.
+- **Docker** (optional): only needed for Redis queue and/or Prometheus/Grafana via Compose (stack verified running locally).
 - API keys: Groq + Supabase (see `.env` examples).
 
 ### Backend
@@ -247,9 +247,11 @@ docker compose up -d redis
 python -m backend.src.workers.worker
 ```
 
-Sync `POST /api/review` remains available without Redis. Async path: `POST /api/reviews` + `GET /api/reviews/{job_id}` (local/dev scale).
+Sync `POST /api/review` remains available without Redis. Async path: `POST /api/reviews` + `GET /api/reviews/{job_id}` (local Compose verified; local/dev scale).
 
 ### Observability (optional)
+
+Local Compose stack verified end-to-end (Prometheus **9090**, Grafana **3001**):
 
 ```bash
 docker compose up -d prometheus grafana
@@ -279,7 +281,7 @@ With the API running, MCP is mounted at `/mcp` (`fastapi-mcp`). Example remote w
 - **Sample size:** Fair personalization comparison at **N=14** paired-clean cases — directional only.
 - **Thesis:** Personalized vs generic remains **inconclusive**; do not cite as a win.
 - **Metric shape:** Shared scale uses a small frozen feature set + mention tracking; production UX still surfaces a scalar `style_score` / CRScore dims — not a full per-feature explanation vector for every claim.
-- **Infra:** Redis/RQ and Prometheus/Grafana are wired for local Compose; not validated as multi-node production.
+- **Infra:** Redis/RQ and Prometheus/Grafana **run and are verified via local Docker Compose** (Redis **6379**, Prometheus **9090**, Grafana **3001**); still **not validated at multi-node / production scale**.
 - **MCP:** Pinned to **mcp 1.x** / compatible `fastapi-mcp` (mcp 2.x broke the Server API in CI pins).
 - **Frontend:** Core pages work; several UI hooks/components remain stubs (`useTheme`, `Card`, etc. in PROJECT_OVERVIEW) — refactor/cleanup pending.
 - **Deps listed but unused in source:** e.g. ReportLab / pylint appear in requirements without call sites (see PROJECT_OVERVIEW).
