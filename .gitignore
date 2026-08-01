@@ -14,6 +14,16 @@ backend/.chroma/
 backend/.env
 frontend/.env
 
+# Kubernetes local secrets (never commit real keys)
+k8s/secret.yaml
+
+# Terraform local state / providers (local minikube demo)
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/.terraform.lock.hcl
+
+
 # IDE / OS
 .vscode/
 .DS_Store

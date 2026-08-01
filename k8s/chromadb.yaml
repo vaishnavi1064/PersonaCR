@@ -1,0 +1,85 @@
+# ChromaDB StatefulSet + headless/ClusterIP Service — local/dev orchestration demo.
+#
+# Honesty: PersonaCR currently uses an in-process chromadb.PersistentClient
+# (backend/.chroma PVC on the backend Deployment). This StatefulSet runs the
+# official chromadb/chroma image to demonstrate StatefulSet + PVC patterns and
+# for a possible future HttpClient wiring — the app source is NOT changed here.
+apiVersion: v1
+kind: Service
+metadata:
+  name: chromadb
+  namespace: personacr
+  labels:
+    app.kubernetes.io/name: chromadb
+    app.kubernetes.io/part-of: personacr
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: chromadb
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: chromadb
+  namespace: personacr
+  labels:
+    app.kubernetes.io/name: chromadb
+    app.kubernetes.io/part-of: personacr
+spec:
+  serviceName: chromadb
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: chromadb
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: chromadb
+        app.kubernetes.io/part-of: personacr
+    spec:
+      containers:
+        - name: chromadb
+          image: chromadb/chroma:0.5.23
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: IS_PERSISTENT
+              value: "TRUE"
+            - name: PERSIST_DIRECTORY
+              value: /chroma/chroma
+          volumeMounts:
+            - name: chroma-data
+              mountPath: /chroma/chroma
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+  volumeClaimTemplates:
+    - metadata:
+        name: chroma-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 2Gi

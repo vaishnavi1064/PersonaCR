@@ -1,0 +1,24 @@
+# Prometheus scrape config for in-cluster backend (local/dev only).
+# Mirrors observability/prometheus.yml but targets the k8s Service DNS name.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: personacr
+  labels:
+    app.kubernetes.io/part-of: personacr
+    app.kubernetes.io/name: prometheus
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    scrape_configs:
+      - job_name: personacr
+        metrics_path: /metrics
+        static_configs:
+          - targets:
+              - backend:8000
+            labels:
+              service: personacr-backend

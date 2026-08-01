@@ -1,0 +1,8 @@
+# Local/dev namespace for PersonaCR on minikube — not a production cluster layout.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: personacr
+  labels:
+    app.kubernetes.io/part-of: personacr
+    environment: local-dev

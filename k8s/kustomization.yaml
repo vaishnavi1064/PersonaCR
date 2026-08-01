@@ -1,0 +1,21 @@
+# Kustomize entrypoint for local minikube apply.
+# Usage:
+#   1. cp k8s/secret.example.yaml k8s/secret.yaml  # fill values; gitignored
+#   2. kubectl apply -f k8s/secret.yaml
+#   3. kubectl apply -k k8s/
+# secret.yaml is intentionally NOT listed here so a clean clone can still dry-run kustomize.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: personacr
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - prometheus-configmap.yaml
+  - redis.yaml
+  - chromadb.yaml
+  - backend.yaml
+  - frontend.yaml
+  - prometheus.yaml
+  - grafana.yaml

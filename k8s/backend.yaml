@@ -1,0 +1,100 @@
+# Backend Deployment + Service + PVC for embedded Chroma data.
+# Local/dev minikube demo — 1 replica, not HA.
+#
+# Note: the app uses chromadb.PersistentClient at backend/.chroma (in-process).
+# The chromadb StatefulSet is a separate orchestration demo; this PVC keeps the
+# embedded store across pod restarts.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backend-chroma-pvc
+  namespace: personacr
+  labels:
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/part-of: personacr
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: personacr
+  labels:
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/part-of: personacr
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: backend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: backend
+        app.kubernetes.io/part-of: personacr
+    spec:
+      containers:
+        - name: backend
+          image: personacr-backend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: personacr-config
+            - secretRef:
+                name: personacr-secrets
+          volumeMounts:
+            - name: chroma-data
+              mountPath: /app/backend/.chroma
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 3Gi
+          # /health is implemented in backend/src/main.py
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+      volumes:
+        - name: chroma-data
+          persistentVolumeClaim:
+            claimName: backend-chroma-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: personacr
+  labels:
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/part-of: personacr
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: backend
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
