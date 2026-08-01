@@ -25,7 +25,7 @@ Schema below was inferred from TypeScript interfaces, insert/select payloads, an
 | Column | Assumption in migrations | Why uncertain |
 |--------|---------------------------|---------------|
 | Score columns (`overall_score`, `style_score`, …) | `double precision` | TS `number` / Python `float`; could be `numeric` |
-| `user_repos.languages` | `text[]` | PROJECT_OVERVIEW + fingerprints use `text[]`; frontend sends JS arrays (PostgREST accepts both `text[]` and jsonb) |
+| `user_repos.languages` | `text[]` | docs/PROJECT_OVERVIEW + fingerprints use `text[]`; frontend sends JS arrays (PostgREST accepts both `text[]` and jsonb) |
 | `user_chats.selected_repos` | `jsonb` | Confirmed by `backend/db/migrations/add_selected_repos.sql` |
 | `id` defaults | `gen_random_uuid()` via `pgcrypto` | Standard Supabase; dashboard might use `uuid_generate_v4()` |
 
@@ -33,7 +33,7 @@ Schema below was inferred from TypeScript interfaces, insert/select payloads, an
 
 | Item | Status |
 |------|--------|
-| Row Level Security enabled? | **Unknown** — PROJECT_OVERVIEW notes unclear RLS implications of frontend-vs-backend write split |
+| Row Level Security enabled? | **Unknown** — docs/PROJECT_OVERVIEW notes unclear RLS implications of frontend-vs-backend write split |
 | Policies (`auth.uid() = user_id`, service-role bypass, etc.) | **Unknown** — no policy SQL in repo |
 | Grants for `anon` / `authenticated` / `service_role` | **Unknown** |
 
@@ -53,5 +53,5 @@ Schema below was inferred from TypeScript interfaces, insert/select payloads, an
 - `backend/src/agents/insights_agent.py`
 - `backend/db/migrations/add_selected_repos.sql`
 - `backend/db/migrations/add_primary_repo_url.sql`
-- `PROJECT_OVERVIEW.md` §4d
+- `docs/PROJECT_OVERVIEW.md` §4d
 - `backend/requirements.txt` (no SQLAlchemy / Alembic)

@@ -1,4 +1,5 @@
 # Python
+.venv/
 backend/.venv/
 __pycache__/
 *.pyc
@@ -6,9 +7,19 @@ __pycache__/
 .coverage.*
 htmlcov/
 backend/.coverage
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+backend/.pytest_cache/
+backend/.mypy_cache/
 
 # Local vector store (regenerated per machine)
 backend/.chroma/
+
+# Node
+node_modules/
+frontend/node_modules/
+frontend/dist/
 
 # Environment files
 backend/.env
@@ -22,7 +33,6 @@ terraform/.terraform/
 terraform/*.tfstate
 terraform/*.tfstate.*
 terraform/.terraform.lock.hcl
-
 
 # IDE / OS
 .vscode/

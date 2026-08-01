@@ -84,7 +84,7 @@ jobs:
         run: npm run lint
 
   # ── 3. Deterministic evals ────────────────────────────────────────────────
-  # Source: TEST_MATRIX.md / pytest.ini — `pytest tests -m "not groq"`.
+  # Source: docs/TEST_MATRIX.md / pytest.ini — `pytest tests -m "not groq"`.
   # Defect Hunter: deterministic AST coverage is in tests/test_agents.py
   # (TestDefectHunterAST). The labeled harness `python evals/run_eval.py`
   # (evals/README.md) requires GROQ_API_KEY — intentionally NOT run here.

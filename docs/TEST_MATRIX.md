@@ -20,7 +20,7 @@ Do not read “30 passed” as “the product works end-to-end.” The three fai
 
 | Component | What “correct” means | Test status | If failing / notes |
 |-----------|----------------------|-------------|--------------------|
-| **CODE_MAP / Step 0** | Map matches real paths & names | **pass** (artifact) | See `CODE_MAP.md` |
+| **CODE_MAP / Step 0** | Map matches real paths & names | **pass** (artifact) | See `docs/CODE_MAP.md` |
 | **Fingerprint rates** | Hand-counts: docstring 0.7, type hints 0.5, error handling 0.3, snake_case, length stats | **pass** | `tests/test_fingerprint.py` |
 | **Fingerprint edges** | Empty / syntax-error / `ast.Constant` docstring / `match` statement | **pass** | No `ast.Str` regression on 3.14 |
 | **Retrieval NN** | Query returns nearest, sorted distances, auth helpers for auth-like query | **pass** | `tests/test_retrieval.py` (slow; local Jina) |
@@ -78,4 +78,4 @@ backend\.venv\Scripts\python.exe -m pytest tests -v
 backend\.venv\Scripts\python.exe -m pytest tests -m "not groq and not slow" -v
 ```
 
-Artifacts: `CODE_MAP.md`, `tests/`, `TEST_MATRIX.md`, `pytest.ini`.
+Artifacts: `docs/CODE_MAP.md`, `tests/`, `docs/TEST_MATRIX.md`, `pytest.ini`.

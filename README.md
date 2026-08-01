@@ -18,7 +18,7 @@ That hypothesis is **under measurement**. At the current fair-metric sample (N=1
 
 ## System Architecture
 
-PersonaCR is organized in three layers: fingerprinting (Layer 1), multi-agent review (Layer 2), and CRScore-inspired quality evaluation (Layer 3). Coordination and patterns follow [ARCHITECTURE.md](ARCHITECTURE.md).
+PersonaCR is organized in three layers: fingerprinting (Layer 1), multi-agent review (Layer 2), and CRScore-inspired quality evaluation (Layer 3). Coordination and patterns follow [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ```mermaid
 flowchart TB
@@ -78,7 +78,7 @@ flowchart TB
 | **Cache-Aside** | `cache_manager` + Supabase | SHA match → reuse fingerprint; else ingest → extract → embed → save |
 | **Feedback / Retry** | Two agentic loops in the orchestrator | Confidence re-plan; quality-gate re-review (max 2 iterations default) |
 
-Redis/RQ async review jobs and Prometheus `/metrics` + Grafana **run and are verified via local Docker Compose** (dev/portfolio scale — not a production HA or multi-node claim). See [ARCHITECTURE.md](ARCHITECTURE.md).
+Redis/RQ async review jobs and Prometheus `/metrics` + Grafana **run and are verified via local Docker Compose** (dev/portfolio scale — not a production HA or multi-node claim). See [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ---
 
@@ -283,8 +283,8 @@ With the API running, MCP is mounted at `/mcp` (`fastapi-mcp`). Example remote w
 - **Metric shape:** Shared scale uses a small frozen feature set + mention tracking; production UX still surfaces a scalar `style_score` / CRScore dims — not a full per-feature explanation vector for every claim.
 - **Infra:** Redis/RQ and Prometheus/Grafana **run and are verified via local Docker Compose** (Redis **6379**, Prometheus **9090**, Grafana **3001**); still **not validated at multi-node / production scale**.
 - **MCP:** Pinned to **mcp 1.x** / compatible `fastapi-mcp` (mcp 2.x broke the Server API in CI pins).
-- **Frontend:** Core pages work; several UI hooks/components remain stubs (`useTheme`, `Card`, etc. in PROJECT_OVERVIEW) — refactor/cleanup pending.
-- **Deps listed but unused in source:** e.g. ReportLab / pylint appear in requirements without call sites (see PROJECT_OVERVIEW).
+- **Frontend:** Core pages work; several UI hooks/components remain stubs (`useTheme`, `Card`, etc. in docs/PROJECT_OVERVIEW) — refactor/cleanup pending.
+- **Deps listed but unused in source:** e.g. ReportLab / pylint appear in requirements without call sites (see docs/PROJECT_OVERVIEW).
 - **Eval scope:** Minimal-A pairs are hand-authored against `psf/requests`; not a multi-repo industry benchmark.
 
 ---
@@ -299,7 +299,8 @@ backend/src/routes/      # FastAPI routes
 frontend/                # React app
 evals/                   # Minimal-A harness + honest result write-ups
 research/RELATED_WORK.md # Paper → component map
-ARCHITECTURE.md          # Patterns + component diagram
+docs/ARCHITECTURE.md     # Patterns + component diagram
+docs/                    # CODE_MAP, TEST_MATRIX, PROJECT_OVERVIEW, …
 ```
 
 ---
@@ -315,7 +316,7 @@ ARCHITECTURE.md          # Patterns + component diagram
 
 ## Citations & facts pending manual verification
 
-These appear in repo notes with links, but were **not** independently re-verified (author lists, venue pages, or DOIs) beyond what RELATED_WORK / PROJECT_OVERVIEW already state. Treat as **citation pending verification** if you need camera-ready bibliography quality:
+These appear in repo notes with links, but were **not** independently re-verified (author lists, venue pages, or DOIs) beyond what RELATED_WORK / docs/PROJECT_OVERVIEW already state. Treat as **citation pending verification** if you need camera-ready bibliography quality:
 
 | Item | Notes |
 |------|--------|
