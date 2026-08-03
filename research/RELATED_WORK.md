@@ -1,8 +1,14 @@
 # PersonaCR — Research Foundation
 
 This document maps each research paper to the specific PersonaCR component it influenced.
-PersonaCR fills a gap no existing paper addresses: combining personalized code style learning
-with multi-agent automated code review.
+
+Convention-aware and multi-agent code review is an **active area**. Related systems learn
+repo standards from config files, PR/review history, or fine-tuning; personalized
+*generation* (e.g. MPCODER) and multi-agent *review* (e.g. CodeAgent, RevAgent) are
+established. PersonaCR’s distinctive angle in this project is the **mechanism**: a
+quantitative ~30-feature AST **style fingerprint** used as a **cold-start** signal
+(no review history or config files required), not a claim that the category is empty
+or that no prior work exists.
 
 ---
 
@@ -89,9 +95,10 @@ academically that developers have distinct, quantifiable coding patterns.
 
 **What we changed:**
 
-- MPCODER does personalized code generation. PersonaCR does personalized code review.
-This is the core research gap we fill — no paper combines personalized style learning
-with multi-agent review.
+- MPCODER does personalized code *generation*. PersonaCR applies style learning to
+*review*. Other convention-aware reviewers exist; our difference is the cold-start
+AST fingerprint mechanism (structural rates from code), not a claim that no one else
+does personalized or multi-agent review.
 - MPCODER uses contrastive learning for implicit style. We use code-specific embeddings
 (Jina v2 base code) stored in ChromaDB for similarity-based retrieval instead.
 
@@ -247,26 +254,35 @@ with personalization."
 - LLM + static analysis combination → our Defect Hunter combines Python AST analysis
 (local, instant) with Groq LLM analysis (semantic, deeper). Our pseudo-reference
 generator similarly combines AST analysis with LLM claims.
-- Industry validation that the problem we are solving (personalized multi-agent review)
-is exactly what industry wants but has not built yet.
+- Industry interest in combining LLMs with static analysis (and in personalization as a
+direction). That interest is now an active product/research space — not an empty gap.
 
 ---
 
 
 
-## Research Gap — PersonaCR's Unique Contribution
+## Positioning — distinctive mechanism (not category novelty)
 
-After reviewing all major venues (EMNLP, NAACL, ACL, ICSE, ASE, MSR):
+After surveying the papers mapped above (and noting that convention-aware multi-agent
+review is an active area beyond this list):
 
-- **Personalized code generation exists** (MPCODER, Style2Code) but not personalized review
-- **Multi-agent code review exists** (CodeAgent, RevAgent) but without personalization
-- **No paper combines both** — this is PersonaCR's contribution
+- **Personalized code generation exists** (MPCODER, Style2Code)
+- **Multi-agent code review exists** (CodeAgent, RevAgent)
+- **Convention-aware review is active** — related tools and work learn standards from
+  configs, PR history, or fine-tuning. This is **not** “no prior work in the category.”
 
-PersonaCR bridges this gap by:
+PersonaCR’s **defensible** claim is a distinctive *mechanism* and an honest evaluation of it:
 
-1. Learning per-developer coding patterns (MPCODER concept applied to the review domain)
-2. Reviewing with specialized parallel agents (CodeAgent + RevAgent architecture)
+1. **Cold-start AST style fingerprint** (~30 quantitative features from code structure) —
+   no review history or config files required (inspired by explicit-style ideas in MPCODER /
+   fingerprinting work above, applied to review)
+2. Reviewing with specialized parallel agents (CodeAgent + RevAgent-style architecture)
 3. Self-evaluating review quality with ML (CRScore methodology)
 4. Optimizing for latency on the critical path (Latency-Aware MAS principles)
-5. Exposing everything via MCP for editor integration (production readiness)
+5. Exposing endpoints via MCP for editor integration (local/dev readiness — not a
+   production HA claim)
+
+What is **not** claimed: being first in personalized or multi-agent review, or a proven
+performance win over generic review (evaluation at N=14 remains inconclusive; see README /
+evals).
 

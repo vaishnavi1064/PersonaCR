@@ -148,13 +148,15 @@ Papers below are taken from [research/RELATED_WORK.md](research/RELATED_WORK.md)
 
 ---
 
-## Novelty
+## Approach & positioning
 
-**Approach (what is new here):** combining **cold-start AST fingerprint** style learning with a **multi-agent review** pipeline (retrieval-conditioned Style Analyst, parallel Defect Hunter, QA, confidence/quality loops). RELATED_WORK frames the literature gap as: personalized *generation* exists (e.g. MPCODER); multi-agent *review* exists (e.g. CodeAgent, RevAgent); **published work combining both for review is not identified** in that survey.
+Convention-aware, multi-agent code review is an **active area** — tools and recent work learn a repo’s standards from config files, PR/review history, or fine-tuning. Personalized *generation* (e.g. MPCODER) and multi-agent *review* (e.g. CodeAgent, RevAgent) are also established; see [research/RELATED_WORK.md](research/RELATED_WORK.md). Related systems exist; this is **not** a claim that the category is empty.
 
-**What is not claimed:** that this approach **beats** generic review in production or on a large benchmark. The fair-metric result at N=14 is **inconclusive**. Novelty here means a **novel approach rigorously tested**, not a proven performance win.
+PersonaCR’s distinctive angle is the **mechanism**: it derives a quantitative **~30-feature AST style fingerprint** (docstring rate, type-hint usage, naming convention, error-handling density, comprehension ratio, and related structural rates) directly from the code as a **cold-start** signal — no review history or config files required — then reviews new code against that fingerprint (retrieval-conditioned Style Analyst, parallel Defect Hunter, QA, confidence/quality loops). That specific fingerprint-based cold-start path is what this project explores; I did not find that exact mechanism in the prior-work notes surveyed for this repo, though related convention-aware reviewers exist.
 
-Commercial tools (e.g. CodeRabbit-class PR reviewers) are typically framed in project notes as reviewing against **generic** standards. Repo notes do **not** document Greptile/Kodus internals (e.g. PR-comment history vs AST cold-start); those comparisons are omitted rather than invented.
+**What is not claimed:** category-level novelty (“first,” “no prior work”), or that this approach **beats** generic review in production or on a large benchmark. The fair-metric result at N=14 is **inconclusive**. The claim is a **distinctive mechanism** plus an **honest evaluation** of it — a posture aligned with serious work in this space that declines to overclaim benchmark superiority.
+
+Commercial tools (e.g. CodeRabbit-class PR reviewers) are often framed as reviewing against **generic** standards. Repo notes do **not** document Greptile/Kodus internals (e.g. PR-comment history vs AST cold-start); those comparisons are omitted rather than invented.
 
 ---
 
@@ -326,7 +328,7 @@ These appear in repo notes with links, but were **not** independently re-verifie
 | Ghaleb et al. MSR 2026 | arXiv:2601.17406 + replication GitHub link in RELATED_WORK; MSR acceptance details not re-checked |
 | Ringer et al. CSI 2025 | DOI present in RELATED_WORK; full author list not copied here |
 | Ericsson experience report | arXiv:2507.19115; “IEEE (industry report)” per RELATED_WORK only |
-| Greptile / Kodus vs PR-comment history | **Not supported** by repo notes — intentionally omitted from Novelty |
+| Greptile / Kodus vs PR-comment history | **Not supported** by repo notes — intentionally omitted from Approach & positioning |
 | Old README latency tables (~8.5s E2E, etc.) | **Not** carried forward — not re-verified for this design doc |
 
-**Honesty check (results / novelty):** README states fingerprint control separation and **inconclusive** personalized-vs-generic at N=14 (2 personalized_better, 1 wrong-way, directional only). It does **not** claim personalization beats generic review.
+**Honesty check (results / positioning):** README claims a **distinctive cold-start AST fingerprint mechanism**, not category novelty. It states fingerprint control separation and **inconclusive** personalized-vs-generic at N=14 (2 personalized_better, 1 wrong-way, directional only). It does **not** claim personalization beats generic review.

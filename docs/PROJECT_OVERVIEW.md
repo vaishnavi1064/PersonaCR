@@ -2,6 +2,8 @@
 
 > **One-line pitch:** A multi-agent AI system that learns a developer's personal coding style from their GitHub repos, then reviews new code against those patterns instead of generic rules.
 
+**Approach & positioning:** Convention-aware multi-agent review is an active area (configs, PR history, fine-tuning, and related tools). PersonaCR’s distinctive angle is a **cold-start ~30-feature AST style fingerprint** derived directly from code structure — no review history or config files required — then used as the review signal. That is a **mechanism** claim, not category novelty (“first” / “no prior work”). Evaluation of personalized vs generic remains inconclusive at N=14; see README and `evals/`.
+
 ---
 
 ## 1. What It Does (User Perspective)

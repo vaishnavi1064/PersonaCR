@@ -126,4 +126,6 @@ Loop 1 is driven by `confidence_evaluator.evaluate_confidence`; Loop 2 by `evalu
 
 ## Honesty note
 
-This document names structure only. It does not assert that fingerprint-conditioned review outperforms a generic baseline; that thesis remains unproven / under measurement in the eval suite.
+This document names structure only. It does not assert that fingerprint-conditioned review outperforms a generic baseline; that thesis remains unproven / under measurement in the eval suite (inconclusive at N=14).
+
+**Positioning (mechanism, not category novelty):** Convention-aware multi-agent review is an active area. PersonaCR’s distinctive angle is the cold-start ~30-feature AST style fingerprint (no review history or config files required) feeding the review pipeline — not a claim that no prior work combines style learning with multi-agent review. See README “Approach & positioning” and `research/RELATED_WORK.md`.
