@@ -1,0 +1,16 @@
+# Build context = ./backend (docker build -t personacr-backend ./backend).
+# Keep secrets, local envs, and local vector data out of the image.
+.env
+.env.*
+.venv/
+venv/
+.chroma/
+__pycache__/
+**/__pycache__/
+*.pyc
+**/*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+tests/
+evals/*.jsonl
