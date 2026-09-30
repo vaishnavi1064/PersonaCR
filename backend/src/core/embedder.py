@@ -11,6 +11,7 @@ import os
 import re
 import hashlib
 from typing import Any
+from urllib.parse import urlparse
 
 import chromadb
 from chromadb.config import Settings
@@ -41,13 +42,33 @@ def _get_model() -> TextEmbedding:
 
 
 def _get_client() -> Any:
+    """
+    CHROMADB_URL set (e.g. k8s ``http://chromadb:8000``) → HttpClient to that server.
+    Unset → embedded PersistentClient under backend/.chroma (local dev default).
+    """
     global _chroma_client
     if _chroma_client is None:
-        os.makedirs(CHROMA_DIR, exist_ok=True)
-        _chroma_client = chromadb.PersistentClient(
-            path=CHROMA_DIR,
-            settings=Settings(anonymized_telemetry=False),
-        )
+        settings = Settings(anonymized_telemetry=False)
+        chroma_url = os.getenv("CHROMADB_URL", "").strip()
+        if chroma_url:
+            parsed = urlparse(chroma_url)
+            if not parsed.hostname:
+                raise ValueError(f"CHROMADB_URL has no host: {chroma_url!r}")
+            ssl = parsed.scheme == "https"
+            port = parsed.port or (443 if ssl else 8000)
+            logger.info("Using ChromaDB HttpClient at %s:%s", parsed.hostname, port)
+            _chroma_client = chromadb.HttpClient(
+                host=parsed.hostname,
+                port=port,
+                ssl=ssl,
+                settings=settings,
+            )
+        else:
+            os.makedirs(CHROMA_DIR, exist_ok=True)
+            _chroma_client = chromadb.PersistentClient(
+                path=CHROMA_DIR,
+                settings=settings,
+            )
     return _chroma_client
 
 

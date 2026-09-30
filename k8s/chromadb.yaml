@@ -1,9 +1,13 @@
 # ChromaDB StatefulSet + headless/ClusterIP Service — local/dev orchestration demo.
 #
-# Honesty: PersonaCR currently uses an in-process chromadb.PersistentClient
-# (backend/.chroma PVC on the backend Deployment). This StatefulSet runs the
-# official chromadb/chroma image to demonstrate StatefulSet + PVC patterns and
-# for a possible future HttpClient wiring — the app source is NOT changed here.
+# The backend talks to this server via chromadb.HttpClient because
+# CHROMADB_URL=http://chromadb:8000 is set in personacr-config (see
+# backend/src/core/embedder.py). Without CHROMADB_URL (local dev) the backend
+# falls back to an embedded PersistentClient under backend/.chroma.
+#
+# Keep the image tag equal to chromadb==<ver> in backend/requirements.txt —
+# a 1.x client cannot talk to a 0.x server. Chroma 1.x reads /config.yaml
+# (persist_path: "/data"), so the volume mounts at /data.
 apiVersion: v1
 kind: Service
 metadata:
@@ -44,19 +48,14 @@ spec:
     spec:
       containers:
         - name: chromadb
-          image: chromadb/chroma:0.5.23
+          image: chromadb/chroma:1.5.7
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 8000
-          env:
-            - name: IS_PERSISTENT
-              value: "TRUE"
-            - name: PERSIST_DIRECTORY
-              value: /chroma/chroma
           volumeMounts:
             - name: chroma-data
-              mountPath: /chroma/chroma
+              mountPath: /data
           resources:
             requests:
               cpu: 100m

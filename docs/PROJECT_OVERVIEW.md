@@ -90,7 +90,7 @@ User asks free-form question
 |---|---|---|
 | **LLM** | Groq — Llama 3.3 70B | `backend/src/agents/planner.py:129`, `style_analyst.py:114`, `defect_hunter.py:160`, `qa_checker.py:92`, `pseudo_ref_gen.py:152`, `insights_agent.py:253` — all use `model="llama-3.3-70b-versatile"` |
 | **Code embeddings** | Jina v2 base code (768-dim, ONNX via fastembed) | `backend/src/core/embedder.py:26` — `MODEL_NAME = "jinaai/jina-embeddings-v2-base-code"`, loaded via `fastembed.TextEmbedding` (L17, L37) |
-| **Vector store** | ChromaDB (persistent, cosine) | `backend/src/core/embedder.py:46` — `PersistentClient`, L127 `hnsw:space: cosine` |
+| **Vector store** | ChromaDB (cosine) | `backend/src/core/embedder.py` `_get_client()` — `HttpClient` if `CHROMADB_URL` set, else embedded `PersistentClient`; `hnsw:space: cosine` |
 | **STS scoring** | all-MiniLM-L6-v2 (sentence-transformers) | `backend/src/evaluation/sts_scorer.py:33` — `SentenceTransformer("all-MiniLM-L6-v2")` |
 | **Static analysis** | Python `ast` module | `backend/src/agents/defect_hunter.py:42` — `ast.parse(code)`, `pattern_extractor.py:59` |
 | **Backend** | FastAPI + Uvicorn | `backend/src/main.py:3` — `from fastapi import FastAPI`, `requirements.txt:2-3` |
@@ -128,7 +128,7 @@ User asks free-form question
 
 - **What gets embedded:** Every function extracted by `github_ingestor.py` + a file-level summary chunk per file (Ringer 2025 two-stage pattern)
 - **Model:** `jinaai/jina-embeddings-v2-base-code` via fastembed (ONNX), 768-dim vectors
-- **Vector store:** ChromaDB persistent client at `backend/.chroma/`, cosine distance
+- **Vector store:** ChromaDB, cosine distance — HTTP server when `CHROMADB_URL` is set (k8s), else embedded persistent client at `backend/.chroma/`
 - **Collection naming:** `pcr-{sanitized_repo}-{md5_hash[:16]}` per user+repo
 - **Retrieval — `query_similar_staged()`** (L216-319):
   - Stage 1: Query file-level chunks (`granularity="file"`) → top N file paths

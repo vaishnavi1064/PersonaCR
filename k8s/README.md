@@ -18,7 +18,7 @@ The app already runs fine via Docker Compose (Redis + Prometheus + Grafana) and 
 ### Honesty notes
 
 - **Compose vs this stack:** Root `docker-compose.yml` currently defines **Redis, Prometheus, Grafana only** (not backend/frontend/Chroma as compose services). Backend/frontend here are new images; Redis/Prom/Grafana images/ports mirror compose.
-- **ChromaDB:** The app uses an **in-process** `chromadb.PersistentClient` under `backend/.chroma`. The backend PVC preserves those vectors across pod restarts. The `chromadb` StatefulSet demonstrates StatefulSet + PVC orchestration and is reserved for a possible future `HttpClient` wiring — **no app source was changed**.
+- **ChromaDB:** `CHROMADB_URL=http://chromadb:8000` in the ConfigMap makes the backend use `chromadb.HttpClient` against the `chromadb` StatefulSet (vectors live on its PVC at `/data`). Without `CHROMADB_URL` (local dev) the backend falls back to an embedded `PersistentClient` under `backend/.chroma`, which the backend PVC still backs. Keep the `chromadb/chroma` image tag equal to `chromadb==` in `backend/requirements.txt`.
 - **Secrets:** Never commit `secret.yaml`. Copy the example template and fill locally.
 - **Scale:** 1 replica each, small requests/limits, emptyDir for Redis/Prometheus TSDB. Not HA.
 
@@ -164,6 +164,5 @@ minikube docker-env -u | Invoke-Expression
 ## Out of scope / follow-ups
 
 - Multi-node / production / HA / TLS ingress
-- Wiring app code to Chroma `HttpClient` against the StatefulSet
 - Cloud providers (EKS etc.)
 - Committing real secrets

@@ -28,7 +28,7 @@ File-level chunks (`__file__`, `__file_summary__`) are skipped for per-function 
 | What | Where |
 |------|--------|
 | Model | `backend/src/core/embedder.py` → `MODEL_NAME = "jinaai/jina-embeddings-v2-base-code"` (L26); `_get_model()` via `fastembed.TextEmbedding` (L33–39) |
-| Persist dir | `CHROMA_DIR` → `backend/.chroma` (L25); `_get_client()` `PersistentClient` (L42–50) |
+| Client | `_get_client()`: `CHROMADB_URL` set → `HttpClient` (host/port parsed from URL); unset → `PersistentClient` at `CHROMA_DIR` → `backend/.chroma` |
 | Write | `embed_and_store` (L94–155) — delete/recreate collection, batch embed, `collection.add` |
 | Collection name | `_collection_name` (L53–58) → `pcr-{safe_repo}-{md5[:16]}` |
 | Flat query | `query_similar` (L158–213) — unused by Style Analyst |

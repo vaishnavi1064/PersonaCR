@@ -1,9 +1,9 @@
 # Backend Deployment + Service + PVC for embedded Chroma data.
 # Local/dev minikube demo — 1 replica, not HA.
 #
-# Note: the app uses chromadb.PersistentClient at backend/.chroma (in-process).
-# The chromadb StatefulSet is a separate orchestration demo; this PVC keeps the
-# embedded store across pod restarts.
+# Note: with CHROMADB_URL set in personacr-config the app uses chromadb.HttpClient
+# against the chromadb StatefulSet. This PVC only backs the embedded
+# PersistentClient fallback at backend/.chroma (used if CHROMADB_URL is unset).
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

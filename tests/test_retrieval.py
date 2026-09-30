@@ -15,6 +15,7 @@ def isolated_chroma(tmp_path, monkeypatch):
     """Point embedder at a fresh temp Chroma dir; reset singletons."""
     import backend.src.core.embedder as emb
 
+    monkeypatch.delenv("CHROMADB_URL", raising=False)  # force embedded client
     monkeypatch.setattr(emb, "CHROMA_DIR", str(tmp_path / "chroma"))
     monkeypatch.setattr(emb, "_chroma_client", None)
     monkeypatch.setattr(emb, "_model", None)
