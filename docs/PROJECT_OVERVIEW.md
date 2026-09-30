@@ -261,15 +261,9 @@ User asks free-form question
 | `FingerprintResponse` | `models.py:52` | Not imported or used anywhere — routes return raw dicts |
 | `InsightsAgentInput` | `models.py:301` | Not imported or used anywhere |
 
-### Frontend Stubs (empty files)
+### Frontend Stubs
 
-| File | Content |
-|---|---|
-| `frontend/src/hooks/useTheme.ts` | `// useTheme — stub (to be implemented)` |
-| `frontend/src/hooks/useInView.ts` | `// useInView — stub (to be implemented)` |
-| `frontend/src/components/ui/Card.tsx` | `// Card — stub (to be implemented)` |
-| `frontend/src/components/ui/Button.tsx` | `// Button — stub (to be implemented)` |
-| `frontend/src/components/ui/Badge.tsx` | `// Badge — stub (to be implemented)` |
+None. The five unused 3-line stubs (`hooks/useTheme.ts`, `hooks/useInView.ts`, `components/ui/{Card,Button,Badge}.tsx`) had no importers and were removed. Landing components use `useInView` from `framer-motion`.
 
 ### Unused Function
 

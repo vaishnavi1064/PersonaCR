@@ -285,7 +285,7 @@ With the API running, MCP is mounted at `/mcp` (`fastapi-mcp`). Example remote w
 - **Metric shape:** Shared scale uses a small frozen feature set + mention tracking; production UX still surfaces a scalar `style_score` / CRScore dims — not a full per-feature explanation vector for every claim.
 - **Infra:** Redis/RQ and Prometheus/Grafana **run and are verified via local Docker Compose** (Redis **6379**, Prometheus **9090**, Grafana **3001**); still **not validated at multi-node / production scale**.
 - **MCP:** Pinned to **mcp 1.x** / compatible `fastapi-mcp` (mcp 2.x broke the Server API in CI pins).
-- **Frontend:** Core pages work; several UI hooks/components remain stubs (`useTheme`, `Card`, etc. in docs/PROJECT_OVERVIEW) — refactor/cleanup pending.
+- **Frontend:** Core pages work; unused UI stubs were removed. No automated frontend tests beyond `tsc` + ESLint in CI.
 - **Deps listed but unused in source:** e.g. ReportLab / pylint appear in requirements without call sites (see docs/PROJECT_OVERVIEW).
 - **Eval scope:** Minimal-A pairs are hand-authored against `psf/requests`; not a multi-repo industry benchmark.
 
