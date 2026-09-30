@@ -24,10 +24,7 @@ resource "kubernetes_config_map_v1" "personacr_config" {
   data = {
     REDIS_URL                 = var.redis_url
     PERSONACR_METRICS_ENABLED = var.metrics_enabled
-    BACKEND_URL               = "http://backend:8000"
     CHROMADB_URL              = "http://chromadb:8000"
-    REDIS_HOST                = "redis"
-    REDIS_PORT                = "6379"
   }
 }
 

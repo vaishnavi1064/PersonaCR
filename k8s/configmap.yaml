@@ -9,8 +9,5 @@ metadata:
 data:
   REDIS_URL: "redis://redis:6379/0"
   PERSONACR_METRICS_ENABLED: "1"
-  # In-cluster service DNS names (for reference / future wiring)
-  BACKEND_URL: "http://backend:8000"
+  # Read by backend/src/core/embedder.py → chromadb.HttpClient
   CHROMADB_URL: "http://chromadb:8000"
-  REDIS_HOST: "redis"
-  REDIS_PORT: "6379"
