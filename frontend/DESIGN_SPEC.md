@@ -345,14 +345,14 @@ STYLE: Missing docstring — 70% coverage → DEFECT: No null check — TypeErro
   - Number: font-display, 40px, --accent color
   - Label: font-body, 12px, --text-tertiary
 - Stats:
-  - "48%" — "faster via parallel execution"
-  - "69ms" — "quality scoring latency"
+  - "6" — "specialized agents"
+  - "30" — "feature style fingerprint"
   - "9" — "research papers"
   - "$0" — "infrastructure cost"
+  - Only counts the repo can back up (agents in backend/src/agents, keys returned by
+    extract_fingerprint, papers in research/RELATED_WORK.md). No latency or percentage claims.
 - Animation: numbers count up from 0 when scrolled into view (use Framer Motion useInView + animate)
-  - Percentages: 0→48 with "%" suffix
-  - Milliseconds: 0→69 with "ms" suffix
-  - Plain numbers: 0→9
+  - Plain numbers: 0→6, 0→30, 0→9
   - Dollar: always "$0" (no animation needed)
 - Padding: 80px top/bottom
 - Border-top: 0.5px solid --border

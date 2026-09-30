@@ -10,8 +10,8 @@ interface StatConfig {
 }
 
 const stats: StatConfig[] = [
-  { target: 48, suffix: '%',  label: 'faster via parallel execution' },
-  { target: 69, suffix: 'ms', label: 'quality scoring latency' },
+  { target: 6,  suffix: '',   label: 'specialized agents' },
+  { target: 30, suffix: '',   label: 'feature style fingerprint' },
   { target: 9,  suffix: '',   label: 'research papers' },
   { target: 0,  prefix: '$',  suffix: '', label: 'infrastructure cost', static: true },
 ]
