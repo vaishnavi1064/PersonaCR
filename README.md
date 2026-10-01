@@ -221,7 +221,7 @@ python -m venv .venv
 
 pip install -r backend/requirements.txt
 cp backend/.env.example backend/.env
-# Edit backend/.env — at minimum GROQ_API_KEY, SUPABASE_URL, SUPABASE_ANON_KEY / SERVICE_ROLE as needed
+# Edit backend/.env — at minimum GROQ_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
 uvicorn backend.src.main:app --reload --port 8000
 ```
