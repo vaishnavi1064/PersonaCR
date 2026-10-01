@@ -28,6 +28,17 @@ CHROMA_DIR = os.path.join(os.path.dirname(__file__), "..", "..", ".chroma")
 MODEL_NAME = "jinaai/jina-embeddings-v2-base-code"
 # Jina v2 supports long context; cap inputs to avoid OOM / ONNX edge cases on large files.
 MAX_EMBED_CHARS = 60_000
+# Memory is driven by sequence length, not chunk count: attention is O(tokens²) per
+# text and fastembed pads every text in a batch to the longest one. Measured in the
+# backend image: 32 function-sized texts ≈ +0.5 GiB, one ~3k-token file ≈ +1.6 GiB,
+# one ~7.5k-token file → SIGKILL. So each text is capped at MAX_EMBED_TOKENS and each
+# batch keeps (len(batch) × longest tokens) ≤ EMBED_TOKEN_BUDGET, which bounds a
+# batch's cost by that of a single EMBED_TOKEN_BUDGET-token text.
+MAX_EMBED_TOKENS = int(os.getenv("MAX_EMBED_TOKENS", "2048"))
+EMBED_BATCH_SIZE = int(os.getenv("EMBED_BATCH_SIZE", "32"))
+EMBED_TOKEN_BUDGET = int(os.getenv("EMBED_TOKEN_BUDGET", str(MAX_EMBED_TOKENS)))
+# Fallback token estimate when the fastembed tokenizer is not reachable (code ≈ 3–4 chars/token).
+_CHARS_PER_TOKEN_EST = 3
 # Chroma requires unique string ids; keep under typical 512-byte limits for deep paths.
 MAX_ID_LEN = 480
 
@@ -37,8 +48,55 @@ def _get_model() -> TextEmbedding:
     if _model is None:
         logger.info("Loading %s via fastembed (first load may download ONNX)...", MODEL_NAME)
         _model = TextEmbedding(MODEL_NAME)
-        logger.info("Embedding model ready.")
+        tokenizer = _get_tokenizer(_model)
+        if tokenizer is not None:
+            # Applies to every embed call (indexing and queries).
+            tokenizer.enable_truncation(max_length=MAX_EMBED_TOKENS)
+        else:
+            logger.warning("fastembed tokenizer not reachable; falling back to char-based caps")
+        logger.info("Embedding model ready (max %s tokens/text).", MAX_EMBED_TOKENS)
     return _model
+
+
+def _get_tokenizer(model: Any) -> Any | None:
+    """fastembed keeps its HF `tokenizers.Tokenizer` at model.model.tokenizer (not public API)."""
+    tokenizer = getattr(getattr(model, "model", None), "tokenizer", None)
+    if tokenizer is None or not hasattr(tokenizer, "enable_truncation"):
+        return None
+    return tokenizer
+
+
+def _token_counts(model: Any, texts: list[str]) -> list[int]:
+    """Post-truncation token count per text (what the ONNX model will actually see)."""
+    tokenizer = _get_tokenizer(model)
+    if tokenizer is None:
+        return [min(MAX_EMBED_TOKENS, len(t) // _CHARS_PER_TOKEN_EST + 1) for t in texts]
+    return [len(enc.ids) for enc in tokenizer.encode_batch(texts)]
+
+
+def _token_budget_batches(
+    token_counts: list[int],
+    max_items: int,
+    token_budget: int,
+) -> list[list[int]]:
+    """
+    Group indices (in order) so each batch has ≤ max_items texts and
+    len(batch) × max(tokens in batch) ≤ token_budget. A text over budget on its
+    own still gets a batch of one (it is already capped at MAX_EMBED_TOKENS).
+    """
+    batches: list[list[int]] = []
+    current: list[int] = []
+    longest = 0
+    for idx, n in enumerate(token_counts):
+        new_longest = max(longest, n)
+        if current and (len(current) >= max_items or (len(current) + 1) * new_longest > token_budget):
+            batches.append(current)
+            current, new_longest = [], n
+        current.append(idx)
+        longest = new_longest
+    if current:
+        batches.append(current)
+    return batches
 
 
 def _get_client() -> Any:
@@ -81,9 +139,12 @@ def _collection_name(user_id: str, repo_name: str) -> str:
 
 
 def _truncate_text(text: str) -> str:
-    if len(text) <= MAX_EMBED_CHARS:
+    limit = MAX_EMBED_CHARS
+    if _model is not None and _get_tokenizer(_model) is None:
+        limit = min(limit, MAX_EMBED_TOKENS * _CHARS_PER_TOKEN_EST)
+    if len(text) <= limit:
         return text
-    return text[:MAX_EMBED_CHARS]
+    return text[:limit]
 
 
 def _vec_to_list(vec: Any) -> list[float]:
@@ -117,7 +178,7 @@ def embed_and_store(
     chunks: list,
     user_id: str,
     repo_name: str,
-    batch_size: int = 32,
+    batch_size: int | None = None,
 ) -> dict[str, Any]:
     """
     Embed code chunks and store them in ChromaDB.
@@ -126,10 +187,11 @@ def embed_and_store(
         chunks: List of CodeChunk objects
         user_id: Supabase user ID (or 'anonymous')
         repo_name: Repository name (used to namespace the collection)
-        batch_size: How many chunks to embed at once
+        batch_size: Max chunks per batch (default EMBED_BATCH_SIZE); batches are also
+            split so len(batch) × longest tokens ≤ EMBED_TOKEN_BUDGET
 
     Returns:
-        dict with keys: collection (name), chunks_embedded (int)
+        dict with keys: collection (name), chunks_embedded (int), batches (int)
     """
     if not chunks:
         return {"collection": "", "chunks_embedded": 0}
@@ -149,14 +211,22 @@ def embed_and_store(
         metadata={"hnsw:space": "cosine", "user_id": user_id},
     )
 
-    # Embed in batches
-    for i in range(0, len(chunks), batch_size):
-        batch = chunks[i : i + batch_size]
-        texts_in = [_truncate_text(c.source) for c in batch]
+    # Embed + upsert one bounded batch at a time; vectors are never accumulated
+    # across batches.
+    texts_all = [_truncate_text(c.source) for c in chunks]
+    batches = _token_budget_batches(
+        _token_counts(model, texts_all),
+        max_items=batch_size or EMBED_BATCH_SIZE,
+        token_budget=EMBED_TOKEN_BUDGET,
+    )
+    for idxs in batches:
+        batch = [chunks[i] for i in idxs]
+        texts_in = [texts_all[i] for i in idxs]
         documents = texts_in  # store same text as embedded (consistent retrieval)
 
-        # fastembed returns a generator — collect to list
-        embeddings = list(model.embed(texts_in))
+        # fastembed returns a generator — collect to list; batch_size matches ours so
+        # fastembed does not re-group texts.
+        embeddings = list(model.embed(texts_in, batch_size=len(texts_in)))
         if len(embeddings) != len(batch):
             raise RuntimeError(
                 f"Embedding count mismatch: got {len(embeddings)}, expected {len(batch)}"
@@ -173,8 +243,11 @@ def embed_and_store(
             metadatas=metadatas,
         )
 
-    logger.info("Stored %s chunks in Chroma collection %s", len(chunks), col_name)
-    return {"collection": col_name, "chunks_embedded": len(chunks)}
+    logger.info(
+        "Stored %s chunks in Chroma collection %s (%s batches)",
+        len(chunks), col_name, len(batches),
+    )
+    return {"collection": col_name, "chunks_embedded": len(chunks), "batches": len(batches)}
 
 
 def query_similar(
