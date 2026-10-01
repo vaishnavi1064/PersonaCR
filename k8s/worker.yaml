@@ -25,6 +25,23 @@ spec:
         app.kubernetes.io/name: worker
         app.kubernetes.io/part-of: personacr
     spec:
+      # Block until Redis answers PING so the worker doesn't crash-loop on
+      # "Connection refused" when the whole stack starts at once.
+      initContainers:
+        - name: wait-for-redis
+          image: redis:7-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - until redis-cli -h redis -p 6379 ping | grep -q PONG; do echo "waiting for redis"; sleep 2; done
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
       containers:
         - name: worker
           image: personacr-backend:latest

@@ -8,6 +8,11 @@ services:
     volumes:
       - personacr_redis:/data
     command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
 
   # RQ worker for async reviews (queue "reviews"). Opt-in — the image is large:
   #   docker compose --profile worker up -d redis worker
@@ -25,7 +30,8 @@ services:
     volumes:
       - ./backend/.chroma:/app/backend/.chroma
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
 
   prometheus:
     image: prom/prometheus:v2.54.1
