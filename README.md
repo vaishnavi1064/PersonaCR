@@ -247,9 +247,11 @@ Requires Docker:
 docker compose up -d redis
 # From repo root, with backend deps + REDIS_URL set (see backend/.env.example):
 python -m backend.src.workers.worker
+# …or run the worker in a container instead (opt-in profile; builds the backend image):
+docker compose --profile worker up -d redis worker
 ```
 
-Sync `POST /api/review` remains available without Redis. Async path: `POST /api/reviews` + `GET /api/reviews/{job_id}` (local Compose verified; local/dev scale).
+Sync `POST /api/review` remains available without Redis. Async path: `POST /api/reviews` enqueues on the Redis queue `reviews`; an RQ worker process (`backend.src.workers.worker` — the `worker` Deployment in `k8s/`, or the Compose `worker` profile) runs the review; `GET /api/reviews/{job_id}` polls status/result. Without a running worker, jobs stay `queued` (local/dev scale).
 
 ### Observability (optional)
 

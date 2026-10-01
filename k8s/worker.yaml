@@ -1,0 +1,44 @@
+# RQ worker Deployment — consumes async review jobs from Redis queue "reviews".
+# Local/dev minikube demo — 1 replica, not HA.
+#
+# Same image as the backend; runs backend/src/workers/worker.py (an RQ Worker on
+# QUEUE_NAME="reviews" from backend/src/workers/review_jobs.py) instead of uvicorn.
+# POST /api/reviews enqueues; this pod runs the review and writes the result back
+# to Redis for GET /api/reviews/{job_id}. No Service: it only talks out to Redis,
+# Chroma (HttpClient via CHROMADB_URL) and Groq/Supabase.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: personacr
+  labels:
+    app.kubernetes.io/name: worker
+    app.kubernetes.io/part-of: personacr
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: worker
+        app.kubernetes.io/part-of: personacr
+    spec:
+      containers:
+        - name: worker
+          image: personacr-backend:latest
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-m", "backend.src.workers.worker"]
+          envFrom:
+            - configMapRef:
+                name: personacr-config
+            - secretRef:
+                name: personacr-secrets
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 3Gi

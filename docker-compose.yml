@@ -9,6 +9,24 @@ services:
       - personacr_redis:/data
     command: ["redis-server", "--appendonly", "yes"]
 
+  # RQ worker for async reviews (queue "reviews"). Opt-in — the image is large:
+  #   docker compose --profile worker up -d redis worker
+  # The API still runs on the host (uvicorn); both share Redis and the embedded
+  # Chroma store via the ./backend/.chroma bind mount. Secrets come from
+  # backend/.env at runtime (never baked into the image — see backend/.dockerignore).
+  worker:
+    profiles: ["worker"]
+    build: ./backend
+    image: personacr-backend:latest
+    command: ["python", "-m", "backend.src.workers.worker"]
+    env_file: ./backend/.env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./backend/.chroma:/app/backend/.chroma
+    depends_on:
+      - redis
+
   prometheus:
     image: prom/prometheus:v2.54.1
     ports:

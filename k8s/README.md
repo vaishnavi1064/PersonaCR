@@ -8,16 +8,17 @@ The app already runs fine via Docker Compose (Redis + Prometheus + Grafana) and 
 
 | Workload | Kind | Notes |
 |----------|------|--------|
-| `backend` | Deployment + ClusterIP + PVC | FastAPI `:8000`, probes on `/health`, PVC at `backend/.chroma` |
+| `backend` | Deployment + ClusterIP + PVC | FastAPI `:8000`, probes on `/health`, PVC at `backend/.chroma` (embedded fallback only) |
+| `worker` | Deployment (no Service) | Same image; `python -m backend.src.workers.worker` — RQ worker on queue `reviews` for `POST /api/reviews` |
 | `frontend` | Deployment + **NodePort 30080** | nginx serves SPA + proxies `/api` → backend |
-| `chromadb` | StatefulSet + PVC | Official image; **not wired into app code** (see below) |
+| `chromadb` | StatefulSet + PVC | `chromadb/chroma:1.5.7`; backend + worker use it via `CHROMADB_URL` (HttpClient) |
 | `redis` | Deployment + ClusterIP | Mirrors compose `redis:7-alpine` |
 | `prometheus` | Deployment + ClusterIP | Scrapes `backend:8000/metrics` |
 | `grafana` | Deployment + **NodePort 30301** | Local admin/admin + anonymous Viewer |
 
 ### Honesty notes
 
-- **Compose vs this stack:** Root `docker-compose.yml` currently defines **Redis, Prometheus, Grafana only** (not backend/frontend/Chroma as compose services). Backend/frontend here are new images; Redis/Prom/Grafana images/ports mirror compose.
+- **Compose vs this stack:** Root `docker-compose.yml` defines **Redis, Prometheus, Grafana**, plus an opt-in `worker` profile (not backend/frontend/Chroma as compose services). Backend/frontend here are new images; Redis/Prom/Grafana images/ports mirror compose.
 - **ChromaDB:** `CHROMADB_URL=http://chromadb:8000` in the ConfigMap makes the backend use `chromadb.HttpClient` against the `chromadb` StatefulSet (vectors live on its PVC at `/data`). Without `CHROMADB_URL` (local dev) the backend falls back to an embedded `PersistentClient` under `backend/.chroma`, which the backend PVC still backs. Keep the `chromadb/chroma` image tag equal to `chromadb==` in `backend/requirements.txt`.
 - **Secrets:** Never commit `secret.yaml`. Copy the example template and fill locally.
 - **Scale:** 1 replica each, small requests/limits, emptyDir for Redis/Prometheus TSDB. Not HA.
