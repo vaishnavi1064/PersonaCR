@@ -340,15 +340,14 @@ STYLE: Missing docstring — 70% coverage → DEFECT: No null check — TypeErro
 - Padding: 100px top/bottom
 
 ### 1G. Stats section (Maze animated counters)
-- 4 numbers in a row, spaced evenly, max-width 600px centered
+- 3 numbers in a row, spaced evenly, max-width 600px centered
 - Each stat:
   - Number: font-display, 40px, --accent color
   - Label: font-body, 12px, --text-tertiary
 - Stats:
-  - "6" — "specialized agents"
+  - "6" — "agent review pipeline + Insights Q&A agent"
   - "30" — "feature style fingerprint"
   - "9" — "research papers"
-  - "$0" — "infrastructure cost"
   - Only counts the repo can back up (agents in backend/src/agents, keys returned by
     extract_fingerprint, papers in research/RELATED_WORK.md). No latency or percentage claims.
 - Animation: numbers count up from 0 when scrolled into view (use Framer Motion useInView + animate)

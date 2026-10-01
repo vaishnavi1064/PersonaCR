@@ -10,10 +10,9 @@ interface StatConfig {
 }
 
 const stats: StatConfig[] = [
-  { target: 6,  suffix: '',   label: 'specialized agents' },
+  { target: 6,  suffix: '',   label: 'agent review pipeline + Insights Q&A agent' },
   { target: 30, suffix: '',   label: 'feature style fingerprint' },
   { target: 9,  suffix: '',   label: 'research papers' },
-  { target: 0,  prefix: '$',  suffix: '', label: 'infrastructure cost', static: true },
 ]
 
 function AnimatedNumber({ config, trigger }: { config: StatConfig; trigger: boolean }) {
