@@ -67,11 +67,18 @@ def _get_tokenizer(model: Any) -> Any | None:
 
 
 def _token_counts(model: Any, texts: list[str]) -> list[int]:
-    """Post-truncation token count per text (what the ONNX model will actually see)."""
+    """
+    Post-truncation token count per text (what the ONNX model will actually see).
+
+    fastembed enables padding-to-longest on its tokenizer, so encode_batch pads every
+    text to the longest one in the call and len(ids) would report that for all texts.
+    Count real tokens via the attention mask instead (padding stays enabled — fastembed
+    needs it to batch).
+    """
     tokenizer = _get_tokenizer(model)
     if tokenizer is None:
         return [min(MAX_EMBED_TOKENS, len(t) // _CHARS_PER_TOKEN_EST + 1) for t in texts]
-    return [len(enc.ids) for enc in tokenizer.encode_batch(texts)]
+    return [sum(enc.attention_mask) for enc in tokenizer.encode_batch(texts)]
 
 
 def _token_budget_batches(

@@ -10,7 +10,11 @@ from tests.conftest import make_chunk
 
 
 class _FakeTokenizer:
-    """1 token per whitespace word, honoring enable_truncation like HF tokenizers."""
+    """
+    1 token per whitespace word. Mirrors fastembed's HF tokenizer config: truncation
+    via enable_truncation, and padding-to-longest within each encode_batch call
+    (ids padded with 0, attention_mask 1 for real tokens / 0 for padding).
+    """
 
     def __init__(self) -> None:
         self.max_length: int | None = None
@@ -18,14 +22,17 @@ class _FakeTokenizer:
     def enable_truncation(self, max_length: int) -> None:
         self.max_length = max_length
 
+    def _real_len(self, text: str) -> int:
+        n = len(text.split())
+        return min(n, self.max_length) if self.max_length is not None else n
+
     def encode_batch(self, texts):
-        out = []
-        for t in texts:
-            n = len(t.split())
-            if self.max_length is not None:
-                n = min(n, self.max_length)
-            out.append(SimpleNamespace(ids=[0] * n))
-        return out
+        lens = [self._real_len(t) for t in texts]
+        longest = max(lens, default=0)
+        return [
+            SimpleNamespace(ids=[1] * n + [0] * (longest - n), attention_mask=[1] * n + [0] * (longest - n))
+            for n in lens
+        ]
 
 
 class _FakeModel:
@@ -96,7 +103,7 @@ def test_token_budget_splits_long_texts(emb, monkeypatch):
 
     tok = emb._fake.model.model.tokenizer
     for batch in emb._fake.model.calls:
-        counts = [len(e.ids) for e in tok.encode_batch(batch)]
+        counts = [sum(e.attention_mask) for e in tok.encode_batch(batch)]
         assert len(batch) * max(counts) <= 2048 or len(batch) == 1
     assert sum(len(c) for c in emb._fake.model.calls) == len(chunks)
 
@@ -111,7 +118,23 @@ def test_text_over_cap_is_truncated_and_embedded_alone(emb, monkeypatch):
     calls = emb._fake.model.calls
     assert len(calls[-1]) == 1  # the huge file gets its own batch
     tok = emb._fake.model.model.tokenizer
-    assert len(tok.encode_batch(calls[-1])[0].ids) == emb.MAX_EMBED_TOKENS
+    assert sum(tok.encode_batch(calls[-1])[0].attention_mask) == emb.MAX_EMBED_TOKENS
+
+
+def test_padding_does_not_inflate_token_counts(emb, monkeypatch):
+    """
+    Regression: fastembed pads encode_batch output to the longest text, so counting
+    len(ids) made every chunk look as long as the longest file and forced 1-chunk
+    batches (493 batches for 493 PersonaCR chunks). Short chunks must still group.
+    """
+    monkeypatch.setattr(emb, "EMBED_TOKEN_BUDGET", 2048)
+    chunks = _chunks(10, words=10, prefix="s") + _chunks(1, words=1500, prefix="l")
+
+    out = emb.embed_and_store(chunks, "u", "repo", batch_size=32)
+
+    assert [len(c) for c in emb._fake.model.calls] == [10, 1]
+    assert out["batches"] == 2
+    assert emb._token_counts(emb._fake.model, [c.source for c in chunks]) == [10] * 10 + [1500]
 
 
 def test_budget_batches_helper_preserves_order():
