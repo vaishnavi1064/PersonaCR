@@ -25,6 +25,7 @@ resource "kubernetes_config_map_v1" "personacr_config" {
     REDIS_URL                 = var.redis_url
     PERSONACR_METRICS_ENABLED = var.metrics_enabled
     CHROMADB_URL              = "http://chromadb:8000"
+    MAX_EMBED_TOKENS          = "1024"
   }
 }
 

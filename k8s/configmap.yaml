@@ -11,3 +11,7 @@ data:
   PERSONACR_METRICS_ENABLED: "1"
   # Read by backend/src/core/embedder.py → chromadb.HttpClient
   CHROMADB_URL: "http://chromadb:8000"
+  # Per-text token cap for Jina embeddings (code default 2048). 1024 keeps analyze
+  # inside the backend's 3 GiB limit on the 6 GiB minikube node; EMBED_TOKEN_BUDGET
+  # defaults to this value. See backend/src/core/embedder.py.
+  MAX_EMBED_TOKENS: "1024"
