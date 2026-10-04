@@ -83,7 +83,7 @@ First-pass `all_issues` built at L184–203. On re-review, L340 assigns `all_iss
 | STS | `backend/src/evaluation/sts_scorer.py` | `compute_sts_scores` (L47); model `all-MiniLM-L6-v2` |
 | Quality gate | `backend/src/evaluation/quality_gate.py` | `evaluate_quality` (L22); thresholds comp≥0.4, conc≥0.3, rel≥0.35 |
 
-Startup warmup of MiniLM: `backend/src/main.py` → `warmup_models` (L75–85).
+MiniLM loads lazily on first use (`_get_sts_model()`); there is no startup warmup.
 
 ---
 

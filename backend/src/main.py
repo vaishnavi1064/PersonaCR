@@ -84,15 +84,7 @@ mcp.mount()
 logger.info("MCP server mounted at /mcp")
 
 
-# ── Startup warmup ────────────────────────────────────────────────────────────
-@app.on_event("startup")
-async def warmup_models() -> None:
-    """Preload ML models on server start so the first request isn't slow."""
-    try:
-        from backend.src.evaluation.sts_scorer import _get_sts_model
-        _get_sts_model()
-        logger.info("MiniLM STS model preloaded")
-        print("MiniLM STS model preloaded")
-    except Exception as e:
-        logger.warning("Model warmup failed (non-fatal): %s", e)
-        print(f"Model warmup failed (non-fatal): {e}")
+# No startup model warmup: MiniLM (sentence-transformers + torch) loads lazily in
+# sts_scorer._get_sts_model() on the first in-process review. Async reviews run in
+# the RQ worker, so the API process often never needs it — preloading it pinned
+# torch + MiniLM in the API pod's 3 GiB budget before any analyze ran.
