@@ -169,10 +169,35 @@ export function normalizeReview(
       conciseness: num(qs.conciseness),
       relevance: num(qs.relevance),
     },
+    retrievalExamples: num(out.retrieval_examples) ?? num(out.similar_functions_used),
     iterations: num(raw.iterations) ?? 1,
     trace: normalizeTrace(raw.agent_trace),
     createdAt: ctx.createdAt ?? null,
   }
+}
+
+const FAILURE_HINT: Record<string, string> = {
+  not_found: 'The configured model isn’t available on the LLM provider.',
+  rate_limit: 'The LLM provider is rate-limiting requests — retry in a minute.',
+  auth: 'The server’s LLM API key was rejected.',
+  connection: 'The server couldn’t reach the LLM provider.',
+  api: 'The LLM provider returned an error.',
+  bad_request: 'The LLM provider rejected the request.',
+  empty: 'The model returned an empty response.',
+  refusal: 'The model declined to answer.',
+  client: 'The server’s LLM client failed.',
+}
+
+/**
+ * Split the backend's degraded_reason — "N LLM call(s) failed (caller: kind) — <raw provider error>" —
+ * into a readable summary, a plain-language hint, and the raw detail.
+ */
+export function explainDegraded(reason: string | null): { summary: string; hint: string | null; detail: string | null } {
+  if (!reason) return { summary: 'The review finished without a trustworthy score.', hint: null, detail: null }
+  const m = /^(\d+ LLM call\(s\) failed \(([\w-]+): (\w+)\))\s*[—-]\s*([\s\S]*)$/.exec(reason)
+  if (!m) return { summary: reason, hint: null, detail: null }
+  const [, summary, , kind, detail] = m
+  return { summary, hint: FAILURE_HINT[kind] ?? null, detail: detail.trim() || null }
 }
 
 export const AGENT_LABEL: Record<AgentName, string> = {

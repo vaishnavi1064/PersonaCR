@@ -127,6 +127,8 @@ export interface Review {
   degradedReason: string | null
   qualityGatePassed: boolean | null
   crScore: CRScore
+  /** Similar functions from the repo the Style Analyst compared against (0 = fingerprint only). */
+  retrievalExamples: number | null
   iterations: number
   trace: TraceStep[]
   createdAt: string | null

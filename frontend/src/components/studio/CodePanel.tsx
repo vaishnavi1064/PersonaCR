@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Code2, TriangleAlert, X } from 'lucide-react'
-import { capabilityLevel, REVIEW_LANGUAGES, type Finding, type Review } from '../../lib/api'
+import { capabilityLevel, explainDegraded, REVIEW_LANGUAGES, type Finding, type Review } from '../../lib/api'
 import { cn } from '../../lib/cn'
 import CodeView from '../ui/CodeView'
 import FilterSelect from '../ui/FilterSelect'
@@ -80,7 +80,7 @@ export default function CodePanel({
           {(review.state === 'degraded' || review.state === 'error') && (
             <p className="flex items-start gap-2 border-b border-line bg-warning/10 px-4 py-2 text-xs text-fg-2" role="status">
               <TriangleAlert size={13} className="mt-0.5 shrink-0 text-warning" aria-hidden />
-              <span>No score — {review.degradedReason} Findings below may be incomplete.</span>
+              <span>No score — {explainDegraded(review.degradedReason).hint ?? explainDegraded(review.degradedReason).summary} Findings below may be incomplete.</span>
             </p>
           )}
 

@@ -10,7 +10,7 @@ export {
 } from './repos'
 export type { ParsedRepoUrl, AnalyzeResult } from './repos'
 export {
-  reviewCode, normalizeReview, normalizeFinding, parseLineHint, REVIEW_LANGUAGES, AGENT_LABEL,
+  reviewCode, normalizeReview, normalizeFinding, parseLineHint, explainDegraded, REVIEW_LANGUAGES, AGENT_LABEL,
 } from './reviews'
 export type { RawReview, RawIssue, ReviewLanguage } from './reviews'
 export { askQuestion, chatRepoUrl, groupChatsByRepo, repoShortName } from './chats'

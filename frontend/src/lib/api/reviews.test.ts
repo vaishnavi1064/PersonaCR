@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeReview, parseLineHint, type RawReview } from './reviews'
+import { explainDegraded, normalizeReview, parseLineHint, type RawReview } from './reviews'
 
 const CODE = 'def f(x):\n    try:\n        return 1 / x\n    except:\n        pass\n'
 
@@ -72,6 +72,12 @@ describe('normalizeReview — states', () => {
     expect(r.degradedReason).toBeTruthy()
   })
 
+  it('reads how many repo functions were compared against', () => {
+    expect(normalizeReview(raw({ review_output: { retrieval_examples: 4 } }), { code: CODE }).retrievalExamples).toBe(4)
+    expect(normalizeReview(raw({ review_output: { similar_functions_used: 2 } }), { code: CODE }).retrievalExamples).toBe(2)
+    expect(normalizeReview(raw(), { code: CODE }).retrievalExamples).toBeNull() // legacy message: unknown, not 0
+  })
+
   it('degraded drops a stray score', () => {
     const r = normalizeReview(raw({ status: 'degraded', overall_score: 40 }), { code: CODE })
     expect(r.score).toBeNull()
@@ -118,5 +124,25 @@ describe('normalizeReview — trace', () => {
     }), { code: CODE })
     expect(r.trace.map((t) => t.parallel)).toEqual([false, false, true, false])
     expect(r.trace[1].durationMs).toBe(4000)
+  })
+})
+
+describe('explainDegraded', () => {
+  it('splits the backend reason into summary, hint and raw detail', () => {
+    const r = explainDegraded("5 LLM call(s) failed (planner: not_found) — Anthropic model not found (claude-x): Error code: 404 - {'type': 'error'}")
+    expect(r.summary).toBe('5 LLM call(s) failed (planner: not_found)')
+    expect(r.hint).toMatch(/model isn’t available/)
+    expect(r.detail).toMatch(/^Anthropic model not found/)
+  })
+
+  it('unknown kinds keep the summary without a hint', () => {
+    expect(explainDegraded('1 LLM call(s) failed (style: weird) — boom')).toEqual({
+      summary: '1 LLM call(s) failed (style: weird)', hint: null, detail: 'boom',
+    })
+  })
+
+  it('passes through reasons in another format, and handles none', () => {
+    expect(explainDegraded('Something else')).toEqual({ summary: 'Something else', hint: null, detail: null })
+    expect(explainDegraded(null).summary).toMatch(/without a trustworthy score/)
   })
 })

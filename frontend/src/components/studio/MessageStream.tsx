@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { Code2, Loader2, TriangleAlert } from 'lucide-react'
 import type { ChatMessage } from '../../store/useStore'
 import { REVIEW_LANGUAGES } from '../../lib/api'
@@ -6,8 +6,8 @@ import { elapsed } from '../../lib/format'
 import { useNow } from '../../lib/useNow'
 import { cn } from '../../lib/cn'
 import { LogoMark } from '../ui/Logo'
-import Button from '../ui/Button'
-import ReviewResult from '../chat/ReviewResult'
+import ReviewSummary from '../review/ReviewSummary'
+import { reviewFromMessage } from './reviewMessage'
 import FingerprintCard from '../chat/FingerprintCard'
 import RichText from './RichText'
 
@@ -20,6 +20,8 @@ interface MessageStreamProps {
   /** Review message shown in the code panel. */
   activeReviewId: string | null
   onShowReview: (messageId: string) => void
+  /** Re-run a degraded/error review. */
+  onRetryReview: (messageId: string) => void
   onSuggestion: (text: string) => void
   loading?: boolean
 }
@@ -31,7 +33,7 @@ const SUGGESTIONS = [
 ]
 
 export default function MessageStream({
-  messages, pending, repoName, activeReviewId, onShowReview, onSuggestion, loading,
+  messages, pending, repoName, activeReviewId, onShowReview, onRetryReview, onSuggestion, loading,
 }: MessageStreamProps) {
   const bottom = useRef<HTMLDivElement>(null)
   useEffect(() => { bottom.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [messages.length, pending])
@@ -78,7 +80,17 @@ export default function MessageStream({
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-6 sm:px-6" role="log" aria-live="polite" aria-relevant="additions">
       {messages.map((m) => (m.role === 'user'
         ? <UserBubble key={m.id} message={m} />
-        : <BotBubble key={m.id} message={m} active={m.id === activeReviewId} onShowReview={onShowReview} />))}
+        : (
+          <BotBubble
+            key={m.id}
+            message={m}
+            messages={messages}
+            active={m.id === activeReviewId}
+            onShowReview={onShowReview}
+            onRetryReview={onRetryReview}
+            busy={pending != null}
+          />
+        )))}
       {pending && <PendingBubble pending={pending} />}
       <div ref={bottom} />
     </div>
@@ -120,21 +132,21 @@ function BotAvatar() {
   )
 }
 
-function BotBubble({ message, active, onShowReview }: { message: ChatMessage; active: boolean; onShowReview: (id: string) => void }) {
+function BotBubble({ message, messages, active, onShowReview, onRetryReview, busy }: {
+  message: ChatMessage
+  messages: ChatMessage[]
+  active: boolean
+  onShowReview: (id: string) => void
+  onRetryReview: (id: string) => void
+  busy: boolean
+}) {
   const data = (message.data ?? {}) as Record<string, unknown>
   return (
     <div className="flex gap-3">
       <BotAvatar />
       <div className="min-w-0 flex-1">
         {message.type === 'review' ? (
-          <div className={cn('rounded-xl border bg-surface p-4', active ? 'border-accent/50' : 'border-line')}>
-            <ReviewResult data={data as never} />
-            <div className="mt-3 flex justify-end border-t border-line pt-3">
-              <Button size="sm" variant={active ? 'ghost' : 'outline'} icon={<Code2 size={14} />} onClick={() => onShowReview(message.id)}>
-                {active ? 'Shown in code panel' : 'View in code panel'}
-              </Button>
-            </div>
-          </div>
+          <ReviewCard message={message} messages={messages} active={active} onShowReview={onShowReview} onRetryReview={onRetryReview} busy={busy} />
         ) : message.type === 'fingerprint' ? (
           <FingerprintCard data={data as never} />
         ) : data.error ? (
@@ -146,6 +158,29 @@ function BotBubble({ message, active, onShowReview }: { message: ChatMessage; ac
           <RichText text={message.text ?? ''} />
         )}
       </div>
+    </div>
+  )
+}
+
+function ReviewCard({ message, messages, active, onShowReview, onRetryReview, busy }: {
+  message: ChatMessage
+  messages: ChatMessage[]
+  active: boolean
+  onShowReview: (id: string) => void
+  onRetryReview: (id: string) => void
+  busy: boolean
+}) {
+  const { review } = useMemo(() => reviewFromMessage(messages, message), [messages, message])
+  const unscored = review.state === 'degraded' || review.state === 'error'
+  return (
+    <div className={cn('rounded-xl border bg-surface p-4', active ? 'border-accent/50' : 'border-line')}>
+      <ReviewSummary
+        review={review}
+        active={active}
+        onOpenCode={() => onShowReview(message.id)}
+        onRetry={unscored && review.code ? () => onRetryReview(message.id) : undefined}
+        retryDisabled={busy}
+      />
     </div>
   )
 }

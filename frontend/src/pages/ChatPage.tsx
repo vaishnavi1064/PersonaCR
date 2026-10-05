@@ -4,8 +4,8 @@ import { useStore } from '../store/useStore'
 import type { ChatMessage, PersistedMessage } from '../store/useStore'
 import { toUI, toPersisted } from '../store/useStore'
 import {
-  ApiError, askQuestion, chatRepoUrl, isAccountUserId, normalizeReview, repoShortName, reviewCode,
-  REVIEW_LANGUAGES, topLanguages, type ChatMode, type Finding, type RawReview,
+  ApiError, askQuestion, chatRepoUrl, isAccountUserId, repoShortName, reviewCode,
+  REVIEW_LANGUAGES, topLanguages, type ChatMode, type Finding,
 } from '../lib/api'
 import { cleanupGuestSession } from '../lib/api/legacy'
 import {
@@ -20,6 +20,7 @@ import RepoPicker from '../components/studio/RepoPicker'
 import MessageStream, { type Pending } from '../components/studio/MessageStream'
 import Composer from '../components/studio/Composer'
 import CodePanel from '../components/studio/CodePanel'
+import { reviewFromMessage } from '../components/studio/reviewMessage'
 
 // Chat/Review Studio: threads grouped by repo | messages | code panel.
 // One repo per chat: selectedRepoUrls holds at most one URL (older chats may
@@ -220,16 +221,17 @@ export default function ChatPage() {
     }
   }
 
-  async function handleReview(code: string, language: string) {
+  async function runReview(code: string, language: string, opts: { retryOf?: string } = {}) {
     // The chat's repo is the review target (selected[0])
     const reviewTarget = selectedRepoUrls[0] ?? null
     if (!reviewTarget || pending) return
     setPending({ kind: 'review', startedAt: Date.now() })
     try {
       await ensureChat(reviewTarget)
-      await addMessage(makeUserMsg(code, { mode: 'review', language }), code)
+      // A retry re-runs the code already in the chat — no second copy of it
+      if (!opts.retryOf) await addMessage(makeUserMsg(code, { mode: 'review', language }), code)
       const raw = await reviewCode(reviewTarget, code, language)
-      const msg = makeBotMsg('review', undefined, { ...raw, code, language, repo_url: reviewTarget })
+      const msg = makeBotMsg('review', undefined, { ...raw, code, language, repo_url: reviewTarget, retry_of: opts.retryOf ?? null })
       await addMessage(msg)
       setPanelReviewId(msg.id)
       setActiveFindingId(null)
@@ -242,24 +244,22 @@ export default function ChatPage() {
     }
   }
 
+  function handleReview(code: string, language: string) {
+    return runReview(code, language)
+  }
+
+  function handleRetryReview(messageId: string) {
+    const msg = activeMessages.find((m) => m.id === messageId)
+    if (!msg) return
+    const { review, language } = reviewFromMessage(activeMessages, msg)
+    if (review.code) runReview(review.code, language, { retryOf: messageId })
+  }
+
   // ── Code panel data ─────────────────────────────────────────────────────────
   const reviewMessages = useMemo(() => activeMessages.filter((m) => m.type === 'review'), [activeMessages])
   const panelMsg = reviewMessages.find((m) => m.id === panelReviewId) ?? reviewMessages.at(-1) ?? null
 
-  const panel = useMemo(() => {
-    if (!panelMsg) return null
-    const data = (panelMsg.data ?? {}) as unknown as RawReview & { code?: string; language?: string; repo_url?: string }
-    let code = data.code
-    if (!code) {
-      // Older review messages didn't store the code — it's the preceding user message
-      const idx = activeMessages.indexOf(panelMsg)
-      code = activeMessages.slice(0, idx).reverse().find((m) => m.role === 'user')?.text ?? ''
-    }
-    return {
-      review: normalizeReview(data, { code, repoUrl: data.repo_url }),
-      language: data.language ?? 'python', // legacy chats always reviewed as Python
-    }
-  }, [panelMsg, activeMessages])
+  const panel = useMemo(() => (panelMsg ? reviewFromMessage(activeMessages, panelMsg) : null), [panelMsg, activeMessages])
 
   const reviewOptions = reviewMessages.map((m, i) => ({ id: m.id, label: `Review ${i + 1} of ${reviewMessages.length}` }))
 
@@ -349,6 +349,7 @@ export default function ChatPage() {
             repoName={repoUrl ? repoShortName(repoUrl) : null}
             activeReviewId={panelMsg?.id ?? null}
             onShowReview={showReview}
+            onRetryReview={handleRetryReview}
             onSuggestion={(s) => handleAsk(s)}
             loading={!initDone || loadingChat}
           />
