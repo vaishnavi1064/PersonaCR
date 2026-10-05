@@ -30,6 +30,7 @@ import time
 
 from backend.src.core.models import (
     AgentTrace,
+    PlannerOutput,
     ReviewResult,
 )
 from backend.src.core.metrics import (
@@ -61,6 +62,11 @@ async def _run_in_executor(func, *args):
     loop = asyncio.get_event_loop()
     ctx = contextvars.copy_context()
     return await loop.run_in_executor(None, functools.partial(ctx.run, func, *args))
+
+
+def _plan_signature(plan: PlannerOutput) -> tuple:
+    """What a Loop 1 retry would actually change: the Style Analyst's focus and depth."""
+    return (tuple(sorted(plan.focus_areas)), plan.review_depth)
 
 
 def _trace(agent_name: str, **kwargs) -> AgentTrace:
@@ -106,7 +112,9 @@ async def _run_review(
     traces: list[AgentTrace] = []
     iteration = 0
     loop1_triggered = False
+    loop1_unchanged = False
     orch_t0 = time.perf_counter()
+    plan_fp: dict = fingerprint  # Loop 1 retries add confidence feedback for the Planner
 
     # These are set inside the loop; initialise so the type checker is happy.
     plan_output = None
@@ -117,17 +125,40 @@ async def _run_review(
 
     while iteration < max_iterations:
         iteration += 1
+        retry = iteration > 1
 
         # ── Step 1: Planner ───────────────────────────────────────────────────
-        plan_output, plan_ms = plan_review(code, language, fingerprint)
+        previous_plan: PlannerOutput | None = plan_output
+        plan_output, plan_ms = plan_review(code, language, plan_fp)
         traces.append(_trace(
             "planner",
-            input_summary=f"{language} code, {len(code.splitlines())} lines",
+            input_summary=(
+                f"Re-plan with confidence feedback (iteration {iteration})" if retry
+                else f"{language} code, {len(code.splitlines())} lines"
+            ),
             output_summary=f"Focus: {plan_output.focus_areas}, Depth: {plan_output.review_depth}",
             decision=plan_output.strategy_notes,
             execution_time_ms=plan_ms,
             iteration=iteration,
         ))
+
+        # Loop 1 only retries when the inputs to the agents change. Same focus and
+        # depth would send Style/Defect/QA identical inputs: same answer, double cost.
+        if retry and previous_plan is not None and (
+            _plan_signature(plan_output) == _plan_signature(previous_plan)
+        ):
+            iteration -= 1
+            loop1_unchanged = True
+            plan_output = previous_plan
+            traces.append(AgentTrace(
+                agent_name="loop1_skip",
+                input_summary="Re-plan after low confidence",
+                output_summary="Same focus and depth as the previous pass",
+                decision="Skipped retry: unchanged inputs would repeat identical LLM calls; keeping low_confidence",
+                execution_time_ms=0,
+                iteration=iteration,
+            ))
+            break
 
         # ── Step 2: Style Analyst + Defect Hunter IN PARALLEL ─────────────────
         # CM wraps each gather branch so wall-clock is attributed per agent even
@@ -146,6 +177,10 @@ async def _run_review(
                 )
 
         async def _defect_branch():
+            # Defect Hunter depends only on (code, language): on a retry its inputs are
+            # unchanged, so reuse the previous result instead of re-running it.
+            if retry and defect_output is not None:
+                return defect_output, 0
             async with track_agent_latency("defect", observe=False):
                 return await _run_in_executor(hunt_defects, code, language)
 
@@ -228,9 +263,15 @@ async def _run_review(
         if llm.failures or conf_output.is_confident or iteration >= max_iterations:
             break
         loop1_triggered = True
-        # Low confidence → loop back; Planner will see suggestion on next pass
+        # Low confidence → re-plan with the evaluator's feedback; the retry only runs
+        # if that changes the plan (checked at the top of the next pass).
+        plan_fp = dict(fingerprint)
+        plan_fp["_confidence_feedback"] = f"{conf_output.reason} {conf_output.suggestion}".strip()
+        plan_fp["_previous_focus"] = list(plan_output.focus_areas)
 
-    if loop1_triggered:
+    if loop1_unchanged:
+        record_self_correction(1, "unchanged")
+    elif loop1_triggered:
         if conf_output and conf_output.is_confident:
             record_self_correction(1, "improved")
         else:
