@@ -100,6 +100,7 @@ def process_review_job(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
                 "issues_count": len(review.issues),
                 "issues": review.issues,
                 "review_output": review.review_output,
+                "retrieval_examples": review.review_output.get("retrieval_examples", 0),
                 "agent_trace": [t.model_dump() for t in review.agent_trace],
             }
 

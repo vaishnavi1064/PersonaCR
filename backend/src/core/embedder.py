@@ -294,6 +294,10 @@ def query_similar(
     try:
         collection = client.get_collection(col_name)
     except Exception:
+        logger.warning(
+            "No Chroma collection %s for %s/%s — retrieval returns 0 examples "
+            "(analyze the repo first)", col_name, user_id, repo_name,
+        )
         return []
 
     # fastembed returns a generator
@@ -359,10 +363,16 @@ def query_similar_staged(
     try:
         collection = client.get_collection(col_name)
     except Exception:
+        logger.warning(
+            "No Chroma collection %s for %s/%s — retrieval returns 0 examples "
+            "(analyze the repo first)", col_name, user_id, repo_name,
+        )
         return {"files": [], "functions": []}
 
     count = collection.count()
     if count == 0:
+        logger.warning("Chroma collection %s for %s/%s is empty — retrieval returns 0 examples",
+                       col_name, user_id, repo_name)
         return {"files": [], "functions": []}
 
     code_in = _truncate_text(code)

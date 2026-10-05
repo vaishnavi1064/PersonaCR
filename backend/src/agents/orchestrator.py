@@ -486,6 +486,9 @@ async def run_review(
             "style_score": style_output.overall_style_score,
             "defect_score": defect_output.defect_score,
             "similar_functions_used": style_output.similar_functions_found,
+            # Retrieved repo examples the Style Analyst saw; 0 = reviewed against the
+            # fingerprint only (no collection / empty collection — see embedder warning).
+            "retrieval_examples": style_output.similar_functions_found,
             "plan": plan_output.model_dump() if plan_output else {},
             "confidence": conf_output.model_dump(),
             "quality_scores": {
