@@ -56,7 +56,7 @@ class LLMError(RuntimeError):
         super().__init__(message)
         self.provider = provider
         self.model = model
-        self.kind = kind  # not_found | rate_limit | auth | bad_request | api | connection | empty | refusal
+        self.kind = kind  # not_found | rate_limit | auth | bad_request | api | connection | empty | refusal | client
 
 
 @dataclass
@@ -194,6 +194,12 @@ def complete(
     except LLMError as err:
         _on_failure(caller, err)
         raise
+    except Exception as exc:
+        # Anything else (SDK TypeError, bad response shape, ...) is still a failed
+        # call: wrap it so it is recorded on the review tracker, never swallowed.
+        wrapped = LLMError(f"{type(exc).__name__}: {exc}", provider=prov, model=mdl, kind="client")
+        _on_failure(caller, wrapped)
+        raise wrapped from exc
     ms = (time.perf_counter() - t0) * 1000.0
     logger.info(
         "LLM call provider=%s model=%s caller=%s input_tokens=%d output_tokens=%d stop=%s ms=%.0f",
@@ -233,7 +239,9 @@ def _complete_anthropic(
         "messages": [{"role": "user", "content": user}],
     }
     if accepts_temperature(mdl):
-        params["temperature"] = temperature
+        # anthropic>=1.0 removed sampling params from messages.create() (TypeError);
+        # the API still honours temperature on models that accept it, via extra_body.
+        params["extra_body"] = {"temperature": temperature}
     try:
         resp = _client("anthropic").messages.create(**params)
     except anthropic.NotFoundError as e:

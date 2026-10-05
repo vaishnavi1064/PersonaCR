@@ -92,3 +92,16 @@ def test_healthy_llm_still_scores_normally(pipeline):
     assert r.review_output["degraded_reason"] is None
     assert r.review_output["llm_usage"]["failures"] == []
     assert r.review_output["llm_usage"]["input_tokens"] > 0
+
+
+def test_unexpected_client_error_still_degrades(pipeline, monkeypatch):
+    """A non-API exception (e.g. SDK TypeError) must degrade, not score 85 'low_confidence'."""
+    def boom(mdl, system, user, temperature, max_tokens):
+        raise TypeError("Messages.create() got an unexpected keyword argument 'temperature'")
+
+    monkeypatch.setattr(llm, "_complete_anthropic", boom)
+    r = _review()
+
+    assert r.status == "error"
+    assert r.overall_score is None
+    assert {f["kind"] for f in r.review_output["llm_usage"]["failures"]} == {"client"}

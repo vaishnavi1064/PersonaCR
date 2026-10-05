@@ -1,6 +1,7 @@
 """core.llm_client — provider selection, Anthropic request shape, token logging, typed failures."""
 from __future__ import annotations
 
+import inspect
 import logging
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -24,11 +25,20 @@ def _text(t):
     return SimpleNamespace(type="text", text=t)
 
 
+_REAL_CREATE = inspect.signature(anthropic.resources.messages.Messages.create)
+
+
+def _check_real_signature(*args, **kwargs):
+    """Fail like the real SDK would on an unknown keyword (MagicMock accepts anything)."""
+    _REAL_CREATE.bind(None, **kwargs)  # raises TypeError on e.g. temperature=
+
+
 @pytest.fixture
 def fake_anthropic(monkeypatch):
     monkeypatch.delenv("LLM_PROVIDER", raising=False)
     monkeypatch.delenv("LLM_MODEL", raising=False)
     client = MagicMock()
+    client.messages.create.side_effect = lambda **kw: (_check_real_signature(**kw), client._reply)[1]
     monkeypatch.setattr(llm, "_clients", {"anthropic": client})
     return client
 
@@ -55,7 +65,7 @@ def test_env_overrides_and_rejects_unknown_provider(monkeypatch):
 
 
 def test_anthropic_request_shape_and_text_join(fake_anthropic, caplog):
-    fake_anthropic.messages.create.return_value = _message(
+    fake_anthropic._reply = _message(
         [SimpleNamespace(type="thinking", thinking=""), _text('{"a": '), _text("1}")]
     )
     with caplog.at_level(logging.INFO, logger="backend.src.core.llm_client"):
@@ -66,16 +76,19 @@ def test_anthropic_request_shape_and_text_join(fake_anthropic, caplog):
     assert kwargs["system"] == "SYS"  # system is a separate param, not a message
     assert kwargs["messages"] == [{"role": "user", "content": "USER"}]
     assert kwargs["model"] == "claude-haiku-4-5-20251001"
-    assert kwargs["max_tokens"] == 800 and kwargs["temperature"] == 0.1
+    assert kwargs["max_tokens"] == 800
+    assert "temperature" not in kwargs  # removed from SDK 1.x signature
+    assert kwargs["extra_body"] == {"temperature": 0.1}  # Haiku 4.5 accepts it via the body
     assert any("caller=qa input_tokens=120 output_tokens=45" in r.message for r in caplog.records)
 
 
 @pytest.mark.parametrize("model_id", ["claude-sonnet-5", "claude-opus-5", "claude-opus-4-8"])
 def test_temperature_omitted_for_models_that_reject_sampling(fake_anthropic, monkeypatch, model_id):
     monkeypatch.setenv("LLM_MODEL", model_id)
-    fake_anthropic.messages.create.return_value = _message([_text("ok")])
+    fake_anthropic._reply = _message([_text("ok")])
     llm.complete("s", "u", temperature=0.2, max_tokens=100)
-    assert "temperature" not in fake_anthropic.messages.create.call_args.kwargs
+    kwargs = fake_anthropic.messages.create.call_args.kwargs
+    assert "temperature" not in kwargs and "extra_body" not in kwargs
 
 
 @pytest.mark.parametrize(
@@ -96,10 +109,10 @@ def test_api_errors_raise_typed_llm_error(fake_anthropic, exc, kind):
 
 
 def test_refusal_and_empty_responses_raise(fake_anthropic):
-    fake_anthropic.messages.create.return_value = _message([], stop="refusal")
+    fake_anthropic._reply = _message([], stop="refusal")
     with pytest.raises(llm.LLMError, match="refusal"):
         llm.complete("s", "u")
-    fake_anthropic.messages.create.return_value = _message([_text("   ")])
+    fake_anthropic._reply = _message([_text("   ")])
     with pytest.raises(llm.LLMError) as ei:
         llm.complete("s", "u")
     assert ei.value.kind == "empty"
@@ -119,3 +132,11 @@ def test_groq_provider_path(monkeypatch):
     kwargs = client.chat.completions.create.call_args.kwargs
     assert kwargs["model"] == "openai/gpt-oss-120b"
     assert kwargs["messages"][0] == {"role": "system", "content": "s"}
+
+
+def test_unexpected_client_exception_is_wrapped_and_tracked(fake_anthropic):
+    fake_anthropic.messages.create.side_effect = TypeError("got an unexpected keyword argument 'x'")
+    with llm.track() as t, pytest.raises(llm.LLMError) as ei:
+        llm.complete("s", "u", caller="defect")
+    assert ei.value.kind == "client"
+    assert t.failures and t.failures[0]["caller"] == "defect" and t.failures[0]["kind"] == "client"
