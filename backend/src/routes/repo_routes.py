@@ -67,8 +67,8 @@ def list_repos(user_id: str) -> dict:
         except httpx.HTTPError:
             logger.exception("list_repos: fingerprints query failed")
             raise HTTPException(status_code=502, detail="Could not load fingerprints from the database.")
-        for fp in fp_rows:
-            fingerprints[_normalize_url(fp.get("repo_url") or "")] = fp
+        for fp_row in fp_rows:
+            fingerprints[_normalize_url(fp_row.get("repo_url") or "")] = fp_row
 
     repos = []
     for url, row in latest.items():

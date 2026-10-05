@@ -83,6 +83,11 @@ jobs:
         # package.json → "lint": "eslint ."
         run: npm run lint
 
+      - name: Unit tests (vitest)
+        working-directory: frontend
+        # package.json → "test": "vitest run" (API normalizers; no network, no Supabase env)
+        run: npm test
+
   # ── 3. Deterministic evals ────────────────────────────────────────────────
   # Source: docs/TEST_MATRIX.md / pytest.ini — `pytest tests -m "not groq"`.
   # Defect Hunter: deterministic AST coverage is in tests/test_agents.py

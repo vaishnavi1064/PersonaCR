@@ -98,6 +98,14 @@
   --border: rgba(255,255,255,0.09);
   --border-hover: rgba(255,255,255,0.17);
   --pop-shadow: 0 12px 32px rgba(0,0,0,0.5);
+  /* Syntax */
+  --syn-keyword: #C4A7FF;
+  --syn-string: #9CD69B;
+  --syn-number: #F2B880;
+  --syn-comment: #7D8590;
+  --syn-def: #82AAFF;
+  --syn-type: #FFCB6B;
+  --syn-prop: #89DDFF;
 }
 
 /* Light theme */
@@ -113,6 +121,14 @@
   --border: rgba(0,0,0,0.10);
   --border-hover: rgba(0,0,0,0.20);
   --pop-shadow: 0 12px 32px rgba(20,20,40,0.12);
+  /* Syntax */
+  --syn-keyword: #7C3AED;
+  --syn-string: #15803D;
+  --syn-number: #B45309;
+  --syn-comment: #6B7280;
+  --syn-def: #1D4ED8;
+  --syn-type: #A16207;
+  --syn-prop: #0E7490;
   /* Darker status colors so they stay readable on white */
   --success: #15803D;
   --warning: #B45309;
@@ -155,3 +171,14 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Syntax tokens from @lezer/highlight classHighlighter — shared by the code
+   editor and the read-only code panel. */
+.tok-keyword, .tok-operatorKeyword, .tok-controlKeyword, .tok-modifier, .tok-bool, .tok-atom { color: var(--syn-keyword); }
+.tok-string, .tok-string2, .tok-special { color: var(--syn-string); }
+.tok-number, .tok-literal { color: var(--syn-number); }
+.tok-comment, .tok-meta { color: var(--syn-comment); font-style: italic; }
+.tok-definition, .tok-function, .tok-macroName { color: var(--syn-def); }
+.tok-typeName, .tok-className, .tok-namespace { color: var(--syn-type); }
+.tok-propertyName { color: var(--syn-prop); }
+.tok-invalid { color: var(--error); }

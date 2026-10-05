@@ -1,77 +1,91 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Code2, PanelLeft, Plus, X } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import type { ChatMessage, PersistedMessage } from '../store/useStore'
 import { toUI, toPersisted } from '../store/useStore'
-import MessageList from '../components/chat/MessageList'
-import ChatInput from '../components/chat/ChatInput'
-import RepoSelector from '../components/chat/RepoSelector'
-import { analyzeRepo, reviewCode, cleanupGuestSession, chatWithInsights } from '../lib/api/legacy'
-import { saveReview, saveRepo } from '../lib/db'
 import {
-  createChat, loadChats, loadChatMessages,
-  saveChatMessages, generateTitle,
-  updateChatSelectedRepos, loadChatSelectedRepos,
+  ApiError, askQuestion, chatRepoUrl, isAccountUserId, normalizeReview, repoShortName, reviewCode,
+  REVIEW_LANGUAGES, topLanguages, type ChatMode, type Finding, type RawReview,
+} from '../lib/api'
+import { cleanupGuestSession } from '../lib/api/legacy'
+import {
+  createChat, generateTitle, loadChatMessages, loadChats, saveChatMessages, saveReview, updateChatSelectedRepos,
 } from '../lib/db'
-import { supabase } from '../lib/supabase'
+import { useCurrentUser } from '../lib/useCurrentUser'
+import { useUserRepos } from '../lib/useUserRepos'
+import Button from '../components/ui/Button'
+import IconButton from '../components/ui/IconButton'
+import ThreadList from '../components/studio/ThreadList'
+import RepoPicker from '../components/studio/RepoPicker'
+import MessageStream, { type Pending } from '../components/studio/MessageStream'
+import Composer from '../components/studio/Composer'
+import CodePanel from '../components/studio/CodePanel'
 
-// ── Constants ─────────────────────────────────────────────────────────────────
-const GH_REGEX = /https?:\/\/github\.com\/[\w-]+\/[\w.-]+/
+// Chat/Review Studio: threads grouped by repo | messages | code panel.
+// One repo per chat: selectedRepoUrls holds at most one URL (older chats may
+// hold several — index 0 is the chat's repo and the review target).
 
-function isCodeSnippet(text: string) {
-  return (
-    text.includes('\n') &&
-    /\b(def |function |class |import |const |let |var |public |private )\b/.test(text)
-  )
-}
+const GUEST_KEY = '__guest'
 
 function uid() { return Math.random().toString(36).slice(2, 9) }
 
-function makeUserMsg(text: string): ChatMessage {
-  return { id: uid(), role: 'user', text, type: 'text' }
+function makeUserMsg(text: string, data: Record<string, unknown>): ChatMessage {
+  return { id: uid(), role: 'user', text, type: 'text', data }
 }
-function makeBotMsg(
-  type: 'text' | 'fingerprint' | 'review',
-  text?: string,
-  data?: Record<string, unknown>,
-): ChatMessage {
+function makeBotMsg(type: 'text' | 'review', text?: string, data?: Record<string, unknown>): ChatMessage {
   return { id: uid(), role: 'bot', type, text, data }
 }
 
-/** Generate a chat title from the selected repo URLs (simple rule, no LLM). */
-function repoSelectionTitle(urls: string[]): string | null {
-  if (urls.length === 0) return null
-  const names = urls.map((u) => {
-    const parts = u.replace(/\/$/, '').split('/')
-    return parts[parts.length - 1] || parts.slice(-2).join('/')
-  })
-  if (names.length === 1) return names[0]
-  if (names.length === 2) return `${names[0]} + ${names[1]}`
-  return `${names[0]} + ${names.length - 1} more`
+function errorText(err: unknown, action: 'ask' | 'review'): string {
+  if (err instanceof ApiError) {
+    if (err.kind === 'network') return 'Could not reach the PersonaCR server. Is the backend running?'
+    if (err.kind === 'timeout') return `${err.message}. Try a smaller piece of code.`
+    if (err.status === 404 && /fingerprint/i.test(err.message)) {
+      return 'This repo has no saved analysis on the server, so it can’t be reviewed yet. Reanalyze it from Repositories while signed in.'
+    }
+    return `${action === 'review' ? 'Review' : 'Answer'} failed: ${err.message}`
+  }
+  return err instanceof Error ? err.message : String(err)
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+const isWide = () => window.matchMedia('(min-width: 1280px)').matches
+
 export default function ChatPage() {
   const {
     activeChatId, setActiveChatId,
     activeMessages, setActiveMessages, appendMessage,
-    chats, setChats, upsertChatMeta, updateChatTitle,
-    user, isGuest, guestSessionId,
+    chats, setChats, upsertChatMeta,
+    isGuest, guestSessionId,
     selectedRepoUrlsByChatId, setSelectedRepoUrls,
     clearNewChatRequest,
   } = useStore()
+  const { userId, guestMode } = useCurrentUser()
+  const account = isAccountUserId(userId)
+  const { repos, loading: reposLoading } = useUserRepos(userId)
 
-  // Resolve user ID: real Supabase UUID for logged-in users, guest session ID for guests
-  const userId = (user as { id?: string } | null)?.id ?? guestSessionId ?? 'anonymous'
+  const [initDone, setInitDone] = useState(() => !account)
+  const [loadingChat, setLoadingChat] = useState(false)
+  const [pending, setPending] = useState<Pending | null>(null)
+  const [selectedRepoUrls, setSelectedRepoUrlsLocal] = useState<string[]>(
+    () => (account ? [] : selectedRepoUrlsByChatId[GUEST_KEY] ?? []),
+  )
+  const [mode, setMode] = useState<ChatMode>('ask')
+  const [panelReviewId, setPanelReviewId] = useState<string | null>(null)
+  const [activeFindingId, setActiveFindingId] = useState<string | null>(null)
+  const [threadsOpen, setThreadsOpen] = useState(false)
+  const [codeOpen, setCodeOpen] = useState(false)
+  const [composerKey, setComposerKey] = useState(0)
 
-  const [loading,    setLoading]    = useState(false)
-  const [initDone,   setInitDone]   = useState(false)
-  const [selectedRepoUrls, setSelectedRepoUrlsLocal] = useState<string[]>([])
-
-  // Track persisted messages for the active chat (mirrors activeMessages but in Supabase shape)
   const persistedRef = useRef<PersistedMessage[]>([])
-  const chatIdRef    = useRef<string | null>(null)
+  const chatIdRef = useRef<string | null>(null)
+  const pendingRef = useRef(false)
+  useEffect(() => { pendingRef.current = pending != null }, [pending])
 
-  // Wipe guest ChromaDB collection when tab closes
+  const repoUrl = selectedRepoUrls[0] ?? null
+  const repo = repos.find((r) => r.url === repoUrl) ?? null
+  const locked = activeMessages.some((m) => m.role === 'user')
+
+  // Wipe guest ChromaDB collections when the tab closes
   useEffect(() => {
     if (!isGuest || !guestSessionId) return
     const cleanup = () => cleanupGuestSession(guestSessionId)
@@ -79,351 +93,290 @@ export default function ChatPage() {
     return () => window.removeEventListener('beforeunload', cleanup)
   }, [isGuest, guestSessionId])
 
-  // ── Init: load chats on mount ───────────────────────────────────────────────
+  // ── Loading / switching chats ───────────────────────────────────────────────
+  const resetView = useCallback(() => {
+    setMode('ask')
+    setPanelReviewId(null)
+    setActiveFindingId(null)
+    setComposerKey((k) => k + 1)
+  }, [])
+
+  const loadInto = useCallback(async (id: string, list: typeof chats) => {
+    setActiveChatId(id)
+    chatIdRef.current = id
+    const meta = list.find((c) => c.id === id)
+    const persisted = await loadChatMessages(id)
+    if (chatIdRef.current !== id) return
+    persistedRef.current = persisted
+    setActiveMessages(persisted.map(toUI))
+    const selected = meta?.selected_repos?.length ? meta.selected_repos : [meta && chatRepoUrl(meta)].filter((u): u is string => !!u)
+    setSelectedRepoUrlsLocal(selected)
+    resetView()
+  }, [setActiveChatId, setActiveMessages, resetView])
+
+  const startNewChat = useCallback((initialRepoUrl?: string | null) => {
+    chatIdRef.current = null
+    persistedRef.current = []
+    setActiveChatId(null)
+    setActiveMessages([])
+    const next = initialRepoUrl ? [initialRepoUrl] : []
+    setSelectedRepoUrlsLocal(next)
+    if (!account) setSelectedRepoUrls(GUEST_KEY, next)
+    resetView()
+  }, [account, setActiveChatId, setActiveMessages, setSelectedRepoUrls, resetView])
+
+  // Init: account users get their saved chats; open the active (or most recent) one
   useEffect(() => {
+    if (!account) return
     let cancelled = false
-
     async function init() {
-      const { data: { session } } = await supabase.auth.getSession()
-
-      // Dev mode — no real session. Show welcome only, no Supabase calls.
-      if (!session?.user?.id) {
-        if (activeMessages.length === 0) {
-          setActiveMessages([makeBotMsg('text', 'Paste a GitHub repo URL to learn your coding style, or paste code for a personalized review.')])
-        }
-        setInitDone(true)
-        return
-      }
-
-      const userId = session.user.id
-
-      // Fetch chat list
-      const fetchedChats = await loadChats(userId)
+      const fetched = await loadChats(userId)
       if (cancelled) return
-      setChats(fetchedChats)
-
-      // Determine which chat to show
-      let targetId = activeChatId
-
-      // If saved activeChatId is valid, use it. Otherwise use most recent.
-      if (!targetId || !fetchedChats.find((c) => c.id === targetId)) {
-        targetId = fetchedChats[0]?.id ?? null
-      }
-
-      if (!targetId) {
-        // No chats at all — create one
-        const meta = await createChat(userId)
-        if (cancelled || !meta) { setInitDone(true); return }
-        upsertChatMeta(meta)
-        setActiveChatId(meta.id)
-        chatIdRef.current = meta.id
-        const welcome = makeBotMsg('text', 'Paste a GitHub repo URL to learn your coding style, or paste code for a personalized review.')
-        setActiveMessages([welcome])
-        persistedRef.current = [toPersisted(welcome)]
-        setSelectedRepoUrlsLocal(meta.selected_repos ?? [])
-        setInitDone(true)
-        return
-      }
-
-      // Load messages for the target chat
-      setActiveChatId(targetId)
-      chatIdRef.current = targetId
-
-      // If we already have messages in memory for this chat, reuse them
-      if (activeChatId === targetId && activeMessages.length > 0) {
-        // Restore selected repos from Zustand cache or Supabase
-        const cached = selectedRepoUrlsByChatId[targetId]
-        if (cached) {
-          setSelectedRepoUrlsLocal(cached)
-        } else {
-          const fromDb = await loadChatSelectedRepos(targetId)
-          if (!cancelled) setSelectedRepoUrlsLocal(fromDb)
-        }
-        setInitDone(true)
-        return
-      }
-
-      const persisted = await loadChatMessages(targetId)
-      if (cancelled) return
-
-      persistedRef.current = persisted
-      setActiveMessages(persisted.length > 0
-        ? persisted.map(toUI)
-        : [makeBotMsg('text', 'Paste a GitHub repo URL to learn your coding style, or paste code for a personalized review.')]
-      )
-
-      // Restore selected repos (single source of truth; index 0 = review target)
-      const chatMeta = fetchedChats.find((c) => c.id === targetId)
-      const selectedFromMeta = chatMeta?.selected_repos
-      if (Array.isArray(selectedFromMeta) && selectedFromMeta.length > 0) {
-        setSelectedRepoUrlsLocal(selectedFromMeta)
-        setSelectedRepoUrls(targetId!, selectedFromMeta)
-      } else {
-        const cached = selectedRepoUrlsByChatId[targetId!]
-        if (cached) {
-          setSelectedRepoUrlsLocal(cached)
-        } else {
-          const fromDb = await loadChatSelectedRepos(targetId!)
-          if (!cancelled) {
-            setSelectedRepoUrlsLocal(fromDb)
-            if (fromDb.length > 0) setSelectedRepoUrls(targetId!, fromDb)
-          }
-        }
-      }
-
-      setInitDone(true)
+      setChats(fetched)
+      const target = activeChatId && fetched.some((c) => c.id === activeChatId) ? activeChatId : fetched[0]?.id ?? null
+      if (target) await loadInto(target, fetched)
+      else startNewChat()
+      if (!cancelled) setInitDone(true)
     }
-
     init()
     return () => { cancelled = true }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [account, userId])
 
-  // ── Switch chat when activeChatId changes (sidebar click) ──────────────────
-  useEffect(() => {
-    if (!initDone) return
-    if (!activeChatId || activeChatId === chatIdRef.current) return
-
-    chatIdRef.current = activeChatId
-    setLoading(true)
-
-    // Restore selected repos for this chat (async so we don't sync-setState in effect)
-    const cached = selectedRepoUrlsByChatId[activeChatId]
-    const selectedPromise = cached
-      ? Promise.resolve(cached)
-      : loadChatSelectedRepos(activeChatId)
-    selectedPromise.then((urls) => {
-      setSelectedRepoUrlsLocal(urls)
-    })
-
-    loadChatMessages(activeChatId).then((persisted) => {
-      persistedRef.current = persisted
-      setActiveMessages(persisted.length > 0
-        ? persisted.map(toUI)
-        : [makeBotMsg('text', 'Paste a GitHub repo URL to learn your coding style, or paste code for a personalized review.')]
-      )
-
-      // Prefer DB selected_repos when switching chats (keeps index-0 review target in sync)
-      const meta = chats.find((c) => c.id === activeChatId)
-      if (Array.isArray(meta?.selected_repos) && meta.selected_repos.length > 0) {
-        setSelectedRepoUrlsLocal(meta.selected_repos)
-        setSelectedRepoUrls(activeChatId, meta.selected_repos)
-      }
-
-      setLoading(false)
-    })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeChatId, initDone])
-
-  // ── Helper: add message to UI + persisted buffer + save to Supabase ──────────
-  const addMessage = useCallback(async (msg: ChatMessage, rawText?: string) => {
-    appendMessage(msg)
-    const pm = toPersisted(msg, rawText)
-    persistedRef.current = [...persistedRef.current, pm]
-
-    const cid = chatIdRef.current
-    if (!cid) return
-
-    // Fire-and-forget save
-    saveChatMessages(cid, persistedRef.current).then(() => {
-      // Update title in store after save
-      const newTitle = generateTitle(persistedRef.current)
-      updateChatTitle(cid, newTitle)
-    })
-  }, [appendMessage, updateChatTitle])
-
-  // ── Helper: create a new chat (UI only — saved on first message) ────────
-  const startNewChat = useCallback((initialRepoUrl?: string | null) => {
-    setSelectedRepoUrlsLocal(initialRepoUrl ? [initialRepoUrl] : [])
-    const welcome = makeBotMsg('text', 'Paste a GitHub repo URL to learn your coding style, or paste code for a personalized review.')
-
-    // Clear everything immediately without hitting DB (like ChatGPT)
-    chatIdRef.current = null
-    setActiveChatId(null)
-    setActiveMessages([welcome])
-    persistedRef.current = []
-  }, [setActiveChatId, setActiveMessages])
-
-  // ── "New chat" from the app shell sidebar ──────────────────────────────────
+  // "New chat" from the app rail / a repo card
   useEffect(() => {
     if (!initDone) return
     const handle = (requested: boolean) => {
       if (!requested) return
-      const repoUrl = useStore.getState().newChatRepoUrl
+      const url = useStore.getState().newChatRepoUrl
       clearNewChatRequest()
-      startNewChat(repoUrl)
+      if (pendingRef.current) return
+      startNewChat(url)
     }
-    // A request made before this page mounted (New chat clicked on another page)
     queueMicrotask(() => handle(useStore.getState().newChatRequested))
     return useStore.subscribe((s, prev) => {
       if (s.newChatRequested && !prev.newChatRequested) handle(true)
     })
   }, [initDone, clearNewChatRequest, startNewChat])
 
-  // ── Handle repo selection changes ─────────────────────────────────────────
-  const handleSelectionChange = useCallback((urls: string[]) => {
-    setSelectedRepoUrlsLocal(urls)
+  function openChat(id: string) {
+    setThreadsOpen(false)
+    if (pending || id === chatIdRef.current) return
+    setLoadingChat(true)
+    loadInto(id, chats).finally(() => setLoadingChat(false))
+  }
 
+  function newChatFromPane(url?: string) {
+    setThreadsOpen(false)
+    if (!pending) startNewChat(url ?? null)
+  }
+
+  // ── Persistence ────────────────────────────────────────────────────────────
+  const ensureChat = useCallback(async (url: string): Promise<string | null> => {
+    if (chatIdRef.current || !account) return chatIdRef.current
+    const meta = await createChat(userId, url)
+    if (meta) {
+      upsertChatMeta(meta)
+      setActiveChatId(meta.id)
+      chatIdRef.current = meta.id
+      setSelectedRepoUrls(meta.id, [url])
+    }
+    return chatIdRef.current
+  }, [account, userId, upsertChatMeta, setActiveChatId, setSelectedRepoUrls])
+
+  const addMessage = useCallback(async (msg: ChatMessage, rawText?: string) => {
+    appendMessage(msg)
+    persistedRef.current = [...persistedRef.current, toPersisted(msg, rawText)]
     const cid = chatIdRef.current
-    if (cid) {
-      // Persist to Zustand
-      setSelectedRepoUrls(cid, urls)
-      // Persist to Supabase (fire-and-forget)
-      updateChatSelectedRepos(cid, urls)
-      // Update chat title based on selection
-      const selTitle = repoSelectionTitle(urls)
-      if (selTitle) {
-        updateChatTitle(cid, selTitle)
-      }
-    }
-  }, [setSelectedRepoUrls, updateChatTitle])
+    if (!cid) return
+    const messages = persistedRef.current
+    await saveChatMessages(cid, messages)
+    const meta = useStore.getState().chats.find((c) => c.id === cid)
+    if (meta) upsertChatMeta({ ...meta, title: generateTitle(messages), updated_at: new Date().toISOString() })
+  }, [appendMessage, upsertChatMeta])
 
-  /** Promote a selected URL to review target by moving it to index 0. */
-  const handlePrimaryChange = useCallback((url: string | null) => {
-    if (!url || !selectedRepoUrls.includes(url)) return
-    if (selectedRepoUrls[0] === url) return
-    const next = [url, ...selectedRepoUrls.filter((u) => u !== url)]
-    handleSelectionChange(next)
-  }, [selectedRepoUrls, handleSelectionChange])
+  // ── Actions ────────────────────────────────────────────────────────────────
+  function selectRepo(url: string) {
+    if (locked) return
+    setSelectedRepoUrlsLocal([url])
+    if (!account) setSelectedRepoUrls(GUEST_KEY, [url])
+    const cid = chatIdRef.current
+    if (cid) { setSelectedRepoUrls(cid, [url]); updateChatSelectedRepos(cid, [url]) }
+    setComposerKey((k) => k + 1) // default review language follows the repo
+  }
 
-  // ── Input handler ─────────────────────────────────────────────────────────
-  const handleSubmit = useCallback(async (text: string) => {
-    // If there is no active chat (because we clicked + New review), create it now before saving the message.
-    if (!chatIdRef.current && userId !== 'anonymous') {
-      const meta = await createChat(userId)
-      if (meta) {
-        upsertChatMeta(meta)
-        setActiveChatId(meta.id)
-        chatIdRef.current = meta.id
-
-        // Persist current selection to the new chat
-        if (selectedRepoUrls.length > 0) {
-          setSelectedRepoUrls(meta.id, selectedRepoUrls)
-          updateChatSelectedRepos(meta.id, selectedRepoUrls)
-        }
-      }
-    }
-
-    await addMessage(makeUserMsg(text), text)
-    setLoading(true)
-
+  async function handleAsk(text: string) {
+    if (!repoUrl || pending) return
+    setPending({ kind: 'ask', startedAt: Date.now() })
     try {
-      if (GH_REGEX.test(text)) {
-        // ── Analyze repo ────────────────────────────────────────────
-        const repoUrl = text.match(GH_REGEX)![0]
-        const r = await analyzeRepo(repoUrl, userId)
-        
-        // Add to selected (index 0 is the review target when this is the first repo)
-        const cleanUrl = repoUrl.replace(/\/$/, '')
-        if (!selectedRepoUrls.includes(cleanUrl)) {
-          const nextSelected = [...selectedRepoUrls, cleanUrl]
-          setSelectedRepoUrlsLocal(nextSelected)
-          if (chatIdRef.current) {
-            setSelectedRepoUrls(chatIdRef.current, nextSelected)
-            updateChatSelectedRepos(chatIdRef.current, nextSelected)
-          }
-        }
-
-        const fp = r.fingerprint ?? {}
-        const data: Record<string, unknown> = {
-          functions_analyzed:  r.num_functions ?? 0,
-          files_analyzed:      Object.keys(fp.language_distribution ?? {}).length || (r.num_functions ?? 0),
-          avg_function_length: fp.avg_function_length ?? 0,
-          error_handling_rate: fp.error_handling_rate ?? 0,
-          docstring_coverage:  fp.docstring_coverage  ?? 0,
-          naming_convention:   fp.naming_convention   ?? 'snake_case',
-          type_hint_usage:     fp.type_hint_usage     ?? 0,
-          avg_complexity:      fp.avg_complexity      ?? 0,
-          cache_status:        r.cache_status,
-          repo_name:           r.repo_name,
-        }
-        await addMessage(makeBotMsg('fingerprint', undefined, data))
-
-        // Save repo to Supabase
-        supabase.auth.getSession().then(({ data: { session } }) => {
-          if (!session?.user?.id) return
-          saveRepo({
-            userId:         session.user.id,
-            repoUrl,
-            repoName:       r.repo_name ?? repoUrl.split('/').slice(-2).join('/'),
-            functionsCount: r.num_functions ?? 0,
-            languages:      Object.keys(fp.language_distribution ?? {}),
-          })
-        })
-
-      } else if (isCodeSnippet(text)) {
-        // ── Review code — selected[0] is the review target (single slice) ─
-        const reviewTarget = selectedRepoUrls[0] ?? null
-
-        if (!reviewTarget) {
-          await addMessage(makeBotMsg('text', 'Select a repo above (or paste a GitHub URL) to review code against your style.'))
-          return
-        }
-
-        const r = await reviewCode(reviewTarget, text, userId)
-        const data: Record<string, unknown> = {
-          overall_score: r.overall_score,
-          status:        r.status,
-          iterations:    r.iterations,
-          issues:        r.issues        ?? [],
-          review_output: r.review_output ?? {},
-          agent_trace:   r.agent_trace   ?? [],
-        }
-        await addMessage(makeBotMsg('review', undefined, data))
-
-        // Save review to Supabase
-        supabase.auth.getSession().then(({ data: { session } }) => {
-          if (!session?.user?.id) return
-          saveReview({ userId: session.user.id, repoUrl: reviewTarget, code: text, result: r })
-        })
-
-      } else {
-        // ── Free-form Q&A ───────────────────────────────────────────
-        if (selectedRepoUrls.length === 0) {
-          await addMessage(makeBotMsg('text', 'Select at least one repo above to ask questions about your code.'))
-        } else {
-          try {
-            const result = await chatWithInsights(
-              text,
-              selectedRepoUrls,
-              userId,
-              chatIdRef.current ?? undefined,
-            )
-            await addMessage(makeBotMsg('text', result.answer))
-          } catch (err) {
-            await addMessage(makeBotMsg('text', `Error: ${err instanceof Error ? err.message : String(err)}`))
-          }
-        }
-      }
+      const cid = await ensureChat(repoUrl)
+      await addMessage(makeUserMsg(text, { mode: 'ask' }), text)
+      const answer = await askQuestion(text, repoUrl, userId, cid)
+      await addMessage(makeBotMsg('text', answer.text, { snippetsUsed: answer.snippetsUsed }))
     } catch (err) {
-      await addMessage(makeBotMsg('text', `Error: ${err instanceof Error ? err.message : String(err)}`))
+      await addMessage(makeBotMsg('text', errorText(err, 'ask'), { error: true }))
     } finally {
-      setLoading(false)
+      setPending(null)
     }
-  }, [addMessage, selectedRepoUrls, userId, upsertChatMeta, setActiveChatId, setSelectedRepoUrls])
+  }
 
-  // ── Render ─────────────────────────────────────────────────────────────────
-  return (
-    <div style={{ height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-      <div style={{
-        maxWidth: 680,
-        width: '100%',
-        margin: '0 auto',
-        padding: '0 20px',
-        display: 'flex',
-        flexDirection: 'column',
-        flex: 1,
-      }}>
-        <RepoSelector
-          userId={userId}
-          selectedUrls={selectedRepoUrls}
-          onSelectionChange={handleSelectionChange}
-          primaryUrl={selectedRepoUrls[0] ?? null}
-          onPrimaryChange={handlePrimaryChange}
-        />
-        <MessageList messages={activeMessages} loading={loading} />
-        <ChatInput onSubmit={handleSubmit} disabled={loading || !initDone} />
+  async function handleReview(code: string, language: string) {
+    // The chat's repo is the review target (selected[0])
+    const reviewTarget = selectedRepoUrls[0] ?? null
+    if (!reviewTarget || pending) return
+    setPending({ kind: 'review', startedAt: Date.now() })
+    try {
+      await ensureChat(reviewTarget)
+      await addMessage(makeUserMsg(code, { mode: 'review', language }), code)
+      const raw = await reviewCode(reviewTarget, code, language)
+      const msg = makeBotMsg('review', undefined, { ...raw, code, language, repo_url: reviewTarget })
+      await addMessage(msg)
+      setPanelReviewId(msg.id)
+      setActiveFindingId(null)
+      // Degraded/error reviews are skipped inside saveReview
+      if (account) saveReview({ userId, repoUrl: reviewTarget, code, result: raw as Parameters<typeof saveReview>[0]['result'] })
+    } catch (err) {
+      await addMessage(makeBotMsg('text', errorText(err, 'review'), { error: true }))
+    } finally {
+      setPending(null)
+    }
+  }
+
+  // ── Code panel data ─────────────────────────────────────────────────────────
+  const reviewMessages = useMemo(() => activeMessages.filter((m) => m.type === 'review'), [activeMessages])
+  const panelMsg = reviewMessages.find((m) => m.id === panelReviewId) ?? reviewMessages.at(-1) ?? null
+
+  const panel = useMemo(() => {
+    if (!panelMsg) return null
+    const data = (panelMsg.data ?? {}) as unknown as RawReview & { code?: string; language?: string; repo_url?: string }
+    let code = data.code
+    if (!code) {
+      // Older review messages didn't store the code — it's the preceding user message
+      const idx = activeMessages.indexOf(panelMsg)
+      code = activeMessages.slice(0, idx).reverse().find((m) => m.role === 'user')?.text ?? ''
+    }
+    return {
+      review: normalizeReview(data, { code, repoUrl: data.repo_url }),
+      language: data.language ?? 'python', // legacy chats always reviewed as Python
+    }
+  }, [panelMsg, activeMessages])
+
+  const reviewOptions = reviewMessages.map((m, i) => ({ id: m.id, label: `Review ${i + 1} of ${reviewMessages.length}` }))
+
+  function showReview(id: string) {
+    setPanelReviewId(id)
+    setActiveFindingId(null)
+    if (!isWide()) setCodeOpen(true)
+  }
+
+  function selectFinding(f: Finding) {
+    setActiveFindingId((cur) => (cur === f.id ? null : f.id))
+  }
+
+  const defaultLanguage = useMemo(() => {
+    const top = repo ? topLanguages(repo, 1)[0]?.toLowerCase() : undefined
+    return REVIEW_LANGUAGES.some((l) => l.value === top) ? top! : 'python'
+  }, [repo])
+
+  const busyReason = pending ? 'Wait for the current answer or review to finish' : null
+  const findingsCount = panel?.review.findings.length ?? 0
+
+  const codePanelProps = {
+    review: panel?.review ?? null,
+    language: panel?.language ?? null,
+    options: reviewOptions,
+    selectedId: panelMsg?.id ?? null,
+    onSelectReview: (id: string) => { setPanelReviewId(id); setActiveFindingId(null) },
+    activeFindingId,
+    onSelectFinding: selectFinding,
+  }
+
+  const threadsPane = (
+    <>
+      <div className="flex h-12 shrink-0 items-center justify-between border-b border-line px-4">
+        <h2 className="text-sm font-semibold text-fg">Chats</h2>
+        <IconButton label="New chat" icon={<Plus size={16} />} size="sm" onClick={() => newChatFromPane()} disabled={!!pending} />
       </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-1.5 py-3">
+        {account ? (
+          chats.length > 0
+            ? <ThreadList chats={chats} activeChatId={activeChatId} onOpen={openChat} onNewInRepo={newChatFromPane} disabledReason={busyReason} />
+            : <p className="px-3 text-xs text-fg-3">{initDone ? 'No chats yet. Pick a repo and ask something.' : 'Loading chats…'}</p>
+        ) : (
+          <p className="px-3 text-xs text-fg-3">Guest chats aren’t saved — this one lasts until you leave the page.</p>
+        )}
+      </div>
+    </>
+  )
+
+  return (
+    <div className="flex h-full min-h-0">
+      {/* Threads, grouped by repo */}
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-line bg-sidebar md:flex" aria-label="Chat threads">
+        {threadsPane}
+      </aside>
+      {threadsOpen && (
+        <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true" aria-label="Chat threads">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setThreadsOpen(false)} aria-hidden />
+          <aside className="relative flex h-full w-72 max-w-[85vw] flex-col border-r border-line bg-sidebar shadow-pop">
+            <div className="absolute right-2 top-2"><IconButton label="Close chats" icon={<X size={16} />} size="sm" onClick={() => setThreadsOpen(false)} /></div>
+            {threadsPane}
+          </aside>
+        </div>
+      )}
+
+      {/* Messages */}
+      <section className="flex min-w-0 flex-1 flex-col" aria-label="Conversation">
+        <div className="flex h-12 shrink-0 items-center gap-2 border-b border-line px-3 sm:px-4">
+          <IconButton label="Show chats" icon={<PanelLeft size={16} />} size="sm" className="md:hidden" onClick={() => setThreadsOpen(true)} />
+          <RepoPicker repos={repos} value={repoUrl} onChange={selectRepo} locked={locked} loading={reposLoading} />
+          {selectedRepoUrls.length > 1 && (
+            <span className="hidden text-xs text-fg-3 sm:inline" title={selectedRepoUrls.map(repoShortName).join(', ')}>
+              Older chat — only {repoShortName(selectedRepoUrls[0])} is used
+            </span>
+          )}
+          <div className="ml-auto xl:hidden">
+            <Button size="sm" icon={<Code2 size={14} />} onClick={() => setCodeOpen(true)}>
+              Code{findingsCount > 0 ? ` · ${findingsCount}` : ''}
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <MessageStream
+            messages={activeMessages}
+            pending={pending}
+            repoName={repoUrl ? repoShortName(repoUrl) : null}
+            activeReviewId={panelMsg?.id ?? null}
+            onShowReview={showReview}
+            onSuggestion={(s) => handleAsk(s)}
+            loading={!initDone || loadingChat}
+          />
+        </div>
+
+        <Composer
+          key={`${composerKey}:${repoUrl ?? ''}`}
+          mode={mode}
+          onModeChange={setMode}
+          repoName={repoUrl ? repoShortName(repoUrl) : null}
+          busy={!!pending || !initDone || loadingChat}
+          defaultLanguage={defaultLanguage}
+          onAsk={handleAsk}
+          onReview={handleReview}
+        />
+        {guestMode && (
+          <p className="border-t border-line bg-canvas px-4 py-1.5 text-center text-[11px] text-fg-3">Guest session — this chat isn’t saved.</p>
+        )}
+      </section>
+
+      {/* Code panel */}
+      <CodePanel className="hidden w-[min(46%,620px)] shrink-0 border-l border-line xl:flex" {...codePanelProps} />
+      {codeOpen && (
+        <div className="fixed inset-0 z-40 xl:hidden" role="dialog" aria-modal="true" aria-label="Code panel">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setCodeOpen(false)} aria-hidden />
+          <CodePanel className="absolute inset-y-0 right-0 flex w-full max-w-2xl border-l border-line shadow-pop" {...codePanelProps} onClose={() => setCodeOpen(false)} />
+        </div>
+      )}
     </div>
   )
 }

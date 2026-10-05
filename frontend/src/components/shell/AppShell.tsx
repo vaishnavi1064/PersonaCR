@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import NavSidebar from './NavSidebar'
 import TopBar from './TopBar'
 
 /** Signed-in layout: sidebar (drawer below lg) + top bar + routed page. */
 export default function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(false)
+  // The Chat Studio has its own threads pane; the app nav shrinks to a rail there.
+  const studio = useLocation().pathname.startsWith('/chat')
 
   useEffect(() => {
     if (!drawerOpen) return
@@ -18,7 +20,7 @@ export default function AppShell() {
 
   return (
     <div className="flex h-dvh overflow-hidden bg-canvas text-fg">
-      <NavSidebar className="hidden lg:flex" />
+      <NavSidebar className="hidden lg:flex" compact={studio} />
 
       {drawerOpen && (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Navigation">

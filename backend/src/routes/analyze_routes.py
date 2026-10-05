@@ -152,3 +152,12 @@ def cleanup_guest(session_id: str) -> dict:
     deleted = delete_guest_collections(session_id)
     logger.info("Cleaned up %d guest collections for %s", deleted, session_id)
     return {"deleted": deleted, "message": f"Removed {deleted} collection(s) for guest session."}
+
+
+@router.post("/cleanup-guest/{session_id}", operation_id="cleanup_guest_beacon", include_in_schema=False)
+def cleanup_guest_beacon(session_id: str) -> dict:
+    """
+    Same as DELETE /cleanup-guest/{session_id}, for navigator.sendBeacon — which
+    can only send POST. Hidden from the schema so MCP exposes a single tool.
+    """
+    return cleanup_guest(session_id)

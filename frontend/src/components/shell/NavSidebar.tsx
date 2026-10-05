@@ -1,12 +1,11 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { FolderGit2, LayoutDashboard, MessagesSquare, Plus, Settings, Star, X } from 'lucide-react'
+import { FolderGit2, LayoutDashboard, MessagesSquare, Plus, Settings, X } from 'lucide-react'
 import { useStore } from '../../store/useStore'
-import type { ChatMeta } from '../../store/useStore'
-import { toggleChatStar } from '../../lib/db'
 import { cn } from '../../lib/cn'
-import Logo from '../ui/Logo'
+import Logo, { LogoMark } from '../ui/Logo'
 import Button from '../ui/Button'
 import IconButton from '../ui/IconButton'
+import ThreadList from '../studio/ThreadList'
 import { useCurrentUser } from '../../lib/useCurrentUser'
 
 const NAV = [
@@ -17,6 +16,8 @@ const NAV = [
 ] as const
 
 interface NavSidebarProps {
+  /** Icon rail — used on the Chat Studio, which has its own threads pane. */
+  compact?: boolean
   /** Called after any navigation — closes the mobile drawer. */
   onNavigate?: () => void
   /** Show a close button (mobile drawer). */
@@ -24,7 +25,7 @@ interface NavSidebarProps {
   className?: string
 }
 
-export default function NavSidebar({ onNavigate, onClose, className }: NavSidebarProps) {
+export default function NavSidebar({ compact, onNavigate, onClose, className }: NavSidebarProps) {
   const navigate = useNavigate()
   const chats = useStore((s) => s.chats)
   const activeChatId = useStore((s) => s.activeChatId)
@@ -44,8 +45,43 @@ export default function NavSidebar({ onNavigate, onClose, className }: NavSideba
     onNavigate?.()
   }
 
-  const starred = chats.filter((c) => c.starred)
-  const recent = chats.filter((c) => !c.starred)
+  if (compact) {
+    return (
+      <aside className={cn('flex h-full w-16 shrink-0 flex-col items-center gap-2 border-r border-line bg-sidebar py-3', className)}>
+        <NavLink to="/repos" aria-label="PersonaCR home" className="mb-1 flex h-9 w-9 items-center justify-center rounded-lg">
+          <LogoMark size={24} />
+        </NavLink>
+        <button
+          type="button"
+          onClick={newChat}
+          aria-label="New chat"
+          title="New chat"
+          className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-strong text-on-accent cursor-pointer hover:brightness-110"
+        >
+          <Plus size={17} aria-hidden />
+        </button>
+        <nav aria-label="Main" className="mt-1">
+          <ul className="flex flex-col gap-1">
+            {NAV.map(({ to, label, icon: Icon }) => (
+              <li key={to}>
+                <NavLink
+                  to={to}
+                  title={label}
+                  aria-label={label}
+                  className={({ isActive }) => cn(
+                    'flex h-9 w-9 items-center justify-center rounded-lg',
+                    isActive ? 'bg-surface-hover text-fg shadow-[inset_0_0_0_1px_var(--border)]' : 'text-fg-3 hover:bg-surface hover:text-fg',
+                  )}
+                >
+                  <Icon size={18} aria-hidden />
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </aside>
+    )
+  }
 
   return (
     <aside className={cn('flex h-full w-[232px] shrink-0 flex-col border-r border-line bg-sidebar', className)}>
@@ -86,15 +122,11 @@ export default function NavSidebar({ onNavigate, onClose, className }: NavSideba
 
       <div className="mx-4 my-3 h-px bg-line" role="presentation" />
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
-        {starred.length > 0 && (
-          <ChatGroup title="Starred" chats={starred} activeChatId={activeChatId} onOpen={openChat} />
-        )}
-        {recent.length > 0 && (
-          <ChatGroup title="Recent chats" chats={recent} activeChatId={activeChatId} onOpen={openChat} />
-        )}
-        {chats.length === 0 && !guestMode && (
-          <p className="px-3 text-xs text-fg-3">No chats yet.</p>
+      <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-3">
+        {chats.length > 0 ? (
+          <ThreadList chats={chats} activeChatId={activeChatId} onOpen={openChat} dense />
+        ) : !guestMode && (
+          <p className="px-4 text-xs text-fg-3">No chats yet.</p>
         )}
       </div>
 
@@ -105,56 +137,5 @@ export default function NavSidebar({ onNavigate, onClose, className }: NavSideba
         </div>
       )}
     </aside>
-  )
-}
-
-function ChatGroup({
-  title, chats, activeChatId, onOpen,
-}: { title: string; chats: ChatMeta[]; activeChatId: string | null; onOpen: (id: string) => void }) {
-  return (
-    <div className="mb-3">
-      <p className="px-3 pb-1 text-[11px] font-medium uppercase tracking-wider text-fg-3">{title}</p>
-      <ul className="flex flex-col gap-px">
-        {chats.map((c) => <ChatItem key={c.id} chat={c} active={c.id === activeChatId} onOpen={onOpen} />)}
-      </ul>
-    </div>
-  )
-}
-
-function ChatItem({ chat, active, onOpen }: { chat: ChatMeta; active: boolean; onOpen: (id: string) => void }) {
-  const updateChatStar = useStore((s) => s.updateChatStar)
-
-  function toggleStar() {
-    const next = !chat.starred
-    updateChatStar(chat.id, next)
-    toggleChatStar(chat.id, next) // fire-and-forget Supabase update
-  }
-
-  return (
-    <li className="group relative">
-      <button
-        type="button"
-        onClick={() => onOpen(chat.id)}
-        aria-current={active ? 'page' : undefined}
-        className={cn(
-          'flex h-8 w-full items-center rounded-md pl-3 pr-8 text-left text-[13px] cursor-pointer',
-          active ? 'bg-surface-hover text-fg' : 'text-fg-2 hover:bg-surface hover:text-fg',
-        )}
-      >
-        <span className="truncate">{chat.title}</span>
-      </button>
-      <button
-        type="button"
-        onClick={toggleStar}
-        aria-label={chat.starred ? `Unstar ${chat.title}` : `Star ${chat.title}`}
-        aria-pressed={chat.starred}
-        className={cn(
-          'absolute right-1.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded cursor-pointer',
-          chat.starred ? 'text-warning' : 'text-fg-3 opacity-0 hover:text-fg group-hover:opacity-100 focus-visible:opacity-100',
-        )}
-      >
-        <Star size={12} fill={chat.starred ? 'currentColor' : 'none'} aria-hidden />
-      </button>
-    </li>
   )
 }

@@ -396,39 +396,38 @@ export interface ChatMeta {
   updated_at:      string
 }
 
-/** Title from first meaningful user message */
+/** Title from the first user message: the question, or "Review: <first line>". */
 export function generateTitle(messages: PersistedMessage[]): string {
-  const repo = messages.find(
-    (m) => m.role === 'user' && m.content?.match(/github\.com/)
-  )
-  if (repo) {
-    const parts = (repo.content ?? '').trim().replace(/\/$/, '').split('/')
-    return parts.slice(-2).join('/')
+  const first = messages.find((m) => m.role === 'user' && (m.content ?? '').trim())
+  if (!first) return 'New chat'
+  const content = (first.content ?? '').trim()
+  const mode = (first.data as { mode?: string } | null | undefined)?.mode
+
+  // Legacy chats started by pasting a repo URL
+  if (!mode && /^https?:\/\/github\.com\/\S+$/.test(content)) {
+    return content.replace(/\/$/, '').split('/').slice(-2).join('/')
   }
-  const code = messages.find(
-    (m) => m.role === 'user' && (m.content ?? '').includes('\n')
-  )
-  if (code) {
-    const first = (code.content ?? '').split('\n')[0].trim()
-    return 'Review: ' + first.substring(0, 40)
+  // Review: explicit mode, or a legacy multi-line code paste
+  if (mode === 'review' || (!mode && content.includes('\n'))) {
+    const firstLine = content.split('\n').find((l) => l.trim())?.trim() ?? ''
+    return 'Review: ' + firstLine.substring(0, 40)
   }
-  return 'New review'
+  const oneLine = content.replace(/\s+/g, ' ')
+  return oneLine.length > 60 ? oneLine.substring(0, 57) + '…' : oneLine
 }
 
-export async function createChat(userId: string): Promise<ChatMeta | null> {
-  const welcome: PersistedMessage = {
-    role:      'bot',
-    content:   'Paste a GitHub repo URL to learn your coding style, or paste code for a personalized review.',
-    type:      'text',
-    timestamp: new Date().toISOString(),
-  }
+/** Create a chat scoped to one repo. Messages are saved as they arrive. */
+export async function createChat(userId: string, repoUrl: string): Promise<ChatMeta | null> {
   const { data, error } = await supabase
     .from('user_chats')
     .insert({
-      user_id:  userId,
-      title:    'New review',
-      messages: [welcome],
-      starred:  false,
+      user_id:          userId,
+      title:            'New chat',
+      messages:         [],
+      starred:          false,
+      selected_repos:   [repoUrl],
+      primary_repo_url: repoUrl,
+      last_repo_url:    repoUrl,
     })
     .select('id, title, starred, last_repo_url, primary_repo_url, selected_repos, updated_at')
     .single()
@@ -486,23 +485,6 @@ export async function toggleChatStar(chatId: string, starred: boolean): Promise<
 
 // ── Repo selector helpers ──────────────────────────────────────────────────────
 
-export interface AnalyzedRepo {
-  repo_url:  string
-  repo_name: string
-  languages: string[]
-}
-
-export async function getUserAnalyzedRepos(userId: string): Promise<AnalyzedRepo[]> {
-  const { data, error } = await supabase
-    .from('user_repos')
-    .select('repo_url, repo_name, languages')
-    .eq('user_id', userId)
-    .order('analyzed_at', { ascending: false })
-
-  if (error) { console.warn('[db] getUserAnalyzedRepos failed:', error.message); return [] }
-  return (data ?? []) as AnalyzedRepo[]
-}
-
 export async function updateChatSelectedRepos(
   chatId: string,
   repoUrls: string[],
@@ -513,29 +495,4 @@ export async function updateChatSelectedRepos(
     .eq('id', chatId)
 
   if (error) console.warn('[db] updateChatSelectedRepos failed:', error.message)
-}
-
-export async function updateChatPrimaryRepoUrl(
-  chatId: string,
-  repoUrl: string | null,
-): Promise<void> {
-  const { error } = await supabase
-    .from('user_chats')
-    .update({ primary_repo_url: repoUrl, updated_at: new Date().toISOString() })
-    .eq('id', chatId)
-
-  if (error) console.warn('[db] updateChatPrimaryRepoUrl failed:', error.message)
-}
-
-export async function loadChatSelectedRepos(chatId: string): Promise<string[]> {
-  const { data, error } = await supabase
-    .from('user_chats')
-    .select('selected_repos')
-    .eq('id', chatId)
-    .single()
-
-  if (error) { console.warn('[db] loadChatSelectedRepos failed:', error.message); return [] }
-  const repos = data?.selected_repos
-  if (Array.isArray(repos)) return repos as string[]
-  return []
 }
