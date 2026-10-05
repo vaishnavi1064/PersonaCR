@@ -5,7 +5,7 @@ Generates "things a good review should mention" without needing human-written
 reference reviews. Combines two complementary sources:
 
   1. AST static analysis — instant, deterministic, high-precision findings
-  2. Groq LLM claims    — semantic, catches what AST misses
+  2. LLM claims         — semantic, catches what AST misses
 
 Based on CRScore (NAACL 2025): pseudo-references from LLMs + code analysis
 tools create reliable evaluation signals without gold-standard human reviews.
@@ -126,12 +126,10 @@ def _ast_pseudo_refs(code: str, language: str) -> list[PseudoReference]:
 
 def _llm_pseudo_refs(code: str, language: str) -> list[PseudoReference]:
     """
-    Generate pseudo-references using Groq LLM.
+    Generate pseudo-references using the LLM (core.llm_client).
     Asks: what claims, issues, and improvements should a good review mention?
     """
-    from groq import Groq
-
-    client = Groq()
+    from backend.src.core.llm_client import complete
 
     system_prompt = (
         "You are generating pseudo-references for evaluating a code review.\n"
@@ -150,16 +148,13 @@ def _llm_pseudo_refs(code: str, language: str) -> list[PseudoReference]:
     )
 
     try:
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
+        raw = complete(
+            system_prompt,
+            user_prompt,
             temperature=0.3,
             max_tokens=1000,
-        )
-        raw = response.choices[0].message.content.strip()
+            caller="pseudo_ref",
+        ).strip()
         json_match = re.search(r'\[.*\]', raw, re.DOTALL)
         if json_match:
             items = json.loads(json_match.group())

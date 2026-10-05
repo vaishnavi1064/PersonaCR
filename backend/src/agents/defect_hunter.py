@@ -3,7 +3,7 @@ Defect Hunter Agent — finds bugs, code smells, and security issues.
 
 Two-phase approach:
   Phase 1 — Local AST analysis (Python only, instant, no LLM).
-  Phase 2 — Groq LLM semantic analysis for logic errors, edge cases, security.
+  Phase 2 — LLM semantic analysis (core.llm_client) for logic errors, edge cases, security.
 
 Runs IN PARALLEL with Style Analyst (RevAgent pattern, 2025) via asyncio.gather
 in the orchestrator — no sequential dependency between them.
@@ -121,10 +121,8 @@ def hunt_defects(code: str, language: str) -> tuple[DefectHunterOutput, int]:
     # ── Phase 1: local AST (instant) ─────────────────────────────────────────
     ast_findings = _ast_analysis(code, language)
 
-    # ── Phase 2: Groq LLM semantic analysis ──────────────────────────────────
-    from groq import Groq
-
-    client = Groq()
+    # ── Phase 2: LLM semantic analysis ──────────────────────────────────
+    from backend.src.core.llm_client import complete
 
     ast_context = ""
     if ast_findings:
@@ -157,16 +155,13 @@ def hunt_defects(code: str, language: str) -> tuple[DefectHunterOutput, int]:
     )
 
     try:
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
+        raw = complete(
+            system_prompt,
+            user_prompt,
             temperature=0.2,
             max_tokens=1500,
-        )
-        raw = response.choices[0].message.content.strip()
+            caller="defect",
+        ).strip()
         json_match = re.search(r"\{.*\}", raw, re.DOTALL)
         if json_match:
             data = json.loads(json_match.group())
@@ -178,9 +173,6 @@ def hunt_defects(code: str, language: str) -> tuple[DefectHunterOutput, int]:
             llm_bugs, llm_smells, llm_security = [], [], []
             defect_score = 70.0
     except Exception as e:
-        from backend.src.core.metrics import maybe_record_groq_throttle
-
-        maybe_record_groq_throttle(e)
         llm_bugs = [DefectFinding(
             severity="low",
             description=f"LLM analysis error: {str(e)[:100]}",

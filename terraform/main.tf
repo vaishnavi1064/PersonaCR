@@ -26,6 +26,8 @@ resource "kubernetes_config_map_v1" "personacr_config" {
     PERSONACR_METRICS_ENABLED = var.metrics_enabled
     CHROMADB_URL              = "http://chromadb:8000"
     MAX_EMBED_TOKENS          = "1024"
+    LLM_PROVIDER              = "anthropic"
+    LLM_MODEL                 = "claude-haiku-4-5-20251001"
   }
 }
 

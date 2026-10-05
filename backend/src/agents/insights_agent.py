@@ -2,7 +2,7 @@
 Insights Agent — answers natural-language questions about the user's analyzed repos.
 
 Read-only agent: loads fingerprints, reviews, and optionally retrieves code snippets
-from ChromaDB, then calls Groq to generate a grounded answer.
+from ChromaDB, then calls the LLM (core.llm_client) to generate a grounded answer.
 """
 from __future__ import annotations
 
@@ -249,23 +249,18 @@ def get_insights(
 
     context_block = "\n".join(context_parts)
 
-    # Call Groq LLM
+    # Call the LLM
     try:
-        from groq import Groq
-
-        client = Groq()
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT.format(context_block=context_block)},
-                {"role": "user", "content": question},
-            ],
+        from backend.src.core.llm_client import complete
+        answer = complete(
+            SYSTEM_PROMPT.format(context_block=context_block),
+            question,
             temperature=0.2,
             max_tokens=1000,
-        )
-        answer = response.choices[0].message.content.strip()
+            caller="insights",
+        ).strip()
     except Exception:
-        logger.exception("Groq call failed in insights_agent")
+        logger.exception("LLM call failed in insights_agent")
         answer = "I ran into an error processing that. Try again?"
 
     elapsed = int((time.time() - start) * 1000)

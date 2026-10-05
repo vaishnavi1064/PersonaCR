@@ -24,13 +24,6 @@ def isolated_chroma(tmp_path, monkeypatch):
     monkeypatch.setattr(emb, "_chroma_client", None)
 
 
-def _fake_groq(content: str = '{"findings": []}'):
-    resp = SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content))])
-    client = MagicMock()
-    client.chat.completions.create.return_value = resp
-    return MagicMock(return_value=client)
-
-
 @pytest.mark.slow
 def test_missing_collection_logs_warning(isolated_chroma, caplog):
     emb = isolated_chroma
@@ -42,7 +35,7 @@ def test_missing_collection_logs_warning(isolated_chroma, caplog):
 
 @pytest.mark.slow
 def test_analyze_as_user_a_review_as_user_b_has_retrieval_examples(isolated_chroma, monkeypatch):
-    """End to end through analyze_repo + Style Analyst retrieval (Groq mocked)."""
+    """End to end through analyze_repo + Style Analyst retrieval (LLM mocked)."""
     import backend.src.agents.style_analyst as sa
     import backend.src.routes.analyze_routes as ar
     from backend.src.routes.review_routes import _parse_repo
@@ -59,10 +52,10 @@ def test_analyze_as_user_a_review_as_user_b_has_retrieval_examples(isolated_chro
     ar.analyze_repo(ar.AnalyzeRequest(repo_url=REPO_URL, user_id=str(uuid.uuid4()), force_refresh=True))
 
     # A different caller ("user B") reviews: the review path derives identity from the URL.
-    import groq
+    import backend.src.core.llm_client as llm_client
 
-    # analyze_style does `from groq import Groq` at call time, so patch the module.
-    monkeypatch.setattr(groq, "Groq", _fake_groq())
+    # analyze_style imports complete() at call time, so patching the module attribute works.
+    monkeypatch.setattr(llm_client, "complete", lambda *a, **k: '{"findings": []}')
     _, namespace, repo_name = _parse_repo(REPO_URL)
     style_output, _ = sa.analyze_style(
         "def combine(h1: dict, h2: dict) -> dict:\n    return {**h1, **h2}",

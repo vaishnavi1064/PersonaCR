@@ -2,7 +2,7 @@
 RQ job functions for async reviews.
 
 Real path runs review_code_sync unchanged. Mock/fail flags exist so queue
-mechanics can be verified without Groq.
+mechanics can be verified without LLM calls.
 """
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ def _canned_result(repo_url: str, language: str) -> dict[str, Any]:
         "issues": [],
         "review_output": {
             "mock": True,
-            "summary": "Canned mock review — no Groq call.",
+            "summary": "Canned mock review — no LLM call.",
         },
         "agent_trace": [],
     }

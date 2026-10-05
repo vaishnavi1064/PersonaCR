@@ -5,7 +5,7 @@ Uses two-stage ChromaDB retrieval (Ringer 2025) via query_similar_staged():
   Stage 1 — file-level summaries to find the most relevant files fast.
   Stage 2 — function-level chunks within those files for detailed comparison.
 
-Then passes similar functions + fingerprint to Groq (Llama-3.3-70B) to generate
+Then passes similar functions + fingerprint to the LLM (core.llm_client) to generate
 personalised style findings — deviations from THIS developer's patterns, not
 generic best-practice violations.
 
@@ -446,7 +446,7 @@ def analyze_style(
 ) -> tuple[StyleAnalysisOutput, int]:
     """
     Compare submitted code against developer's personal patterns.
-    Uses two-stage ChromaDB retrieval (Ringer 2025) + Groq LLM.
+    Uses two-stage ChromaDB retrieval (Ringer 2025) + LLM (core.llm_client).
     Returns (StyleAnalysisOutput, execution_time_ms).
 
     overall_style_score is computed from findings (Defect A), after
@@ -495,10 +495,8 @@ def analyze_style(
 
     direction_guide = build_fingerprint_direction_guide(fingerprint)
 
-    # ── Groq LLM call ─────────────────────────────────────────────────────────
-    from groq import Groq
-
-    client = Groq()
+    # ── LLM call ─────────────────────────────────────────────────────────
+    from backend.src.core.llm_client import complete
 
     system_prompt = (
         "You are a Style Analyst for PersonaCR. You compare submitted code against a "
@@ -552,16 +550,13 @@ def analyze_style(
     )
 
     try:
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
+        raw = complete(
+            system_prompt,
+            user_prompt,
             temperature=0.2,
             max_tokens=1500,
-        )
-        raw = response.choices[0].message.content.strip()
+            caller="style",
+        ).strip()
         json_match = re.search(r"\{.*\}", raw, re.DOTALL)
         if json_match:
             data = json.loads(json_match.group())
@@ -580,9 +575,6 @@ def analyze_style(
                 similar_functions_found=similar_count,
             )
     except Exception as e:
-        from backend.src.core.metrics import maybe_record_groq_throttle
-
-        maybe_record_groq_throttle(e)
         result = StyleAnalysisOutput(
             findings=[
                 StyleFinding(

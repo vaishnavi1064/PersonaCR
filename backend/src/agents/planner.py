@@ -3,7 +3,7 @@ Planner Agent — decides the review strategy before any review agents run.
 
 Hybrid approach (Latency-Aware Multi-Agent Architecture Search, 2026):
 - Rules-based fast path first: no LLM call when deviations are obvious.
-- LLM slow path (Groq / Llama-3.3-70B) only for complex/ambiguous cases.
+- LLM slow path (core.llm_client) only for complex/ambiguous cases.
   Reducing serial LLM calls on the critical path is the #1 latency lever.
 """
 from __future__ import annotations
@@ -85,10 +85,8 @@ def plan_review(code: str, language: str, fingerprint: dict) -> tuple[PlannerOut
         elapsed = int((time.time() - start) * 1000)
         return rules_plan, elapsed
 
-    # ── Slow path: Groq LLM ──────────────────────────────────────────────────
-    from groq import Groq  # imported lazily — only when needed
-
-    client = Groq()
+    # ── Slow path: LLM ──────────────────────────────────────────────────
+    from backend.src.core.llm_client import complete
 
     fp_summary = json.dumps(
         {
@@ -125,16 +123,13 @@ def plan_review(code: str, language: str, fingerprint: dict) -> tuple[PlannerOut
     )
 
     try:
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
+        raw = complete(
+            system_prompt,
+            user_prompt,
             temperature=0.2,
             max_tokens=800,
-        )
-        raw = response.choices[0].message.content.strip()
+            caller="planner",
+        ).strip()
         json_match = re.search(r"\{.*\}", raw, re.DOTALL)
         if json_match:
             data = json.loads(json_match.group())
@@ -146,9 +141,6 @@ def plan_review(code: str, language: str, fingerprint: dict) -> tuple[PlannerOut
                 strategy_notes="LLM response parsing failed, using defaults",
             )
     except Exception as e:
-        from backend.src.core.metrics import maybe_record_groq_throttle
-
-        maybe_record_groq_throttle(e)
         result = PlannerOutput(
             focus_areas=["style", "error_handling"],
             review_depth="standard",

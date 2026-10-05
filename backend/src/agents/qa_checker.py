@@ -9,6 +9,8 @@ Single focused LLM call — kept lightweight so it doesn't dominate latency.
 """
 from __future__ import annotations
 
+import logging
+
 import json
 import re
 import time
@@ -23,6 +25,8 @@ from backend.src.core.models import (
 
 load_dotenv("backend/.env")
 
+
+logger = logging.getLogger(__name__)
 
 def check_quality(
     code: str,
@@ -57,9 +61,7 @@ def check_quality(
         for f in (defect_output.bugs + defect_output.code_smells + defect_output.security_issues)[:10]
     ]
 
-    from groq import Groq
-
-    client = Groq()
+    from backend.src.core.llm_client import complete
 
     system_prompt = (
         "You are a QA Checker for a code review system. Your job: verify that review findings "
@@ -87,16 +89,13 @@ def check_quality(
     )
 
     try:
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
+        raw = complete(
+            system_prompt,
+            user_prompt,
             temperature=0.1,
             max_tokens=800,
-        )
-        raw = response.choices[0].message.content.strip()
+            caller="qa",
+        ).strip()
         json_match = re.search(r"\{.*\}", raw, re.DOTALL)
         if json_match:
             data = json.loads(json_match.group())
@@ -132,9 +131,7 @@ def check_quality(
                 filtered_defect_findings=all_defects,
             )
     except Exception as e:
-        from backend.src.core.metrics import maybe_record_groq_throttle
-
-        maybe_record_groq_throttle(e)
+        logger.warning("QA checker LLM call failed; passing findings through unfiltered: %s", e)
         all_defects = (
             defect_output.bugs + defect_output.code_smells + defect_output.security_issues
         )

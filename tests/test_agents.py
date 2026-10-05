@@ -1,9 +1,9 @@
-"""Step 3 — Per-agent correctness (deterministic + mocked LLM; Groq marked)."""
+"""Step 3 — Per-agent correctness (deterministic + mocked LLM; live-LLM tests marked)."""
 from __future__ import annotations
 
 import asyncio
 import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -35,7 +35,7 @@ class TestPlannerRules:
         assert "error_handling" in plan.focus_areas
         assert "documentation" in plan.focus_areas
 
-    def test_plan_review_uses_rules_fast_path_without_groq(self):
+    def test_plan_review_uses_rules_fast_path_without_llm(self):
         fp = {
             "error_handling_rate": 0.9,
             "avg_function_length": 10,
@@ -43,9 +43,9 @@ class TestPlannerRules:
             "comment_density": 0.0,
         }
         code = "def add(a, b):\n    return a + b\n"
-        with patch("groq.Groq") as groq_cls:
+        with patch("backend.src.core.llm_client.complete") as llm:
             out, _ms = plan_review(code, "python", fp)
-            groq_cls.assert_not_called()
+            llm.assert_not_called()
         assert "error_handling" in out.focus_areas
 
 
@@ -124,7 +124,7 @@ class TestConfidenceEvaluator:
         assert "No similar functions" in out.reason
 
 
-# ── QA filtering logic with mocked Groq ──────────────────────────────────────
+# ── QA filtering logic with mocked LLM ──────────────────────────────────────
 
 class TestQACheckerParsing:
     def test_filters_irrelevant_indices_from_mocked_llm(self):
@@ -145,17 +145,13 @@ class TestQACheckerParsing:
             defect_score=50,
         )
 
-        mock_resp = MagicMock()
-        mock_resp.choices = [MagicMock()]
-        mock_resp.choices[0].message.content = (
+        llm_text = (
             '{"style_relevant": true, "defect_relevant": true, '
             '"irrelevant_indices_style": [1], "irrelevant_indices_defect": [], '
             '"issues_flagged": ["style[1] hallucinated"]}'
         )
-        mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = mock_resp
 
-        with patch("groq.Groq", return_value=mock_client):
+        with patch("backend.src.core.llm_client.complete", return_value=llm_text):
             out, _ = qa_checker.check_quality("def f():\n    pass\n", style, defect)
 
         assert len(out.filtered_style_findings) == 1
@@ -163,7 +159,7 @@ class TestQACheckerParsing:
         assert len(out.filtered_defect_findings) == 1
 
 
-# ── Style Analyst parsing with mocked retrieval + Groq ───────────────────────
+# ── Style Analyst parsing with mocked retrieval + LLM ───────────────────────
 
 class TestStyleAnalystParsing:
     def test_parses_deviation_findings_from_mocked_llm(self):
@@ -183,20 +179,16 @@ class TestStyleAnalystParsing:
                 }
             ],
         }
-        mock_resp = MagicMock()
-        mock_resp.choices = [MagicMock()]
-        mock_resp.choices[0].message.content = (
+        llm_text = (
             '{"findings":[{"category":"type_safety","severity":"high",'
             '"description":"Missing type hints vs fingerprint 100% typed",'
             '"fingerprint_value":"1.0","submitted_value":"0"}],'
             '"overall_style_score":40}'
         )
-        mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = mock_resp
 
         with patch.object(
             embedder_mod, "query_similar_staged", return_value=staged
-        ), patch("groq.Groq", return_value=mock_client):
+        ), patch("backend.src.core.llm_client.complete", return_value=llm_text):
             out, _ = style_analyst.analyze_style(
                 code, "python", fp, "u", "r", focus_areas=["type_safety"]
             )
@@ -572,7 +564,7 @@ class TestOrchestrator:
         assert len(result.issues) == 3
 
 
-# ── Live Groq smoke (excluded from fast runs) ────────────────────────────────
+# ── Live LLM smoke (excluded from fast runs) ────────────────────────────────
 
 @pytest.mark.groq
 def test_defect_hunter_live_catches_planted_bug():

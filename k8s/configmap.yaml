@@ -15,3 +15,7 @@ data:
   # inside the backend's 3 GiB limit on the 6 GiB minikube node; EMBED_TOKEN_BUDGET
   # defaults to this value. See backend/src/core/embedder.py.
   MAX_EMBED_TOKENS: "1024"
+  # LLM layer (backend/src/core/llm_client.py). Haiku 4.5 for testing; deploy with
+  # LLM_MODEL=claude-sonnet-5-5. ANTHROPIC_API_KEY comes from personacr-secrets.
+  LLM_PROVIDER: "anthropic"
+  LLM_MODEL: "claude-haiku-4-5-20251001"

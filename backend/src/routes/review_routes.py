@@ -37,7 +37,7 @@ class AsyncReviewRequest(BaseModel):
     repo_url: str
     code: str = Field(min_length=1)
     language: str = "python"
-    # Queue verification without Groq — not for production clients.
+    # Queue verification without LLM calls — not for production clients.
     mock: bool = False
     force_fail: bool = False
     mock_sleep: float = 0.15
@@ -148,7 +148,7 @@ def enqueue_review(req: AsyncReviewRequest, response: Response) -> StatusRespons
     Enqueue an async review job (Redis-backed RQ queue).
 
     Returns immediately with job_id (HTTP 202). Poll GET /api/reviews/{job_id}.
-    Set mock=true to exercise the queue without calling Groq.
+    Set mock=true to exercise the queue without calling the LLM.
     """
     repo_url, user_id, repo_name = _parse_repo(req.repo_url)
 
