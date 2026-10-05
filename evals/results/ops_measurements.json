@@ -1,0 +1,71 @@
+{
+  "title": "PersonaCR ops measurements (memory, embedding batches, analyze time, Claude review cost)",
+  "recorded": "2026-10-05",
+  "setup": {
+    "cluster": "minikube v1.35.1, docker driver, node capped at 6 GiB (Docker Desktop on WSL2, Windows 11 laptop, 15.6 GB RAM)",
+    "backend_limit": "3 GiB memory limit (k8s/backend.yaml); worker has the same 3 GiB limit",
+    "repo_under_test": "https://github.com/vaishnavi1064/PersonaCR @ 21ee17a (493 chunks: 100 file-level, 393 function)",
+    "embedding_model": "jinaai/jina-embeddings-v2-base-code via fastembed (ONNX, CPU)",
+    "vector_store": "chromadb/chroma:1.5.7 StatefulSet, backend uses HttpClient",
+    "llm": "claude-haiku-4-5-20251001 via anthropic==1.11.0 (review measurement only)",
+    "runs": "single run per configuration; not repeated, no variance estimate"
+  },
+  "provenance_levels": {
+    "archived_log": "raw sampler / curl / job JSON output was captured to a file during the run; values copied here verbatim",
+    "offline_recount": "re-derived offline from the repo + tokenizer, no embedding (reproducible)",
+    "session_only": "seen in kubectl output during the session; the raw output was not saved and pod logs were lost on restart"
+  },
+  "caveat_on_before_after": "The 'before' and 'after' analyze runs differ in THREE changes, not one: (1) token-budget batching padding fix (eb63cb4), (2) MAX_EMBED_TOKENS 2048 -> 1024 (279eb11), (3) MiniLM no longer preloaded at startup (079c2de). The deltas below are their combined effect and must not be attributed to batching alone.",
+  "analyze": {
+    "before": {
+      "date": "2026-10-04",
+      "config": "image with padding bug (every batch = 1 chunk), MAX_EMBED_TOKENS=2048, MiniLM preloaded at API startup",
+      "backend_memory_at_start_MiB": {"value": 2115, "provenance": "archived_log", "note": "first sampler reading, before Jina loaded"},
+      "backend_memory_peak_MiB": {"value": 3071, "limit_MiB": 3072, "provenance": "archived_log", "note": "219 samples at >= 3000 MiB; cgroup memory.current includes page cache"},
+      "cgroup_memory_events": {"value": "max=12, oom_kill=0", "provenance": "session_only"},
+      "embedding_batches": {"value": 493, "provenance": "session_only", "corroboration": "offline_recount with the buggy counter also gives 493 (eb63cb4)"},
+      "analyze_wall_time_s": {"value": 1777, "approx_min": 29.6, "provenance": "session_only", "note": "22:21:42Z request start to 22:51:19Z 200 OK in the backend log; embedding phase 22:23:01 -> 22:51:18 (28.3 min)"},
+      "earlier_failure": {"value": "OOMKilled (exit 137) at the 3 GiB limit on 2026-10-01, before token-budget batching", "provenance": "session_only", "corroboration": "commit f0dae99 message"}
+    },
+    "after": {
+      "date": "2026-10-05",
+      "config": "padding fix + MAX_EMBED_TOKENS=1024 (ConfigMap) + lazy MiniLM",
+      "backend_memory_idle_MiB": {"value": 200, "provenance": "archived_log", "note": "cgroup reading before the request; kubectl top showed 198Mi (session_only)"},
+      "backend_memory_peak_MiB": {"value": 1443, "limit_MiB": 3072, "provenance": "archived_log", "note": "236 samples; cgroup memory.peak read afterwards = 1446 MiB (session_only); oom_kill=0"},
+      "node_memory_peak_GiB": {"value": 3.659, "provenance": "archived_log"},
+      "embedding_batches": {"value": 244, "provenance": "session_only", "corroboration": "offline_recount = 244 at 1024 tokens (279eb11)"},
+      "analyze_wall_time_s": {"value": 1244.5, "approx_min": 20.7, "provenance": "archived_log", "note": "curl time_total via kubectl port-forward"}
+    },
+    "batch_counts_offline": {
+      "provenance": "offline_recount",
+      "padding_bug_counter": 493,
+      "fixed_counter_at_2048_tokens": 145,
+      "fixed_counter_at_1024_tokens": 244,
+      "texts_truncated_at_2048": 5,
+      "texts_truncated_at_1024": 20,
+      "source_commits": ["eb63cb4", "279eb11"]
+    },
+    "embedding_probe_in_backend_image": {
+      "provenance": "session_only",
+      "note": "fastembed Jina v2, docker run in the backend image; before the cap a ~3k-token text peaked +1.6 GiB over a 0.9 GiB baseline and a ~7.5k-token text was SIGKILLed with no memory limit; with the 2048 cap, 1/4/32 x 30k-char files peaked at 1.62-1.73 GiB under --memory=3g",
+      "source_commit": "f0dae99"
+    }
+  },
+  "claude_review": {
+    "date": "2026-10-05",
+    "job_id": "03e3bd0c-3b7b-49f2-b9e9-68089e3d9d12",
+    "path": "POST /api/reviews -> RQ worker pod (fingerprint + 493-vector collection reused, no re-analyze)",
+    "snippet": "backend/src/core/embedder.py::_vec_to_list",
+    "model": "claude-haiku-4-5-20251001",
+    "llm_calls": {"value": 7, "http_200": 7, "http_429": 0, "provenance": "archived_log", "note": "llm_usage in the job result; HTTP statuses from the worker log (session_only)"},
+    "input_tokens": {"value": 4626, "provenance": "archived_log"},
+    "output_tokens": {"value": 1403, "provenance": "archived_log"},
+    "estimated_cost_usd": {"value": 0.0116, "provenance": "derived", "note": "list price $1/MTok input + $5/MTok output; an estimate, not a billed amount"},
+    "server_time_s": {"value": 65.1, "provenance": "archived_log", "note": "job created_at -> updated_at"},
+    "client_time_s": {"value": 67.8, "provenance": "session_only", "note": "POST to completed, polling every 3 s"},
+    "result": {"status": "low_confidence", "overall_score": 91.0, "issues": 2, "iterations": 2, "retrieval_examples": 2, "provenance": "archived_log"},
+    "note_on_cost": "iterations=2: Loop 1 re-ran style/defect/QA with unchanged inputs, so 6 of the 7 calls were 3 calls made twice (fixed in a later commit).",
+    "worker_memory_peak_MiB": {"value": 2344, "provenance": "archived_log", "note": "cgroup memory.peak read afterwards = 2415 MiB (session_only)"},
+    "node_memory_peak_GiB": {"value": 5.184, "provenance": "archived_log"}
+  }
+}
