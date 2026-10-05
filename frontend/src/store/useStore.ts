@@ -76,6 +76,11 @@ interface AppState {
   selectedRepoUrlsByChatId: Record<string, string[]>
   setSelectedRepoUrls:     (chatId: string, urls: string[]) => void
 
+  // "New chat" from the app shell — ChatPage starts a fresh chat when set (not persisted)
+  newChatRequested:    boolean
+  requestNewChat:      () => void
+  clearNewChatRequest: () => void
+
   // UI
   sidebarOpen:   boolean
   toggleSidebar: () => void
@@ -152,6 +157,10 @@ export const useStore = create<AppState>()(
         set((s) => ({
           selectedRepoUrlsByChatId: { ...s.selectedRepoUrlsByChatId, [chatId]: urls },
         })),
+
+      newChatRequested:    false,
+      requestNewChat:      () => set({ newChatRequested: true }),
+      clearNewChatRequest: () => set({ newChatRequested: false }),
 
       // UI
       sidebarOpen:   true,

@@ -21,6 +21,7 @@ interface ReviewOutput {
   quality_gate_passed?: boolean
   pseudo_refs_generated?: number
   confidence?: Record<string, unknown>
+  degraded_reason?: string | null
 }
 
 interface AgentTraceEntry {
@@ -35,7 +36,8 @@ interface AgentTraceEntry {
 }
 
 interface ReviewData {
-  overall_score: number
+  /** null when the review is degraded/error. Render "—", never 0. */
+  overall_score: number | null
   status: string
   iterations?: number
   issues?: Issue[]
@@ -44,7 +46,8 @@ interface ReviewData {
   latency_ms?: number
 }
 
-function scoreColor(score: number) {
+function scoreColor(score: number | null) {
+  if (score == null) return 'var(--text-tertiary)'
   if (score >= 70) return 'var(--success)'
   if (score >= 50) return 'var(--warning)'
   return 'var(--error)'
@@ -58,6 +61,10 @@ function statusStyle(status: string) {
     return { bg: 'rgba(251,191,36,0.1)', color: 'var(--warning)', label: 're-reviewed' }
   if (s === 'quality_gate_failed')
     return { bg: 'rgba(248,113,113,0.1)', color: 'var(--error)', label: 'gate failed' }
+  if (s === 'degraded')
+    return { bg: 'rgba(251,191,36,0.1)', color: 'var(--warning)', label: 'degraded' }
+  if (s === 'error')
+    return { bg: 'rgba(248,113,113,0.1)', color: 'var(--error)', label: 'error' }
   return { bg: 'rgba(251,191,36,0.1)', color: 'var(--warning)', label: s }
 }
 
@@ -95,11 +102,13 @@ export default function ReviewResult({ data }: { data: ReviewData }) {
           color: scoreColor(data.overall_score),
           lineHeight: 1,
         }}>
-          {Math.round(data.overall_score)}
+          {data.overall_score == null ? '—' : Math.round(data.overall_score)}
         </span>
-        <span style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--text-secondary)' }}>
-          /100
-        </span>
+        {data.overall_score != null && (
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--text-secondary)' }}>
+            /100
+          </span>
+        )}
         <span style={{
           fontFamily: 'var(--font-mono)',
           fontSize: 11,
@@ -134,6 +143,12 @@ export default function ReviewResult({ data }: { data: ReviewData }) {
           </span>
         )}
       </div>
+
+      {data.overall_score == null && (
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
+          No score — {data.review_output?.degraded_reason || 'the review could not complete reliably.'} Try again.
+        </p>
+      )}
 
       {/* Issues */}
       {issues.length > 0 && (

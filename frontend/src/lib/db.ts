@@ -13,7 +13,8 @@ export interface ReviewRow {
   repo_url: string
   repo_name: string
   submitted_code: string
-  overall_score: number
+  /** null for degraded/error reviews (older rows may still have them). */
+  overall_score: number | null
   style_score: number
   defect_score: number
   comprehensiveness: number
@@ -53,12 +54,22 @@ export interface RepoRow {
 
 // ── Write ─────────────────────────────────────────────────────────────────────
 
+/** Backend statuses where the pipeline could not produce a trustworthy score. */
+const UNSCORED_STATUSES = new Set(['degraded', 'error'])
+
+/** A review that has a real score and belongs in averages and trends. */
+export function isScoredReview(r: { overall_score: number | null | undefined; status?: string | null }): boolean {
+  return typeof r.overall_score === 'number'
+    && Number.isFinite(r.overall_score)
+    && !UNSCORED_STATUSES.has((r.status ?? '').toLowerCase())
+}
+
 export async function saveReview(params: {
   userId: string
   repoUrl: string
   code: string
   result: {
-    overall_score: number
+    overall_score: number | null
     status: string
     iterations: number
     issues: IssueRow[]
@@ -76,6 +87,9 @@ export async function saveReview(params: {
   }
 }): Promise<void> {
   const { userId, repoUrl, code, result } = params
+  // Degraded/error reviews have no trustworthy score — keep them out of history
+  // and the dashboard. The chat still shows them with a retry.
+  if (!isScoredReview(result)) return
   const repoName = repoUrl.replace(/\/$/, '').split('/').slice(-2).join('/')
   const qs = result.review_output?.quality_scores ?? {}
 
@@ -151,7 +165,8 @@ export async function fetchRepos(userId: string): Promise<RepoRow[]> {
 
 // ── Derived metrics ───────────────────────────────────────────────────────────
 
-export function computeDashboardStats(reviews: ReviewRow[]) {
+export function computeDashboardStats(allReviews: ReviewRow[]) {
+  const reviews = allReviews.filter(isScoredReview)
   if (reviews.length === 0) {
     return {
       avgScore:    null as number | null,
@@ -163,7 +178,7 @@ export function computeDashboardStats(reviews: ReviewRow[]) {
   }
 
   // Average score
-  const avgScore = reviews.reduce((s, r) => s + r.overall_score, 0) / reviews.length
+  const avgScore = reviews.reduce((s, r) => s + (r.overall_score as number), 0) / reviews.length
 
   // Top issue category
   const catCount: Record<string, number> = {}
@@ -180,7 +195,7 @@ export function computeDashboardStats(reviews: ReviewRow[]) {
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
     .map((r) => ({
       date:  new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      score: Math.round(r.overall_score),
+      score: Math.round(r.overall_score as number),
     }))
 
   // Issue breakdown
@@ -261,7 +276,8 @@ function percentile(sorted: number[], p: number): number {
   return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo)
 }
 
-export function computeAdvancedStats(reviews: ReviewRow[]): AdvancedStats {
+export function computeAdvancedStats(allReviews: ReviewRow[]): AdvancedStats {
+  const reviews = allReviews.filter(isScoredReview)
   // ── Latency p50/p95 ──
   const totalLatencies: number[] = []
   for (const r of reviews) {

@@ -6,7 +6,12 @@ import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import ChatPage from './pages/ChatPage'
 import DashboardPage from './pages/DashboardPage'
+import ReposPage from './pages/ReposPage'
+import SettingsPage from './pages/SettingsPage'
+import NotFoundPage from './pages/NotFoundPage'
 import AuthGuard from './components/layout/AuthGuard'
+import AppShell from './components/shell/AppShell'
+import { LogoMark } from './components/ui/Logo'
 
 // Apply stored theme immediately (before first paint) to prevent flash
 try {
@@ -83,11 +88,7 @@ export default function App() {
         justifyContent: 'center',
         background: 'var(--bg-primary)',
       }}>
-        <svg width="34" height="34" viewBox="0 0 28 28" fill="none">
-          <rect x="7" y="7" width="14" height="14" rx="2" transform="rotate(45 14 14)" fill="var(--accent)" opacity="0.9" />
-          <rect x="10" y="10" width="8" height="8" rx="1" transform="rotate(45 14 14)" fill="var(--bg-primary)" opacity="0.7" />
-          <rect x="12" y="12" width="4" height="4" rx="0.5" transform="rotate(45 14 14)" fill="var(--accent)" />
-        </svg>
+        <LogoMark size={34} innerFill="var(--bg-primary)" />
       </div>
     )
   }
@@ -97,8 +98,13 @@ export default function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/chat" element={<AuthGuard><ChatPage /></AuthGuard>} />
-        <Route path="/dashboard" element={<AuthGuard><DashboardPage /></AuthGuard>} />
+        <Route element={<AuthGuard><AppShell /></AuthGuard>}>
+          <Route path="/repos" element={<ReposPage />} />
+          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Route>
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   )

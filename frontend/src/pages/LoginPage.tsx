@@ -3,6 +3,7 @@ import { Navigate, Link, useNavigate } from 'react-router-dom'
 import { motion, type Variants } from 'framer-motion'
 import { useStore } from '../store/useStore'
 import { signInWithGitHub, supabase } from '../lib/supabase'
+import { LogoMark } from '../components/ui/Logo'
 
 // ── GitHub icon ───────────────────────────────────────────────────────────────
 function GitHubIcon() {
@@ -17,11 +18,7 @@ function GitHubIcon() {
 function DiamondLogo({ bg = 'var(--bg-card)' }: { bg?: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <svg width="26" height="26" viewBox="0 0 28 28" fill="none">
-        <rect x="7" y="7" width="14" height="14" rx="2" transform="rotate(45 14 14)" fill="var(--accent)" opacity="0.9" />
-        <rect x="10" y="10" width="8" height="8" rx="1" transform="rotate(45 14 14)" fill={bg} opacity="0.7" />
-        <rect x="12" y="12" width="4" height="4" rx="0.5" transform="rotate(45 14 14)" fill="var(--accent)" />
-      </svg>
+      <LogoMark size={26} innerFill={bg} />
       <span style={{ fontFamily: 'var(--font-display)', fontSize: 19, color: 'var(--text-primary)', letterSpacing: '-0.2px' }}>
         PersonaCR
       </span>
@@ -319,11 +316,7 @@ export default function LoginPage() {
         justifyContent: 'center', background: 'var(--bg-primary)',
         flexDirection: 'column', gap: 16,
       }}>
-        <svg width="32" height="32" viewBox="0 0 28 28" fill="none">
-          <rect x="7" y="7" width="14" height="14" rx="2" transform="rotate(45 14 14)" fill="var(--accent)" opacity="0.9" />
-          <rect x="10" y="10" width="8" height="8" rx="1" transform="rotate(45 14 14)" fill="var(--bg-primary)" opacity="0.7" />
-          <rect x="12" y="12" width="4" height="4" rx="0.5" transform="rotate(45 14 14)" fill="var(--accent)" />
-        </svg>
+        <LogoMark size={32} innerFill="var(--bg-primary)" />
         <p style={{ fontFamily: 'var(--font-body)', fontSize: 15, color: 'var(--text-secondary)' }}>
           Completing sign-in…
         </p>

@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import FingerprintCard from './FingerprintCard'
 import ReviewResult from './ReviewResult'
+import { LogoMark } from '../ui/Logo'
 
 function BotAvatar() {
   return (
@@ -15,11 +16,7 @@ function BotAvatar() {
       flexShrink: 0,
       marginTop: 2,
     }}>
-      <svg width="11" height="11" viewBox="0 0 28 28" fill="none">
-        <rect x="7" y="7" width="14" height="14" rx="2" transform="rotate(45 14 14)" fill="var(--accent)" opacity="0.9" />
-        <rect x="10" y="10" width="8" height="8" rx="1" transform="rotate(45 14 14)" fill="var(--accent-surface)" opacity="0.7" />
-        <rect x="12" y="12" width="4" height="4" rx="0.5" transform="rotate(45 14 14)" fill="var(--accent)" />
-      </svg>
+      <LogoMark size={11} innerFill="var(--accent-surface)" />
     </div>
   )
 }

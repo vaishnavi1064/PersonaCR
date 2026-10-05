@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import { useStore } from '../../store/useStore'
+import { LogoMark } from '../ui/Logo'
 
 interface AuthGuardProps {
   children: React.ReactNode
@@ -16,11 +17,7 @@ function Spinner() {
       flexDirection: 'column',
       gap: 16,
     }}>
-      <svg width="32" height="32" viewBox="0 0 28 28" fill="none">
-        <rect x="7" y="7" width="14" height="14" rx="2" transform="rotate(45 14 14)" fill="var(--accent)" opacity="0.9" />
-        <rect x="10" y="10" width="8" height="8" rx="1" transform="rotate(45 14 14)" fill="var(--bg-primary)" opacity="0.7" />
-        <rect x="12" y="12" width="4" height="4" rx="0.5" transform="rotate(45 14 14)" fill="var(--accent)" />
-      </svg>
+      <LogoMark size={32} innerFill="var(--bg-primary)" />
       <style>{`
         @keyframes auth-pulse {
           0%, 100% { opacity: 0.4; }

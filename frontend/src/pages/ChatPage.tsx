@@ -2,12 +2,10 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { useStore } from '../store/useStore'
 import type { ChatMessage, PersistedMessage } from '../store/useStore'
 import { toUI, toPersisted } from '../store/useStore'
-import Sidebar from '../components/layout/Sidebar'
-import TopBar from '../components/layout/TopBar'
 import MessageList from '../components/chat/MessageList'
 import ChatInput from '../components/chat/ChatInput'
 import RepoSelector from '../components/chat/RepoSelector'
-import { analyzeRepo, reviewCode, cleanupGuestSession, chatWithInsights } from '../lib/api'
+import { analyzeRepo, reviewCode, cleanupGuestSession, chatWithInsights } from '../lib/api/legacy'
 import { saveReview, saveRepo } from '../lib/db'
 import {
   createChat, loadChats, loadChatMessages,
@@ -59,6 +57,7 @@ export default function ChatPage() {
     chats, setChats, upsertChatMeta, updateChatTitle,
     user, isGuest, guestSessionId,
     selectedRepoUrlsByChatId, setSelectedRepoUrls,
+    clearNewChatRequest,
   } = useStore()
 
   // Resolve user ID: real Supabase UUID for logged-in users, guest session ID for guests
@@ -245,6 +244,21 @@ export default function ChatPage() {
     persistedRef.current = []
   }, [setActiveChatId, setActiveMessages])
 
+  // ── "New chat" from the app shell sidebar ──────────────────────────────────
+  useEffect(() => {
+    if (!initDone) return
+    const handle = (requested: boolean) => {
+      if (!requested) return
+      clearNewChatRequest()
+      startNewChat()
+    }
+    // A request made before this page mounted (New chat clicked on another page)
+    queueMicrotask(() => handle(useStore.getState().newChatRequested))
+    return useStore.subscribe((s, prev) => {
+      if (s.newChatRequested && !prev.newChatRequested) handle(true)
+    })
+  }, [initDone, clearNewChatRequest, startNewChat])
+
   // ── Handle repo selection changes ─────────────────────────────────────────
   const handleSelectionChange = useCallback((urls: string[]) => {
     setSelectedRepoUrlsLocal(urls)
@@ -389,39 +403,25 @@ export default function ChatPage() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div style={{
-      display: 'flex',
-      height: '100vh',
-      background: 'var(--bg-primary)',
-      color: 'var(--text-primary)',
-      overflow: 'hidden',
-    }}>
-      <Sidebar onNewChat={startNewChat} />
-
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
-        <TopBar title={chats.find((c) => c.id === activeChatId)?.title ?? 'New review'} />
-
-        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-          <div style={{
-            maxWidth: 680,
-            width: '100%',
-            margin: '0 auto',
-            padding: '0 20px',
-            display: 'flex',
-            flexDirection: 'column',
-            flex: 1,
-          }}>
-            <RepoSelector
-              userId={userId}
-              selectedUrls={selectedRepoUrls}
-              onSelectionChange={handleSelectionChange}
-              primaryUrl={selectedRepoUrls[0] ?? null}
-              onPrimaryChange={handlePrimaryChange}
-            />
-            <MessageList messages={activeMessages} loading={loading} />
-            <ChatInput onSubmit={handleSubmit} disabled={loading || !initDone} />
-          </div>
-        </div>
+    <div style={{ height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+      <div style={{
+        maxWidth: 680,
+        width: '100%',
+        margin: '0 auto',
+        padding: '0 20px',
+        display: 'flex',
+        flexDirection: 'column',
+        flex: 1,
+      }}>
+        <RepoSelector
+          userId={userId}
+          selectedUrls={selectedRepoUrls}
+          onSelectionChange={handleSelectionChange}
+          primaryUrl={selectedRepoUrls[0] ?? null}
+          onPrimaryChange={handlePrimaryChange}
+        />
+        <MessageList messages={activeMessages} loading={loading} />
+        <ChatInput onSubmit={handleSubmit} disabled={loading || !initDone} />
       </div>
     </div>
   )

@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import Sidebar from '../components/layout/Sidebar'
-import TopBar from '../components/layout/TopBar'
+import PageHeader from '../components/ui/PageHeader'
 import SummaryCards from '../components/dashboard/SummaryCards'
 import QualityTrend from '../components/dashboard/QualityTrend'
 import IssueBreakdown from '../components/dashboard/IssueBreakdown'
@@ -59,102 +58,40 @@ export default function DashboardPage() {
   }, [])
 
   return (
-    <div style={{
-      display: 'flex',
-      height: '100vh',
-      background: 'var(--bg-primary)',
-      color: 'var(--text-primary)',
-      overflow: 'hidden',
-    }}>
-      <Sidebar />
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6 lg:py-10">
+      <PageHeader
+        title="Dashboard"
+        description={loading
+          ? 'Loading your data…'
+          : stats.totalReviews === 0
+            ? 'No reviews yet — go to Chats to get started.'
+            : `${stats.totalReviews} review${stats.totalReviews === 1 ? '' : 's'} across your repos.`}
+      />
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
-        <TopBar title="Dashboard" />
+      <SummaryCards
+        avgScore={stats.avgScore}
+        totalReviews={stats.totalReviews}
+        topIssue={stats.topIssue}
+        latencyP50={advanced.latency.p50}
+        latencyP95={advanced.latency.p95}
+      />
 
-        <div style={{ flex: 1, overflowY: 'auto' }}>
-          <div style={{
-            maxWidth: 960,
-            width: '100%',
-            margin: '0 auto',
-            padding: '28px 24px 48px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 24,
-          }}>
-            {/* Heading */}
-            <div>
-              <h1 style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 25,
-                color: 'var(--text-primary)',
-                letterSpacing: '-0.3px',
-                marginBottom: 4,
-              }}>
-                Dashboard
-              </h1>
-              <p style={{
-                fontFamily: 'var(--font-body)',
-                fontSize: 14,
-                color: 'var(--text-tertiary)',
-              }}>
-                {loading
-                  ? 'Loading your data…'
-                  : stats.totalReviews === 0
-                    ? 'No reviews yet — go to Chat to get started.'
-                    : `${stats.totalReviews} review${stats.totalReviews === 1 ? '' : 's'} across your repos.`}
-              </p>
-            </div>
-
-            {/* Summary cards */}
-            <SummaryCards
-              avgScore={stats.avgScore}
-              totalReviews={stats.totalReviews}
-              topIssue={stats.topIssue}
-              latencyP50={advanced.latency.p50}
-              latencyP95={advanced.latency.p95}
-            />
-
-            {/* Charts row */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '2fr 1fr',
-              gap: 16,
-              alignItems: 'stretch',
-            }}>
-              <QualityTrend data={stats.trendData} />
-              <IssueBreakdown data={stats.breakdown} />
-            </div>
-
-            {/* New metrics row: CRScore + Loop Health */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: 16,
-              alignItems: 'stretch',
-            }}>
-              <CRScoreCard data={advanced.crScore} />
-              <LoopHealthCard data={advanced.loopHealth} />
-            </div>
-
-            {/* Per-agent latency */}
-            <AgentLatencyChart data={advanced.agentLatency} />
-
-            {/* Review history */}
-            <div>
-              <p style={{
-                fontFamily: 'var(--font-body)',
-                fontSize: 15,
-                fontWeight: 500,
-                color: 'var(--text-primary)',
-                marginBottom: 12,
-              }}>
-                Review history
-              </p>
-              <ReviewHistory rows={historyRows} />
-            </div>
-          </div>
-        </div>
+      <div className="grid items-stretch gap-4 lg:grid-cols-[2fr_1fr]">
+        <QualityTrend data={stats.trendData} />
+        <IssueBreakdown data={stats.breakdown} />
       </div>
+
+      <div className="grid items-stretch gap-4 md:grid-cols-2">
+        <CRScoreCard data={advanced.crScore} />
+        <LoopHealthCard data={advanced.loopHealth} />
+      </div>
+
+      <AgentLatencyChart data={advanced.agentLatency} />
+
+      <section>
+        <h2 className="mb-3 text-[15px] font-semibold text-fg">Review history</h2>
+        <ReviewHistory rows={historyRows} />
+      </section>
     </div>
   )
 }

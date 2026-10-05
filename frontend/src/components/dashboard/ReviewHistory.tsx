@@ -5,7 +5,8 @@ import { useNavigate } from 'react-router-dom'
 export interface HistoryRow {
   date:   string
   repo:   string
-  score:  number
+  /** null for degraded/error reviews — shown as "—". */
+  score:  number | null
   issues: number
   status: string
 }
@@ -14,7 +15,8 @@ interface Props {
   rows: HistoryRow[]
 }
 
-function scoreColor(score: number) {
+function scoreColor(score: number | null) {
+  if (score == null) return 'var(--text-tertiary)'
   if (score >= 70) return 'var(--success)'
   if (score >= 50) return 'var(--warning)'
   return 'var(--error)'
@@ -26,6 +28,8 @@ function statusBadge(status: string) {
     return { bg: 'color-mix(in srgb, var(--success) 10%, transparent)', color: 'var(--success)', label: 'passed' }
   if (s === 'low_confidence' || s === 're-reviewed')
     return { bg: 'color-mix(in srgb, var(--warning) 10%, transparent)', color: 'var(--warning)', label: 're-reviewed' }
+  if (s === 'degraded')
+    return { bg: 'color-mix(in srgb, var(--warning) 10%, transparent)', color: 'var(--warning)', label: 'degraded' }
   return { bg: 'color-mix(in srgb, var(--error) 10%, transparent)', color: 'var(--error)', label: s.replace(/_/g, ' ') }
 }
 
@@ -59,7 +63,7 @@ function TableRow({ row }: { row: HistoryRow }) {
     >
       <td style={cellStyle}>{row.date}</td>
       <td style={{ ...cellStyle, color: 'var(--text-primary)' }}>{row.repo}</td>
-      <td style={{ ...cellStyle, fontWeight: 500, color: scoreColor(row.score) }}>{Math.round(row.score)}</td>
+      <td style={{ ...cellStyle, fontWeight: 500, color: scoreColor(row.score) }}>{row.score == null ? '—' : Math.round(row.score)}</td>
       <td style={cellStyle}>{row.issues}</td>
       <td style={cellStyle}>
         <span style={{

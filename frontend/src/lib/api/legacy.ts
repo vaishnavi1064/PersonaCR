@@ -1,3 +1,5 @@
+// Legacy fetch helpers — internal adapter wrapped by the typed API layer.
+// New code imports from lib/api (index), not from here.
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 export async function analyzeRepo(repoUrl: string, userId = 'anonymous') {

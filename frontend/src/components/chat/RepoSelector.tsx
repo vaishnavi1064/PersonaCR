@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, X, Loader2 } from 'lucide-react'
 import { getUserAnalyzedRepos } from '../../lib/db'
 import type { AnalyzedRepo } from '../../lib/db'
-import { analyzeRepo } from '../../lib/api'
+import { analyzeRepo } from '../../lib/api/legacy'
 
 interface Props {
   userId: string
