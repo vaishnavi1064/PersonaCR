@@ -10,6 +10,8 @@ from datetime import datetime, timezone
 from github import Github
 from dotenv import load_dotenv
 
+from backend.src.core.repo_identity import as_uuid_or_none
+
 load_dotenv("backend/.env")
 
 
@@ -82,8 +84,10 @@ def save_fingerprint(
     languages_list = fingerprint_data.get("languages", [])
     languages_pg = "{" + ",".join(languages_list) + "}"
 
-    # user_id must be a valid UUID or None (column is UUID type)
-    uid = user_id if (user_id and user_id != "anonymous") else None
+    # fingerprints.user_id is a UUID column: only real Supabase user ids are stored;
+    # guest_ sessions, "anonymous", repo owners etc. become NULL (a non-UUID 400s
+    # the whole insert). Lookups match on repo_url, not user_id.
+    uid = as_uuid_or_none(user_id)
 
     # num_chunks = all ingested chunks (incl. __file__ fallbacks); fingerprint total_functions excludes __file__
     stored_count = (

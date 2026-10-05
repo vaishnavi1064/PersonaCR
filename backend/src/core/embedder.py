@@ -138,7 +138,14 @@ def _get_client() -> Any:
 
 
 def _collection_name(user_id: str, repo_name: str) -> str:
-    """ChromaDB collection names must be 3-63 chars, alphanumeric + hyphens."""
+    """
+    ChromaDB collection names must be 3-63 chars, alphanumeric + hyphens.
+
+    ``user_id`` is the collection namespace, not the requesting user: app traffic
+    (analyze, review, worker, insights) passes the repo OWNER from
+    core.repo_identity.repo_identity(repo_url), so every caller of a repo hits the
+    same collection. Eval harnesses pass their own fixed namespace.
+    """
     raw = f"{user_id}__{repo_name}"
     hashed = hashlib.md5(raw.encode()).hexdigest()[:16]
     safe_repo = re.sub(r"[^a-zA-Z0-9-]", "-", repo_name)[:30]
@@ -186,14 +193,17 @@ def embed_and_store(
     user_id: str,
     repo_name: str,
     batch_size: int | None = None,
+    analyzed_by: str | None = None,
 ) -> dict[str, Any]:
     """
     Embed code chunks and store them in ChromaDB.
 
     Args:
         chunks: List of CodeChunk objects
-        user_id: Supabase user ID (or 'anonymous')
+        user_id: Collection namespace — the repo owner for app traffic (see _collection_name)
         repo_name: Repository name (used to namespace the collection)
+        analyzed_by: Who triggered this (re)build, stored in collection metadata so
+            delete_guest_collections can find collections a guest session last built
         batch_size: Max chunks per batch (default EMBED_BATCH_SIZE); batches are also
             split so len(batch) × longest tokens ≤ EMBED_TOKEN_BUDGET
 
@@ -215,7 +225,7 @@ def embed_and_store(
         pass
     collection = client.create_collection(
         name=col_name,
-        metadata={"hnsw:space": "cosine", "user_id": user_id},
+        metadata={"hnsw:space": "cosine", "user_id": user_id, "analyzed_by": analyzed_by or user_id},
     )
 
     # Embed + upsert one bounded batch at a time; vectors are never accumulated
@@ -433,10 +443,13 @@ def delete_collection(user_id: str, repo_name: str) -> None:
 
 def delete_guest_collections(guest_session_id: str) -> int:
     """
-    Delete all ChromaDB collections that belong to a guest session.
-    Collections created by embed_and_store store the user_id in their metadata,
-    so we can do an exact match to find all collections for this guest.
-    Returns the number of deleted collections.
+    Delete ChromaDB collections last (re)built by a guest session.
+
+    Collections are per-repo and shared, so this matches the ``analyzed_by``
+    metadata (falls back to legacy ``user_id`` for collections created before
+    repo-scoped naming). A deleted shared collection is just a cache: the next
+    analyze rebuilds it, and reviews in between log a warning and report
+    retrieval_examples=0. Returns the number of deleted collections.
     """
     client = _get_client()
     deleted = 0
@@ -447,7 +460,7 @@ def delete_guest_collections(guest_session_id: str) -> int:
             try:
                 collection = client.get_collection(name)
                 meta = collection.metadata or {}
-                if meta.get("user_id") == guest_session_id:
+                if guest_session_id in (meta.get("analyzed_by"), meta.get("user_id")):
                     client.delete_collection(name)
                     deleted += 1
                     logger.info("Deleted guest collection: %s", name)

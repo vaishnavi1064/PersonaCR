@@ -15,6 +15,7 @@ from typing import Any
 from dotenv import load_dotenv
 
 from backend.src.core.models import InsightsAgentOutput
+from backend.src.core.repo_identity import repo_identity
 from backend.src.db.supabase_rest import SupabaseREST
 
 load_dotenv("backend/.env")
@@ -45,16 +46,19 @@ Context:
 
 
 def _extract_owner_from_url(repo_url: str) -> str:
-    """Extract the GitHub owner from a repo URL (matches review_routes.py pattern)."""
-    parts = repo_url.rstrip("/").split("/")
-    if len(parts) >= 2:
-        return parts[-2]
-    return "unknown"
+    """GitHub owner = Chroma collection namespace (core.repo_identity, same as analyze/review)."""
+    try:
+        return repo_identity(repo_url)[0]
+    except ValueError:
+        return "unknown"
 
 
 def _extract_repo_name_from_url(repo_url: str) -> str:
     """Extract the repo name from a URL."""
-    return repo_url.rstrip("/").removesuffix(".git").split("/")[-1]
+    try:
+        return repo_identity(repo_url)[1]
+    except ValueError:
+        return repo_url.rstrip("/").removesuffix(".git").split("/")[-1]
 
 
 def _load_fingerprint(db: SupabaseREST, repo_url: str) -> dict[str, Any] | None:

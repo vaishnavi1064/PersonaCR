@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from backend.src.agents.orchestrator import review_code_sync
 from backend.src.core import job_store
 from backend.src.core.cache_manager import get_cached_fingerprint
+from backend.src.core.repo_identity import repo_identity
 from backend.src.core.models import ReportResponse, StatusResponse
 from backend.src.core.review_queue import enqueue_review_job
 from backend.src.db.supabase_rest import SupabaseREST
@@ -43,16 +44,13 @@ class AsyncReviewRequest(BaseModel):
 
 
 def _parse_repo(repo_url: str) -> tuple[str, str, str]:
+    """Return (repo_url, owner, repo_name); owner is the Chroma collection namespace."""
     repo_url = repo_url.rstrip("/")
-    parts = repo_url.split("/")
-    if len(parts) < 2:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid repo URL — expected https://github.com/owner/repo",
-        )
-    repo_name = parts[-1].removesuffix(".git")
-    user_id = parts[-2]
-    return repo_url, user_id, repo_name
+    try:
+        owner, repo_name = repo_identity(repo_url)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return repo_url, owner, repo_name
 
 
 def _load_fingerprint(repo_url: str, user_id: str, repo_name: str) -> tuple[dict, str]:

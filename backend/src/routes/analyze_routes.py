@@ -13,6 +13,7 @@ from backend.src.core.github_ingestor import ingest_repo
 from backend.src.core.pattern_extractor import extract_fingerprint
 from backend.src.core.embedder import embed_and_store, delete_guest_collections
 from backend.src.core.cache_manager import get_cached_fingerprint, save_fingerprint
+from backend.src.core.repo_identity import repo_identity
 from backend.src.db.supabase_rest import SupabaseREST
 
 logger = logging.getLogger(__name__)
@@ -78,8 +79,12 @@ def analyze_repo(payload: AnalyzeRequest) -> dict:
     # Extract fingerprint
     fingerprint = extract_fingerprint(chunks)
 
-    # Derive repo name from URL
-    repo_name = repo_url.rstrip("/").removesuffix(".git").split("/")[-1]
+    # Per-repo identity: the collection is keyed on the repo (owner/name), not on who
+    # analyzed it, so reviews by any user hit the same vectors.
+    try:
+        owner, repo_name = repo_identity(repo_url)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     # Embed and store in ChromaDB (explicit status — never silent)
     embedding_info: dict = {
@@ -89,7 +94,7 @@ def analyze_repo(payload: AnalyzeRequest) -> dict:
         "error": None,
     }
     try:
-        emb = embed_and_store(chunks, payload.user_id, repo_name)
+        emb = embed_and_store(chunks, owner, repo_name, analyzed_by=payload.user_id)
         embedding_info = {
             "status": "ok",
             "collection": emb.get("collection"),

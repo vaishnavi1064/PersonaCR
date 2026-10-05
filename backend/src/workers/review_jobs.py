@@ -13,6 +13,7 @@ import uuid
 from typing import Any
 
 from backend.src.core import job_store
+from backend.src.core.repo_identity import repo_identity
 
 logger = logging.getLogger(__name__)
 
@@ -74,9 +75,8 @@ def process_review_job(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
                 fingerprint = json.loads(fingerprint)
 
             repo_url = payload["repo_url"].rstrip("/")
-            parts = repo_url.split("/")
-            repo_name = parts[-1].removesuffix(".git")
-            user_id = parts[-2]
+            # Same repo-based collection namespace as analyze (core.repo_identity).
+            user_id, repo_name = repo_identity(repo_url)
 
             job_store.update_job(job_id, progress=30, message="running pipeline")
             from backend.src.agents.orchestrator import review_code_sync
