@@ -78,7 +78,9 @@ interface AppState {
 
   // "New chat" from the app shell — ChatPage starts a fresh chat when set (not persisted)
   newChatRequested:    boolean
-  requestNewChat:      () => void
+  /** Repo to preselect in the requested chat ("Start chat" on a repo card). */
+  newChatRepoUrl:      string | null
+  requestNewChat:      (repoUrl?: string | null) => void
   clearNewChatRequest: () => void
 
   // UI
@@ -159,8 +161,9 @@ export const useStore = create<AppState>()(
         })),
 
       newChatRequested:    false,
-      requestNewChat:      () => set({ newChatRequested: true }),
-      clearNewChatRequest: () => set({ newChatRequested: false }),
+      newChatRepoUrl:      null,
+      requestNewChat:      (repoUrl = null) => set({ newChatRequested: true, newChatRepoUrl: repoUrl }),
+      clearNewChatRequest: () => set({ newChatRequested: false, newChatRepoUrl: null }),
 
       // UI
       sidebarOpen:   true,

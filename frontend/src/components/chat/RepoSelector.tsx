@@ -89,6 +89,15 @@ export default function RepoSelector({
     }
   }, [inputValue, userId, selectedUrls, onSelectionChange])
 
+  // Selected repos that aren't in the saved list (guests, or a repo preselected
+  // from the Repositories page) still need a chip.
+  const displayRepos: AnalyzedRepo[] = [
+    ...repos,
+    ...selectedUrls
+      .filter((u) => !repos.some((r) => r.repo_url === u))
+      .map((u) => ({ repo_url: u, repo_name: u.split('/').slice(-2).join('/'), languages: [] })),
+  ]
+
   const repoDisplayName = (repo: AnalyzedRepo) => {
     if (repo.repo_name) return repo.repo_name
     const parts = repo.repo_url.replace(/\/$/, '').split('/')
@@ -110,7 +119,7 @@ export default function RepoSelector({
         Repos in this conversation
       </p>
 
-      {repos.length === 0 && !showInput ? (
+      {displayRepos.length === 0 && !showInput ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <p style={{
             fontFamily: 'var(--font-body)',
@@ -152,7 +161,7 @@ export default function RepoSelector({
           alignItems: 'center',
         }}>
           <AnimatePresence mode="popLayout">
-            {repos.map((repo) => {
+            {displayRepos.map((repo) => {
               const isSelected = selectedUrls.includes(repo.repo_url)
               return (
                 <motion.button

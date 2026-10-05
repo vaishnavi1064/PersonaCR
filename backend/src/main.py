@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.src.routes.analyze_routes import router as analyze_router
 from backend.src.routes.review_routes import router as review_router
 from backend.src.routes.chat_routes import router as chat_router
+from backend.src.routes.repo_routes import router as repo_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -42,6 +43,7 @@ app.add_middleware(
 app.include_router(analyze_router)
 app.include_router(review_router)
 app.include_router(chat_router)
+app.include_router(repo_router)
 
 
 @app.get("/health", operation_id="health_check")

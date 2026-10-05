@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore'
 import { supabase } from './supabase'
 
 interface SupabaseUserLike {
+  id?: string
   email?: string
   name?: string
   user_metadata?: { full_name?: string; name?: string; avatar_url?: string; user_name?: string }
@@ -15,6 +16,7 @@ export function useCurrentUser() {
   const session = useStore((s) => s.session)
   const isGuest = useStore((s) => s.isGuest)
   const setIsGuest = useStore((s) => s.setIsGuest)
+  const guestSessionId = useStore((s) => s.guestSessionId)
 
   const guestMode = isGuest && !session
 
@@ -37,6 +39,8 @@ export function useCurrentUser() {
   }, [guestMode, setIsGuest])
 
   return {
+    /** Same resolution as ChatPage: Supabase id → guest session id → 'anonymous'. */
+    userId: user?.id ?? guestSessionId ?? 'anonymous',
     guestMode,
     displayName,
     initials,

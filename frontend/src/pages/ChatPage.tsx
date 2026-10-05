@@ -233,8 +233,8 @@ export default function ChatPage() {
   }, [appendMessage, updateChatTitle])
 
   // ── Helper: create a new chat (UI only — saved on first message) ────────
-  const startNewChat = useCallback(() => {
-    setSelectedRepoUrlsLocal([])
+  const startNewChat = useCallback((initialRepoUrl?: string | null) => {
+    setSelectedRepoUrlsLocal(initialRepoUrl ? [initialRepoUrl] : [])
     const welcome = makeBotMsg('text', 'Paste a GitHub repo URL to learn your coding style, or paste code for a personalized review.')
 
     // Clear everything immediately without hitting DB (like ChatGPT)
@@ -249,8 +249,9 @@ export default function ChatPage() {
     if (!initDone) return
     const handle = (requested: boolean) => {
       if (!requested) return
+      const repoUrl = useStore.getState().newChatRepoUrl
       clearNewChatRequest()
-      startNewChat()
+      startNewChat(repoUrl)
     }
     // A request made before this page mounted (New chat clicked on another page)
     queueMicrotask(() => handle(useStore.getState().newChatRequested))

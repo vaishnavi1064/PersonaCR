@@ -5,6 +5,7 @@ POST /api/analyze-repo  →  returns FingerprintResponse
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -55,6 +56,7 @@ def analyze_repo(payload: AnalyzeRequest) -> dict:
                 "fingerprint": cached.get("fingerprint_data", {}),
                 "num_functions": cached.get("num_functions", 0),
                 "last_commit_sha": cached.get("last_commit_sha", ""),
+                "analyzed_at": cached.get("updated_at"),
                 "cache_status": "fresh",
                 "message": "Loaded from cache — repo unchanged since last analysis.",
                 "embedding": {
@@ -132,6 +134,7 @@ def analyze_repo(payload: AnalyzeRequest) -> dict:
         "fingerprint": fingerprint,
         "num_functions": len(chunks),
         "last_commit_sha": latest_sha,
+        "analyzed_at": datetime.now(timezone.utc).isoformat(),
         "cache_status": "new",
         "message": f"Analyzed {len(chunks)} functions from {repo_name}.",
         "embedding": embedding_info,

@@ -16,22 +16,27 @@ export type RepoStatus = 'added' | 'analyzing' | 'ready' | 'failed'
 
 export type NamingConvention = 'snake_case' | 'camelCase' | 'PascalCase' | 'unknown'
 
-/** Subset of backend FingerprintData (models.py). Rates are 0–1 fractions. */
+/**
+ * Subset of backend FingerprintData (models.py). Rates are 0–1 fractions.
+ * Every field is nullable: older cached rows can be partial, and a missing
+ * value must render as "—", never as 0.
+ */
 export interface Fingerprint {
-  totalFunctions: number
-  avgFunctionLength: number
+  totalFunctions: number | null
+  avgFunctionLength: number | null
   maxFunctionLength: number | null
-  docstringCoverage: number
-  typeHintUsage: number
-  errorHandlingRate: number
-  avgComplexity: number
-  namingConvention: NamingConvention
+  docstringCoverage: number | null
+  typeHintUsage: number | null
+  errorHandlingRate: number | null
+  avgComplexity: number | null
+  namingConvention: NamingConvention | null
   languages: string[]
+  /** language → number of functions */
   languageDistribution: Record<string, number>
   commentDensity: number | null
   avgLineLength: number | null
   primaryIndentDepth: number | null
-  /** Every other numeric field, kept for the Convention Atlas. */
+  /** Every other scalar field, kept for the Convention Atlas. */
   extra: Record<string, number | string | null>
 }
 

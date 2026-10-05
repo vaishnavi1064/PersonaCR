@@ -297,7 +297,7 @@ export default function LoginPage() {
         setIsGuest(false)
         // Clean hash from URL so it doesn't confuse anything on back-navigation
         window.history.replaceState(null, '', window.location.pathname)
-        navigate('/chat', { replace: true })
+        navigate('/repos', { replace: true })
       })
       .catch((err) => {
         console.error('[PersonaCR] setSession threw:', err)
@@ -306,7 +306,7 @@ export default function LoginPage() {
       })
   }, [navigate, setSession, setUser, setIsGuest])
 
-  if (session) return <Navigate to="/chat" replace />
+  if (session) return <Navigate to="/repos" replace />
 
   // Show "completing sign-in" spinner while PKCE exchange runs
   if (completing) {
@@ -347,7 +347,7 @@ export default function LoginPage() {
 
   const handleGuest = () => {
     setIsGuest(true)
-    navigate('/chat', { replace: true })
+    navigate('/repos', { replace: true })
   }
 
   return (
