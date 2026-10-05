@@ -20,6 +20,7 @@ The app already runs fine via Docker Compose (Redis + Prometheus + Grafana) and 
 
 - **Compose vs this stack:** Root `docker-compose.yml` defines **Redis, Prometheus, Grafana**, plus an opt-in `worker` profile (not backend/frontend/Chroma as compose services). Backend/frontend here are new images; Redis/Prom/Grafana images/ports mirror compose.
 - **ChromaDB:** `CHROMADB_URL=http://chromadb:8000` in the ConfigMap makes the backend use `chromadb.HttpClient` against the `chromadb` StatefulSet (vectors live on its PVC at `/data`). Without `CHROMADB_URL` (local dev) the backend falls back to an embedded `PersistentClient` under `backend/.chroma`, which the backend PVC still backs. Keep the `chromadb/chroma` image tag equal to `chromadb==` in `backend/requirements.txt`.
+- **LLM:** the ConfigMap sets `LLM_PROVIDER=anthropic` and `LLM_MODEL=claude-haiku-4-5-20251001` (testing). For a deploy, set `LLM_MODEL=claude-sonnet-5-5`; `ANTHROPIC_API_KEY` comes from `personacr-secrets`. Temperature is omitted automatically for Sonnet 5.x (it rejects sampling params).
 - **Embedding memory:** the ConfigMap sets `MAX_EMBED_TOKENS=1024` (code default 2048). Jina attention cost grows with tokens², and the backend's 3 GiB limit has to fit the API process plus Jina on a 6 GiB minikube node. With 1024, 20 of PersonaCR's 493 chunks are truncated (vs 5 at 2048) and analyze runs ~244 embedding batches (vs 145). Raise it only together with the backend memory limit.
 - **Secrets:** Never commit `secret.yaml`. Copy the example template and fill locally.
 - **Scale:** 1 replica each, small requests/limits, emptyDir for Redis/Prometheus TSDB. Not HA.
@@ -29,7 +30,7 @@ The app already runs fine via Docker Compose (Redis + Prometheus + Grafana) and 
 - minikube running (`minikube status`) with docker driver
 - `kubectl` context = `minikube`
 - Docker CLI available
-- Real API keys for Groq + Supabase (for a useful backend)
+- Real API keys for Anthropic + Supabase (for a useful backend)
 
 ## 1. Point Docker at minikube
 
@@ -64,7 +65,7 @@ Alternative: `minikube image build -t personacr-backend:latest -f backend/Docker
 
 ```powershell
 cp k8s/secret.example.yaml k8s/secret.yaml
-# Edit k8s/secret.yaml — set GROQ_API_KEY, SUPABASE_*, etc.
+# Edit k8s/secret.yaml — set ANTHROPIC_API_KEY, SUPABASE_*, etc. (GROQ_API_KEY only with LLM_PROVIDER=groq)
 ```
 
 `k8s/secret.yaml` is gitignored. Do not commit it.

@@ -86,7 +86,7 @@ Redis/RQ async review jobs and Prometheus `/metrics` + Grafana **run and are ver
 
 | Area | Stack |
 |------|--------|
-| **Backend** | Python, FastAPI, Uvicorn, PyGithub, ChromaDB, Supabase (REST), Redis/RQ (optional async queue), Groq Llama 3.3 70B (`llama-3.3-70b-versatile`), Jina v2 code embeddings via fastembed, sentence-transformers (`all-MiniLM-L6-v2`) for STS |
+| **Backend** | Python, FastAPI, Uvicorn, PyGithub, ChromaDB, Supabase (REST), Redis/RQ (optional async queue), Claude via the Anthropic SDK behind `core/llm_client.py` (Haiku 4.5 `claude-haiku-4-5-20251001` for testing, Sonnet 5.5 `claude-sonnet-5-5` for deploy; Groq kept as an optional provider), Jina v2 code embeddings via fastembed, sentence-transformers (`all-MiniLM-L6-v2`) for STS |
 | **Frontend** | React 19, TypeScript, Vite, Zustand, Tailwind CSS v4, Recharts, Framer Motion, Supabase Auth |
 | **Infra / ops** | GitHub Actions CI (Python **3.12**, Node **24**), Docker Compose for Redis + Prometheus + Grafana, MCP via `fastapi-mcp` (MCP package pinned to **1.x**) |
 
@@ -187,6 +187,8 @@ Post-fix re-score (0 new Groq): IN FP-rate **1.0 → ~0.43**; personalized OFF r
 
 ### Result at N=14 (state plainly)
 
+**Model:** this result was produced in July 2026 with **Llama 3.3 70B on Groq** (`llama-3.3-70b-versatile`, since retired by Groq). The pipeline now runs on Claude; a Claude re-run is a **new benchmark**, not a continuation of these numbers, and must be reported separately.
+
 | Fact | Value |
 |------|--------|
 | Control / pairs | Feature-distance separates IN vs OFF: **7/7** pairs OFF farther (mean IN dist 0.08, OFF ~0.77) |
@@ -208,7 +210,7 @@ Reporting an inconclusive result after fixing metric and scorer bugs is intentio
 - **Python:** CI and smoke use **3.12**. Local **3.14** can work (fastembed/ONNX path); prefer 3.12 for parity with CI.
 - **Node:** **24** (aligned with CI) for the frontend.
 - **Docker** (optional): only needed for Redis queue and/or Prometheus/Grafana via Compose (stack verified running locally).
-- API keys: Groq + Supabase (see `.env` examples).
+- API keys: Anthropic + Supabase (see `.env` examples). Groq only if `LLM_PROVIDER=groq`.
 
 ### Backend
 
@@ -221,7 +223,7 @@ python -m venv .venv
 
 pip install -r backend/requirements.txt
 cp backend/.env.example backend/.env
-# Edit backend/.env — at minimum GROQ_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+# Edit backend/.env — at minimum ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
 uvicorn backend.src.main:app --reload --port 8000
 ```
@@ -272,7 +274,7 @@ pip install pytest pytest-asyncio   # if not already installed
 python -m pytest -m "not groq"
 ```
 
-Excludes live Groq tests. Deterministic CI job runs the same marker set.
+Excludes live-LLM tests (marker name `groq` kept for CI; they now call Claude). Deterministic CI job runs the same marker set.
 
 ### MCP (optional)
 

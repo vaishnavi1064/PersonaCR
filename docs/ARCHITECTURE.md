@@ -74,6 +74,10 @@ Each review agent is an interchangeable strategy behind a narrow entry function 
 
 `insights_agent.get_insights` is a separate conversational strategy invoked from `chat_routes`, not from the review pipeline.
 
+### Adapter — one LLM client
+
+Every LLM-backed agent (planner slow path, style analyst, defect hunter, QA checker, pseudo-reference generator, insights) calls `backend/src/core/llm_client.complete(system, user, temperature, max_tokens)`. `LLM_PROVIDER` selects Anthropic (default; official SDK) or Groq; `LLM_MODEL` defaults to Claude Haiku 4.5 (`claude-haiku-4-5-20251001`) for testing, and deployments set Claude Sonnet 5.5 (`claude-sonnet-5-5`). Each call logs input/output tokens. Failures raise `LLMError`; `llm_client.track()` records them per review, and the orchestrator then marks the review `degraded` or `error` (no score, not confident) instead of scoring it.
+
 ### Chain of Responsibility / Pipeline — Layer 2 (+ Layer 3)
 
 The review path is a fixed pipeline in `run_review`:

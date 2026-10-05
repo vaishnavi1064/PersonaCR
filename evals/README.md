@@ -1,7 +1,7 @@
 # PersonaCR Defect Hunter — Eval Harness
 
 A test-set-based eval + prompt regression harness for the Defect Hunter agent.
-Calls `hunt_defects()` directly, so it needs only `GROQ_API_KEY` — no Supabase,
+Calls `hunt_defects()` directly, so it needs only the LLM key (`ANTHROPIC_API_KEY` by default; see `backend/src/core/llm_client.py`) — no Supabase,
 no fingerprint, no orchestrator.
 
 ## Files
@@ -12,7 +12,7 @@ no fingerprint, no orchestrator.
 
 ## Setup
 1. Drop the `evals/` folder at the PersonaCR repo root (same level as `backend/`).
-2. Make sure `GROQ_API_KEY` is set: `export GROQ_API_KEY=gsk_...`
+2. Make sure `ANTHROPIC_API_KEY` is set (or `LLM_PROVIDER=groq` + `GROQ_API_KEY`). Runs before 2026-10 used Groq Llama 3.3 70B; results from different models are not comparable.
 3. Confirm the import path works. From repo root:
    `python -c "from backend.src.agents.defect_hunter import hunt_defects; print('ok')"`
    If that fails, the folder layout differs — adjust the import at the top of `run_eval.py`.

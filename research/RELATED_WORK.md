@@ -65,7 +65,7 @@ generating pseudo-references from the code itself.
 **What we changed:**
 
 - CRScore uses Magicoder-S-DS-6.7B (6.7B param model running locally) for pseudo-reference
-generation. We use Groq's Llama 3.3 70B via API (300+ tok/sec) + local AST analysis for
+generation. We use a hosted LLM via API (originally Groq's Llama 3.3 70B; Claude since 2026-10) + local AST analysis for
 a hybrid approach that is faster on consumer hardware.
 - CRScore only scores reviews. We added a Quality Gate that makes a pass/fail decision and
 triggers Agentic Loop 2 for re-review — turning evaluation into an agentic capability.
@@ -125,7 +125,7 @@ outputs from the parallel agents.
 **What we changed:**
 
 - RevAgent fine-tunes each agent on category-specific data. We use prompt engineering
-with Groq's Llama 3.3 70B instead (no fine-tuning needed, zero training cost).
+with a hosted LLM instead (originally Groq's Llama 3.3 70B, now Claude; no fine-tuning needed, zero training cost).
 - RevAgent's categories are generic (Refactoring, Bugfix, etc.). Our Style Analyst
 specifically compares against the developer's personal patterns — personalized, not generic.
 
@@ -252,7 +252,7 @@ with personalization."
 **What we adopted:**
 
 - LLM + static analysis combination → our Defect Hunter combines Python AST analysis
-(local, instant) with Groq LLM analysis (semantic, deeper). Our pseudo-reference
+(local, instant) with LLM analysis (semantic, deeper). Our pseudo-reference
 generator similarly combines AST analysis with LLM claims.
 - Industry interest in combining LLMs with static analysis (and in personalization as a
 direction). That interest is now an active product/research space — not an empty gap.

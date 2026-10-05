@@ -47,16 +47,16 @@ User pastes code snippet
       ┌─ LAYER 2 (while loop, max 2 iterations) ──────────────────────────┐
       │ Step 1: planner.py::plan_review()          [rules-based → LLM]    │
       │ Step 2: PARALLEL via asyncio.gather():                             │
-      │         style_analyst.py::analyze_style()  [ChromaDB + Groq LLM]  │
-      │         defect_hunter.py::hunt_defects()   [AST + Groq LLM]       │
-      │ Step 3: qa_checker.py::check_quality()     [Groq LLM]             │
+      │         style_analyst.py::analyze_style()  [ChromaDB + LLM]       │
+      │         defect_hunter.py::hunt_defects()   [AST + LLM]            │
+      │ Step 3: qa_checker.py::check_quality()     [LLM]                  │
       │ Step 4: confidence_evaluator.py::evaluate_confidence() [rules]    │
       │                                                                    │
       │ AGENTIC LOOP 1: if confidence < 0.70 → re-plan (back to Step 1)  │
       └────────────────────────────────────────────────────────────────────┘
 
       ┌─ LAYER 3 (after Loop 1 settles) ──────────────────────────────────┐
-      │ pseudo_ref_gen.py::generate_pseudo_references() [AST + Groq LLM]  │
+      │ pseudo_ref_gen.py::generate_pseudo_references() [AST + LLM]       │
       │ sts_scorer.py::compute_sts_scores()             [MiniLM cosine]   │
       │ quality_gate.py::evaluate_quality()             [rules-based]     │
       │                                                                    │
@@ -78,7 +78,7 @@ User asks free-form question
       → Loads fingerprints from Supabase (fingerprints table)
       → Loads recent reviews from Supabase (user_reviews table)
       → Optionally retrieves code from ChromaDB (if question has code keywords)
-      → Groq LLM call with grounded context
+      → LLM call (core/llm_client) with grounded context
   → Response: answer, repos_used, code_chunks_retrieved
 ```
 
@@ -88,7 +88,7 @@ User asks free-form question
 
 | Component | Technology | Evidence |
 |---|---|---|
-| **LLM** | Groq — Llama 3.3 70B | `backend/src/agents/planner.py:129`, `style_analyst.py:114`, `defect_hunter.py:160`, `qa_checker.py:92`, `pseudo_ref_gen.py:152`, `insights_agent.py:253` — all use `model="llama-3.3-70b-versatile"` |
+| **LLM** | Claude (Anthropic SDK) — Haiku 4.5 for testing, Sonnet 5.5 for deploy; Groq optional | `backend/src/core/llm_client.py` — `complete()`; `LLM_PROVIDER` / `LLM_MODEL` env. Used by planner, style_analyst, defect_hunter, qa_checker, pseudo_ref_gen, insights_agent. (Until 2026-10 this was Groq `llama-3.3-70b-versatile`, which Groq retired.) |
 | **Code embeddings** | Jina v2 base code (768-dim, ONNX via fastembed) | `backend/src/core/embedder.py:26` — `MODEL_NAME = "jinaai/jina-embeddings-v2-base-code"`, loaded via `fastembed.TextEmbedding` (L17, L37) |
 | **Vector store** | ChromaDB (cosine) | `backend/src/core/embedder.py` `_get_client()` — `HttpClient` if `CHROMADB_URL` set, else embedded `PersistentClient`; `hnsw:space: cosine` |
 | **STS scoring** | all-MiniLM-L6-v2 (sentence-transformers) | `backend/src/evaluation/sts_scorer.py:33` — `SentenceTransformer("all-MiniLM-L6-v2")` |
@@ -117,9 +117,9 @@ User asks free-form question
 | Agent | File | LLM? | Role |
 |---|---|---|---|
 | **Orchestrator** | `orchestrator.py` (428 lines) | No | Wires all agents, manages both agentic loops, parallel execution via `asyncio.gather` |
-| **Planner** | `planner.py` (157 lines) | Hybrid | Rules-based fast path first (≥2 deviations → no LLM); falls back to Groq for complex cases |
-| **Style Analyst** | `style_analyst.py` (155 lines) | Yes | Two-stage ChromaDB retrieval + Groq LLM to find deviations from developer's personal patterns |
-| **Defect Hunter** | `defect_hunter.py` (203 lines) | Yes | Phase 1: Python AST analysis (instant); Phase 2: Groq LLM for semantic bugs. Merged output |
+| **Planner** | `planner.py` (157 lines) | Hybrid | Rules-based fast path first (≥2 deviations → no LLM); falls back to the LLM for complex cases |
+| **Style Analyst** | `style_analyst.py` (155 lines) | Yes | Two-stage ChromaDB retrieval + LLM to find deviations from developer's personal patterns |
+| **Defect Hunter** | `defect_hunter.py` (203 lines) | Yes | Phase 1: Python AST analysis (instant); Phase 2: LLM for semantic bugs. Merged output |
 | **QA Checker** | `qa_checker.py` (149 lines) | Yes | Validates Style + Defect outputs are relevant to submitted code. Filters hallucinated findings |
 | **Confidence Evaluator** | `confidence_evaluator.py` (104 lines) | No | Rules-based scoring (4 factors, max 1.0). Triggers Loop 1 if < 0.70 |
 | **Insights Agent** | `insights_agent.py` (280 lines) | Yes | Answers Q&A grounded in fingerprints + reviews + optional ChromaDB code retrieval |
@@ -139,7 +139,7 @@ User asks free-form question
 
 | Component | File | Role |
 |---|---|---|
-| **Pseudo-Reference Generator** | `pseudo_ref_gen.py` | AST-based refs (instant) + Groq LLM refs. Combined list of "things a good review should mention" |
+| **Pseudo-Reference Generator** | `pseudo_ref_gen.py` | AST-based refs (instant) + LLM refs. Combined list of "things a good review should mention" |
 | **STS Scorer** | `sts_scorer.py` | Encodes review sentences + pseudo-refs with MiniLM, computes pairwise cosine similarity. Produces comprehensiveness (recall), conciseness (precision), relevance (F1) |
 | **Quality Gate** | `quality_gate.py` | Rules-based pass/fail: comp ≥ 0.40, conc ≥ 0.30, rel ≥ 0.35. Sets `should_re_review` flag |
 
@@ -210,9 +210,9 @@ User asks free-form question
 | Jina code embeddings + ChromaDB | **Built** | `embedder.py` — `embed_and_store()`, `query_similar_staged()` fully wired |
 | Two-stage retrieval (Ringer 2025) | **Built** | `embedder.py:216-319` — file-level then function-level |
 | Supabase fingerprint caching | **Built** | `cache_manager.py` — SHA-based staleness detection |
-| Planner (hybrid rules + LLM) | **Built** | `planner.py` — rules fast-path L22-73, Groq fallback L88-156 |
-| Style Analyst (ChromaDB + LLM) | **Built** | `style_analyst.py` — two-stage retrieval + Groq comparison |
-| Defect Hunter (AST + LLM) | **Built** | `defect_hunter.py` — AST phase L25-111, Groq phase L124-187, merged L189-198 |
+| Planner (hybrid rules + LLM) | **Built** | `planner.py` — rules fast-path, LLM fallback |
+| Style Analyst (ChromaDB + LLM) | **Built** | `style_analyst.py` — two-stage retrieval + LLM comparison |
+| Defect Hunter (AST + LLM) | **Built** | `defect_hunter.py` — AST phase, LLM phase, merged |
 | QA Checker (hallucination filter) | **Built** | `qa_checker.py` — LLM validates + filters irrelevant findings |
 | Confidence Evaluator (rules) | **Built** | `confidence_evaluator.py` — 4-factor scoring, threshold 0.70 |
 | Agentic Loop 1 (confidence re-plan) | **Built** | `orchestrator.py:78-181` — while loop with break on confidence |
