@@ -23,6 +23,8 @@ Direction (Defect B fix):
 """
 from __future__ import annotations
 
+import logging
+
 import json
 import re
 import time
@@ -33,6 +35,8 @@ from dotenv import load_dotenv
 from backend.src.core.models import StyleAnalysisOutput, StyleFinding
 
 load_dotenv("backend/.env")
+
+logger = logging.getLogger(__name__)
 
 # ── Defect A — severity → score penalty (documented before re-measure) ───────
 # Principle: one HIGH personal-pattern break costs a quarter of the 0–100 scale;
@@ -575,16 +579,12 @@ def analyze_style(
                 similar_functions_found=similar_count,
             )
     except Exception as e:
+        # Do not turn the failure into a fake finding. llm_client records it on the
+        # review's tracker and the orchestrator marks the review degraded/error.
+        logger.warning("Style Analyst LLM step failed: %s", str(e)[:200])
         result = StyleAnalysisOutput(
-            findings=[
-                StyleFinding(
-                    category="error",
-                    severity="low",
-                    description=f"Style analysis error: {str(e)[:100]}",
-                )
-            ],
-            # Error findings do not penalize (honesty); neutral mid score on hard failure
-            overall_style_score=50.0,
+            findings=[],
+            overall_style_score=SCORE_BASE,
             similar_functions_found=similar_count,
         )
 

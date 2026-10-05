@@ -116,8 +116,8 @@ def review_code(req: CodeReviewRequest) -> dict:
         raise HTTPException(status_code=500, detail=f"Review pipeline failed: {e}")
 
     logger.info(
-        "Review complete — score=%.1f, issues=%d, iterations=%d, status=%s",
-        result.overall_score,
+        "Review complete — score=%s, issues=%d, iterations=%d, status=%s",
+        "n/a" if result.overall_score is None else f"{result.overall_score:.1f}",
         len(result.issues),
         result.iterations,
         result.status,

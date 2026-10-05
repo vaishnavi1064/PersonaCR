@@ -247,11 +247,12 @@ class AgentTrace(BaseModel):
 
 class ReviewResult(BaseModel):
     review_output: dict = {}
-    overall_score: float = 0.0
+    # None when status is "degraded" / "error" (an LLM call failed) — no honest score.
+    overall_score: float | None = 0.0
     issues: list[dict] = []
     agent_trace: list[AgentTrace] = []
     iterations: int = 1
-    status: str = "passed"
+    status: str = "passed"  # passed | low_confidence | quality_gate_failed | degraded | error
 
 
 class DocumentationOutput(BaseModel):

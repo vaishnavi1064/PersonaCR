@@ -23,6 +23,8 @@ beyond two passes rarely justify the added LLM latency.
 from __future__ import annotations
 
 import asyncio
+import contextvars
+import functools
 import logging
 import time
 
@@ -36,6 +38,8 @@ from backend.src.core.metrics import (
     record_self_correction,
     track_agent_latency,
 )
+from backend.src.core import llm_client
+from backend.src.core.llm_client import LLMTracker
 from backend.src.agents.planner import plan_review
 from backend.src.agents.style_analyst import analyze_style
 from backend.src.agents.defect_hunter import hunt_defects
@@ -49,9 +53,14 @@ logger = logging.getLogger(__name__)
 
 
 async def _run_in_executor(func, *args):
-    """Run a blocking (sync) function inside asyncio without blocking the event loop."""
+    """
+    Run a blocking (sync) function inside asyncio without blocking the event loop.
+    The current contextvars context is copied into the worker thread so the
+    review's llm_client tracker sees calls made by the parallel agents.
+    """
     loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, func, *args)
+    ctx = contextvars.copy_context()
+    return await loop.run_in_executor(None, functools.partial(ctx.run, func, *args))
 
 
 def _trace(agent_name: str, **kwargs) -> AgentTrace:
@@ -68,6 +77,20 @@ async def run_review(
     user_id: str,
     repo_name: str,
     max_iterations: int = 2,
+) -> ReviewResult:
+    """Run the review with an LLM tracker so any failed LLM call degrades the result."""
+    with llm_client.track() as llm:
+        return await _run_review(code, language, fingerprint, user_id, repo_name, max_iterations, llm)
+
+
+async def _run_review(
+    code: str,
+    language: str,
+    fingerprint: dict,
+    user_id: str,
+    repo_name: str,
+    max_iterations: int,
+    llm: LLMTracker,
 ) -> ReviewResult:
     """
     Main orchestrator. Runs the full multi-agent review pipeline.
@@ -201,7 +224,8 @@ async def run_review(
         ))
 
         # ── Step 4: Agentic Loop 1 check ─────────────────────────────────────
-        if conf_output.is_confident or iteration >= max_iterations:
+        # An LLM failure is not low confidence to retry around: stop and degrade.
+        if llm.failures or conf_output.is_confident or iteration >= max_iterations:
             break
         loop1_triggered = True
         # Low confidence → loop back; Planner will see suggestion on next pass
@@ -284,7 +308,7 @@ async def run_review(
     # Runs AFTER Loop 1 (confidence) completes. Separate loop — does not share
     # the iteration counter with Loop 1. Capped at one re-review pass to bound
     # total latency.
-    if gate_result.should_re_review and iteration < max_iterations:
+    if gate_result.should_re_review and iteration < max_iterations and not llm.failures:
         quality_feedback = gate_result.reason
 
         traces.append(AgentTrace(
@@ -465,7 +489,7 @@ async def run_review(
             ))
 
     # ── Final score and status ────────────────────────────────────────────────
-    overall_score = round(
+    overall_score: float | None = round(
         (style_output.overall_style_score * 0.5 + defect_output.defect_score * 0.5), 1
     )
 
@@ -477,6 +501,23 @@ async def run_review(
         status = "quality_gate_failed"
     else:
         status = "passed"
+
+    # ── LLM failure: never a confident review or a normal score ──────────────
+    degraded_reason: str | None = None
+    if llm.failures:
+        status = "error" if llm.calls == 0 else "degraded"
+        first = llm.failures[0]
+        degraded_reason = (
+            f"{len(llm.failures)} LLM call(s) failed ({first['caller']}: {first['kind']}) — "
+            f"{first['reason'][:200]}"
+        )
+        overall_score = None
+        conf_output = conf_output.model_copy(update={
+            "confidence_score": 0.0,
+            "is_confident": False,
+            "reason": f"LLM failure: {degraded_reason}",
+        })
+        logger.warning("Review %s: %s", status, degraded_reason)
 
     observe_from_trace("orchestrator", (time.perf_counter() - orch_t0) * 1000.0)
     record_review_outcome(status)
@@ -498,6 +539,8 @@ async def run_review(
             },
             "quality_gate_passed": gate_result.passed,
             "pseudo_refs_generated": len(pseudo_refs.references),
+            "degraded_reason": degraded_reason,
+            "llm_usage": llm.summary(),
         },
         overall_score=overall_score,
         issues=all_issues,

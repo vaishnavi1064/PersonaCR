@@ -21,6 +21,9 @@ import logging
 import os
 import threading
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -88,6 +91,57 @@ class LLMUsage:
 
 usage = LLMUsage()
 
+
+@dataclass
+class LLMTracker:
+    """Per-review record of LLM calls (see track()). Thread-safe."""
+
+    calls: int = 0
+    input_tokens: int = 0
+    output_tokens: int = 0
+    failures: list[dict[str, str]] = field(default_factory=list)
+    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
+
+    def ok(self, input_tokens: int, output_tokens: int) -> None:
+        with self._lock:
+            self.calls += 1
+            self.input_tokens += input_tokens
+            self.output_tokens += output_tokens
+
+    def failed(self, caller: str, err: LLMError) -> None:
+        with self._lock:
+            self.failures.append({"caller": caller, "kind": err.kind, "reason": str(err)[:300]})
+
+    def summary(self) -> dict[str, Any]:
+        with self._lock:
+            return {
+                "provider": provider(),
+                "model": model(),
+                "calls": self.calls,
+                "input_tokens": self.input_tokens,
+                "output_tokens": self.output_tokens,
+                "failures": list(self.failures),
+            }
+
+
+_tracker: ContextVar[LLMTracker | None] = ContextVar("llm_tracker", default=None)
+
+
+@contextmanager
+def track() -> Iterator[LLMTracker]:
+    """
+    Record every complete() call made in this context (and in threads started
+    with contextvars.copy_context().run) so a review can tell whether any agent's
+    LLM call failed. Agents swallow LLM errors to keep the pipeline alive; the
+    orchestrator reads the tracker to mark the review degraded instead of scoring it.
+    """
+    tracker = LLMTracker()
+    token = _tracker.set(tracker)
+    try:
+        yield tracker
+    finally:
+        _tracker.reset(token)
+
 _clients: dict[str, Any] = {}
 _clients_lock = threading.Lock()
 
@@ -137,11 +191,10 @@ def complete(
             text, in_tok, out_tok, stop = _complete_anthropic(mdl, system, user, temperature, max_tokens)
         else:
             text, in_tok, out_tok, stop = _complete_groq(mdl, system, user, temperature, max_tokens)
-    except LLMError:
-        usage.fail()
+    except LLMError as err:
+        _on_failure(caller, err)
         raise
     ms = (time.perf_counter() - t0) * 1000.0
-    usage.add(in_tok, out_tok)
     logger.info(
         "LLM call provider=%s model=%s caller=%s input_tokens=%d output_tokens=%d stop=%s ms=%.0f",
         prov, mdl, caller, in_tok, out_tok, stop, ms,
@@ -149,9 +202,23 @@ def complete(
     if stop in ("max_tokens", "length"):
         logger.warning("LLM output truncated at max_tokens=%d (caller=%s)", max_tokens, caller)
     if not text.strip():
-        usage.fail()
-        raise LLMError(f"Empty response from {prov}/{mdl}", provider=prov, model=mdl, kind="empty")
+        empty = LLMError(f"Empty response from {prov}/{mdl}", provider=prov, model=mdl, kind="empty")
+        _on_failure(caller, empty)
+        raise empty
+    usage.add(in_tok, out_tok)
+    tracker = _tracker.get()
+    if tracker is not None:
+        tracker.ok(in_tok, out_tok)
     return text
+
+
+def _on_failure(caller: str, err: LLMError) -> None:
+    usage.fail()
+    logger.warning("LLM call failed provider=%s model=%s caller=%s kind=%s: %s",
+                   err.provider, err.model, caller, err.kind, str(err)[:300])
+    tracker = _tracker.get()
+    if tracker is not None:
+        tracker.failed(caller, err)
 
 
 def _complete_anthropic(

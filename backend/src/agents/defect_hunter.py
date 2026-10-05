@@ -10,6 +10,8 @@ in the orchestrator — no sequential dependency between them.
 """
 from __future__ import annotations
 
+import logging
+
 import ast
 import json
 import re
@@ -20,6 +22,8 @@ from dotenv import load_dotenv
 from backend.src.core.models import DefectFinding, DefectHunterOutput
 
 load_dotenv("backend/.env")
+
+logger = logging.getLogger(__name__)
 
 
 def _ast_analysis(code: str, language: str) -> list[DefectFinding]:
@@ -173,12 +177,10 @@ def hunt_defects(code: str, language: str) -> tuple[DefectHunterOutput, int]:
             llm_bugs, llm_smells, llm_security = [], [], []
             defect_score = 70.0
     except Exception as e:
-        llm_bugs = [DefectFinding(
-            severity="low",
-            description=f"LLM analysis error: {str(e)[:100]}",
-            category="bug",
-        )]
-        llm_smells, llm_security = [], []
+        # Keep the deterministic AST findings; add no fake LLM finding. llm_client
+        # records the failure and the orchestrator marks the review degraded/error.
+        logger.warning("Defect Hunter LLM step failed: %s", str(e)[:200])
+        llm_bugs, llm_smells, llm_security = [], [], []
         defect_score = 70.0
 
     # ── Merge AST + LLM findings ──────────────────────────────────────────────
