@@ -1,5 +1,7 @@
 # PersonaCR — TEST MATRIX
 
+> Historical snapshot (2026-07-27); see [README](../README.md) for the current state.
+
 **Run:** `backend\.venv\Scripts\python.exe -m pytest tests -m "not groq" -v`  
 **Result (this pass):** 30 passed · 3 failed · 1 deselected (`@pytest.mark.groq`)
 

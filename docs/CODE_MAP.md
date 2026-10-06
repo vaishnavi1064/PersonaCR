@@ -1,5 +1,7 @@
 # PersonaCR — Code Map (verification)
 
+> Historical snapshot (2026-07-27; one-line fixes through 2026-10-04); see [README](../README.md) for the current state.
+
 Accurate map of entry points used by the verification suite. Paths are relative to repo root.
 
 ---

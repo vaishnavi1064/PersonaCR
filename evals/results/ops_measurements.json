@@ -67,5 +67,39 @@
     "note_on_cost": "iterations=2: Loop 1 re-ran style/defect/QA with unchanged inputs, so 6 of the 7 calls were 3 calls made twice (fixed in a later commit).",
     "worker_memory_peak_MiB": {"value": 2344, "provenance": "archived_log", "note": "cgroup memory.peak read afterwards = 2415 MiB (session_only)"},
     "node_memory_peak_GiB": {"value": 5.184, "provenance": "archived_log"}
+  },
+  "deploy_verification": {
+    "recorded": "2026-10-05 (evening, US Pacific; log clocks are local time UTC-7, job timestamps are UTC)",
+    "setup": {
+      "cluster": "minikube v1.38.1 (k8s v1.35.1), docker driver, node capped at 6 GiB / 4 CPUs, Docker Desktop on WSL2, Windows 11 laptop",
+      "workloads": "k8s/ manifests: backend + worker (3 GiB limits), frontend (nginx), redis, chromadb 1.5.7, prometheus, grafana; real Redis, real Supabase project, Claude Haiku 4.5",
+      "node_memory_sampler": "docker stats minikube --no-stream every 5 s (MemUsage of the minikube container, includes page cache)",
+      "auth": "guest = Supabase anonymous sign-in token, sent through the frontend nginx (same path as the browser)",
+      "runs": "single run per scenario; not repeated, no variance estimate"
+    },
+    "verify1_main_96a210c": {
+      "note": "main after slice 8 (auth + RLS), before the deploy fixes",
+      "analyze_job": {"repo": "vaishnavi1064/Retail-Inventory-Order-Fulfillment-System (108 chunks)", "stages": "queued -> fetch -> index -> summary -> completed", "wall_time_s": 105, "provenance": "archived_log", "source": "ops_logs/2026-10-05_minikube/analyze_verify1_job1.txt + worker log line 'job in 0:01:45'"},
+      "node_memory_peak_during_analyze_GiB": {"value": 3.71, "provenance": "archived_log", "source": "ops_logs/2026-10-05_minikube/node_memory_verify1.log (21:15:45-21:17:40)"},
+      "worker_restart_mid_index": {"value": "job stayed state=running stage=index progress=70; forced Reanalyze returned HTTP 200 with the same job id; UI showed 'Indexing...' with no hint", "provenance": "archived_log", "source": "ops_logs/2026-10-05_minikube/analyze_verify1_worker_restart.txt"},
+      "partial_index_after_restart": {"value": "50 of 108 vectors", "provenance": "session_only", "note": "collection.count() via the worker pod"},
+      "ui_review_path": {"value": "POST /api/review (sync) ran in the backend pod; worker logged nothing", "provenance": "session_only"},
+      "backend_memory_after_ui_review_MiB": {"value": 2501, "limit_MiB": 3072, "provenance": "session_only", "note": "kubectl top, after one sync review loaded torch + MiniLM into the API process"},
+      "node_memory_peak_during_worker_review_GiB": {"value": 5.163, "provenance": "archived_log", "source": "ops_logs/2026-10-05_minikube/node_memory_verify1.log (21:24:50, single sample)", "note": "measured after restarting the backend pod to free its 2.5 GiB"},
+      "backend_image_bytes": {"value": 6874412538, "provenance": "session_only", "note": "docker image inspect .Size inside minikube's Docker; torch 2.14.1 + CUDA 13: site-packages/nvidia 3.2G, triton 897M, torch 1.2G (du -sh)"},
+      "frontend_image_build": {"value": "failed at npm ci: node:24-alpine had moved to npm 11.19.0, which rejected the lockfile (missing optional @emnapi/* entries)", "provenance": "session_only"}
+    },
+    "reverify_deploy_fixes_4a2fd2f": {
+      "note": "deploy-fixes branch: bb45f07 (lockfile + pinned Node), 941f536 (heartbeat/stale jobs), c50878f (build-aside index swap), ccdcdb7 (UI reviews on worker), 4a2fd2f (CPU-only torch)",
+      "backend_image_bytes": {"value": 2131835003, "provenance": "session_only", "note": "docker image inspect .Size inside minikube's Docker (same measurement as verify1); host Docker Desktop listed the same image as 2.95GB; torch 2.14.1+cpu, no nvidia/triton/cuda packages"},
+      "stuck_record_from_verify1": {"value": "the verify1 record (running/index/70, last write 04:18 UTC) read as failed with the 'worker stopped' reason once the new code was deployed", "provenance": "session_only"},
+      "graceful_worker_restart_mid_index": {"value": "pod deleted at +11 s; job completed at +132 s (RQ warm shutdown within terminationGracePeriodSeconds=300); index 108/108 after the swap, no temp collections left", "provenance": "archived_log", "source": "ops_logs/2026-10-05_minikube/analyze_reverify_graceful_restart.txt"},
+      "crash_mid_index": {"value": "worker force-killed (--grace-period=0) at 21:59:45 local; job and GET /api/repos read failed at +136 s with 'The background worker stopped...'; live index stayed at 108", "provenance": "archived_log", "source": "ops_logs/2026-10-05_minikube/analyze_reverify_crash.txt"},
+      "forced_reanalyze_after_crash": {"value": "HTTP 202 with a new job id; completed in 104 s", "provenance": "session_only"},
+      "ui_review_on_worker": {"value": "shipped frontend reviewCode(): queued +2 s, running +4 s, result at 47 s; backend logged only POST /api/reviews (202) + polling; worker logged 'reviews: Job OK'", "provenance": "session_only"},
+      "backend_memory_after_ui_review_MiB": {"value": 131, "limit_MiB": 3072, "provenance": "session_only", "note": "kubectl top"},
+      "node_memory_peak_GiB": {"value": 3.868, "provenance": "archived_log", "source": "ops_logs/2026-10-05_minikube/node_memory_reverify.log (131 samples; peak at 22:04:35 during the review)"},
+      "pod_restarts": {"value": 0, "provenance": "session_only"}
+    }
   }
 }

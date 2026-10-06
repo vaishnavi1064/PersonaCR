@@ -1,295 +1,183 @@
 # PersonaCR — Project Overview
 
-> **One-line pitch:** A multi-agent AI system that learns a developer's personal coding style from their GitHub repos, then reviews new code against those patterns instead of generic rules.
+> **One line:** PersonaCR measures how a GitHub repo is written (a ~30-feature style fingerprint) and reviews new code against that repo's own conventions with six cooperating agents.
 
-**Approach & positioning:** Convention-aware multi-agent review is an active area (configs, PR history, fine-tuning, and related tools). PersonaCR’s distinctive angle is a **cold-start ~30-feature AST style fingerprint** derived directly from code structure — no review history or config files required — then used as the review signal. That is a **mechanism** claim, not category novelty (“first” / “no prior work”). Evaluation of personalized vs generic remains inconclusive at N=14; see README and `evals/`.
-
----
-
-## 1. What It Does (User Perspective)
-
-1. **Analyze a repo** — User pastes a GitHub URL. The system ingests the code, extracts a 30-feature "coding fingerprint," embeds functions into a vector store, and caches the result.
-2. **Review code** — User pastes a code snippet. Six AI agents compare it against the fingerprint and return personalized style deviations, bugs, and quality scores.
-3. **Ask questions** — User asks free-form questions about their analyzed repos. An Insights Agent answers grounded in fingerprints, past reviews, and code snippets from ChromaDB.
-4. **Dashboard** — Historical review scores, issue breakdown, CRScore quality metrics, per-agent latency, and agentic-loop health rates.
-5. **MCP integration** — Any MCP-compatible tool (Claude Desktop, Cursor, VS Code Copilot) can call PersonaCR's endpoints as tools directly in the editor.
+The [README](../README.md) is the primary document: screenshots, architecture diagrams, evaluation, challenges, and limitations. This file is a code-level companion: where things live and what is (and isn't) built. It does not claim that personalized review beats generic review; the fair benchmark at N=14 is **inconclusive** (see README → Evaluation).
 
 ---
 
-## 2. How It Works — End-to-End Data Flow
+## 1. What it does (user perspective)
 
-### 2a. Analyze Flow
+1. **Import a repo:** paste a public GitHub URL on the Repositories page. A background job on the RQ worker fetches the code, computes the fingerprint, indexes functions in ChromaDB and writes a one-line summary. The card and import dialog show the server's live stage; closing the tab doesn't stop it.
+2. **Ask about the repo:** the Chat/Review Studio's "Ask" mode answers from the repo's fingerprint, recent saved reviews, retrieved code, this chat's last turns and earlier chats about the same repo.
+3. **Review code:** "Review code" mode enqueues a review on the worker and polls it; results show a score, a confidence level, findings pinned to lines, and an agent trace.
+4. **Repo detail:** Overview (summary, key conventions), Convention Atlas (every measured feature with its definition), the repo's chats and saved reviews.
+5. **Dashboard:** saved reviews across all repos or one repo: score per review, findings by category, review quality, feedback-loop rates, time per agent.
+6. **Guests:** Supabase anonymous sign-in; nothing is saved to Postgres.
+7. **MCP:** API endpoints exposed as MCP tools at `/mcp` (Bearer token required).
 
-```
-User pastes GitHub URL
-  → frontend/src/pages/ChatPage.tsx (L297-343) detects GH_REGEX
-  → frontend/src/lib/api.ts::analyzeRepo() → POST /api/analyze-repo
-  → backend/src/routes/analyze_routes.py::analyze_repo()
-    → backend/src/core/cache_manager.py::get_cached_fingerprint()  [check Supabase cache]
-    → backend/src/core/github_ingestor.py::ingest_repo()           [PyGithub → CodeChunks]
-    → backend/src/core/pattern_extractor.py::extract_fingerprint() [AST → 30 features]
-    → backend/src/core/embedder.py::embed_and_store()              [Jina v2 → ChromaDB]
-    → backend/src/core/cache_manager.py::save_fingerprint()        [→ Supabase]
-  → Response: fingerprint data, num_functions, cache_status
-  → frontend/src/lib/db.ts::saveRepo()                            [→ Supabase user_repos]
-```
+---
 
-### 2b. Review Flow
+## 2. End-to-end flows (current code)
+
+### 2a. Analyze (background)
 
 ```
-User pastes code snippet
-  → frontend/src/pages/ChatPage.tsx (L345-370) detects isCodeSnippet()
-  → frontend/src/lib/api.ts::reviewCode() → POST /api/review
-  → backend/src/routes/review_routes.py::review_code()
-    → cache_manager.get_cached_fingerprint()            [load fingerprint from Supabase]
-    → backend/src/agents/orchestrator.py::review_code_sync() → run_review()
-
-      ┌─ LAYER 2 (while loop, max 2 iterations) ──────────────────────────┐
-      │ Step 1: planner.py::plan_review()          [rules-based → LLM]    │
-      │ Step 2: PARALLEL via asyncio.gather():                             │
-      │         style_analyst.py::analyze_style()  [ChromaDB + LLM]       │
-      │         defect_hunter.py::hunt_defects()   [AST + LLM]            │
-      │ Step 3: qa_checker.py::check_quality()     [LLM]                  │
-      │ Step 4: confidence_evaluator.py::evaluate_confidence() [rules]    │
-      │                                                                    │
-      │ AGENTIC LOOP 1: if confidence < 0.70 → re-plan (back to Step 1)  │
-      └────────────────────────────────────────────────────────────────────┘
-
-      ┌─ LAYER 3 (after Loop 1 settles) ──────────────────────────────────┐
-      │ pseudo_ref_gen.py::generate_pseudo_references() [AST + LLM]       │
-      │ sts_scorer.py::compute_sts_scores()             [MiniLM cosine]   │
-      │ quality_gate.py::evaluate_quality()             [rules-based]     │
-      │                                                                    │
-      │ AGENTIC LOOP 2: if quality gate fails → re-run full Layer 2+3    │
-      └────────────────────────────────────────────────────────────────────┘
-
-  → Response: overall_score, status, issues[], agent_trace[], quality_scores
-  → frontend/src/lib/db.ts::saveReview()           [→ Supabase user_reviews]
+ReposPage / ImportRepoDialog → store/useRepoJobs.startAnalyze
+  → lib/api/repos.ts::startAnalyzeJob → POST /api/analyze-jobs (Bearer JWT)
+  → routes/analyze_routes.py::enqueue_analysis
+      user from core/auth.py (token sub; guests → guest_<sub>)
+      analysis_store.get_record (stale running record → failed, see core/liveness.py)
+      job_store.create_job + analysis_store.start_record → core/analyze_queue.enqueue (on_failure hook)
+  → workers/analyze_jobs.py::process_analyze_job (RQ worker, heartbeat every 15 s)
+      core/analysis.py::run_analysis
+        cache_manager.get_cached_fingerprint (SHA check; force_refresh skips)
+        github_ingestor.ingest_repo            → CodeChunks (Python AST / regex for others)
+        pattern_extractor.extract_fingerprint  → ~30 features
+        embedder.embed_and_store               → temp collection → swap into place
+        repo_summary.generate_repo_summary     → one LLM call
+        cache_manager.save_fingerprint         → Postgres fingerprints (accounts only)
+      _record_user_repo                          → user_repos (accounts only, uuid-guarded)
+  ← UI polls GET /api/analyze-jobs/{id}; GET /api/repos merges the analysis record
 ```
 
-### 2c. Chat / Q&A Flow
+The synchronous `POST /api/analyze-repo` runs the same `run_analysis` in the API process (fallback when the queue is unavailable).
+
+### 2b. Review (worker)
 
 ```
-User asks free-form question
-  → frontend/src/pages/ChatPage.tsx (L372-389) — neither GH URL nor code
-  → frontend/src/lib/api.ts::chatWithInsights() → POST /api/chat
-  → backend/src/routes/chat_routes.py::ask_insights()
-    → backend/src/agents/insights_agent.py::get_insights()
-      → Loads fingerprints from Supabase (fingerprints table)
-      → Loads recent reviews from Supabase (user_reviews table)
-      → Optionally retrieves code from ChromaDB (if question has code keywords)
-      → LLM call (core/llm_client) with grounded context
-  → Response: answer, repos_used, code_chunks_retrieved
+ChatPage → lib/api/reviews.ts::reviewCode
+  → POST /api/reviews → routes/review_routes.py::enqueue_review
+      loads the repo's fingerprint (404 if never analyzed), job owner = token sub
+  → workers/review_jobs.py::process_review_job (heartbeat every 15 s)
+      agents/orchestrator.py::review_code_sync → run_review
+        Layer 2 (max 2 iterations):
+          planner.plan_review                 rules fast path (≥2 deviations) → else LLM
+          style_analyst.analyze_style  ‖  defect_hunter.hunt_defects   (asyncio.gather)
+          qa_checker.check_quality            LLM filter
+          confidence_evaluator                rules; Loop 1 only if the re-plan differs
+        Layer 3:
+          pseudo_ref_gen → sts_scorer (MiniLM) → quality_gate; Loop 2 re-review
+        any LLM failure → status degraded / error, no score
+  ← UI polls GET /api/reviews/{id} (owner only) every 1.5 s
+  → lib/db.ts::saveReview → user_reviews (signed-in users; RLS own rows; degraded/error not saved)
+```
+
+`POST /api/review` (synchronous) remains for API/MCP clients; the UI doesn't use it.
+
+### 2c. Q&A
+
+```
+ChatPage (Ask) → lib/api/chats.ts::askQuestion → POST /api/chat
+  → routes/chat_routes.py::ask_insights → agents/insights_agent.get_insights
+      fingerprint (Postgres), last 5 saved reviews (accounts), ChromaDB snippets,
+      chat_memory: this chat's last 8 turns + up to 3 earlier chats about the same repo (accounts)
+      → one LLM call (core/llm_client)
 ```
 
 ---
 
-## 3. Tech Stack (Verified)
+## 3. Tech stack (verified in code)
 
 | Component | Technology | Evidence |
 |---|---|---|
-| **LLM** | Claude (Anthropic SDK) — Haiku 4.5 for testing, Sonnet 5.5 for deploy; Groq optional | `backend/src/core/llm_client.py` — `complete()`; `LLM_PROVIDER` / `LLM_MODEL` env. Used by planner, style_analyst, defect_hunter, qa_checker, pseudo_ref_gen, insights_agent. (Until 2026-10 this was Groq `llama-3.3-70b-versatile`, which Groq retired.) |
-| **Code embeddings** | Jina v2 base code (768-dim, ONNX via fastembed) | `backend/src/core/embedder.py:26` — `MODEL_NAME = "jinaai/jina-embeddings-v2-base-code"`, loaded via `fastembed.TextEmbedding` (L17, L37) |
-| **Vector store** | ChromaDB (cosine) | `backend/src/core/embedder.py` `_get_client()` — `HttpClient` if `CHROMADB_URL` set, else embedded `PersistentClient`; `hnsw:space: cosine` |
-| **STS scoring** | all-MiniLM-L6-v2 (sentence-transformers) | `backend/src/evaluation/sts_scorer.py:33` — `SentenceTransformer("all-MiniLM-L6-v2")` |
-| **Static analysis** | Python `ast` module | `backend/src/agents/defect_hunter.py:42` — `ast.parse(code)`, `pattern_extractor.py:59` |
-| **Backend** | FastAPI + Uvicorn | `backend/src/main.py:3` — `from fastapi import FastAPI`, `requirements.txt:2-3` |
-| **MCP server** | fastapi-mcp | `backend/src/main.py:57` — `from fastapi_mcp import FastApiMCP`, `requirements.txt:29` |
-| **Database** | Supabase PostgreSQL (REST API via httpx) | `backend/src/db/supabase_rest.py:16-33` — raw HTTP client, `backend/.env:1` |
-| **Repo access** | PyGithub | `backend/src/core/github_ingestor.py:12`, `requirements.txt:9` |
-| **Frontend** | React 19 + TypeScript + Vite 8 | `frontend/package.json:16-17,36` |
-| **Routing** | react-router-dom v7 | `frontend/package.json:18` |
-| **State mgmt** | Zustand (persisted) | `frontend/package.json:20`, `frontend/src/store/useStore.ts:1` |
-| **Charts** | Recharts | `frontend/package.json:19` |
-| **Animations** | Framer Motion | `frontend/package.json:14` |
-| **Styling** | TailwindCSS v4 | `frontend/package.json:24,33` |
-| **Auth** | Supabase Auth (GitHub OAuth, implicit flow) | `frontend/src/lib/supabase.ts:14-20` |
-| **Icons** | Lucide React | `frontend/package.json:15` |
-| **PDF reports** | ReportLab (listed in requirements.txt) | `backend/requirements.txt:26` — **listed but NEVER imported anywhere in source** |
-| **pylint** | Listed in requirements.txt | `backend/requirements.txt:19` — **listed but NEVER called in source** (only referenced as string in `models.py:261`) |
+| LLM | Claude via the Anthropic SDK (Haiku 4.5 test, Sonnet 5.5 deploy); Groq optional | `core/llm_client.py` (`LLM_PROVIDER`, `LLM_MODEL`); used by planner, style analyst, defect hunter, QA checker, pseudo-ref gen, insights, repo summary |
+| Code embeddings | `jinaai/jina-embeddings-v2-base-code` (768-dim, fastembed/ONNX, CPU) | `core/embedder.py` `MODEL_NAME`; `MAX_EMBED_TOKENS` (2048, k8s 1024), `EMBED_BATCH_SIZE`, `EMBED_TOKEN_BUDGET` |
+| Vector store | ChromaDB 1.5.7, cosine | `_get_client()`: `HttpClient` when `CHROMADB_URL` is set, else embedded `PersistentClient` |
+| STS scoring | `all-MiniLM-L6-v2` via sentence-transformers (CPU torch in the image) | `evaluation/sts_scorer.py`; `backend/Dockerfile` installs torch from the CPU index |
+| Static analysis | Python `ast` | `defect_hunter.py`, `pattern_extractor.py`, `github_ingestor.py` |
+| API | FastAPI + Uvicorn, PyJWT | `main.py`, `core/auth.py` |
+| Jobs | Redis + RQ (queues `reviews`, `analyze`) | `workers/worker.py`, `core/job_store.py`, `core/analysis_store.py`, `core/liveness.py`, `workers/failures.py` |
+| Database / auth | Supabase Postgres (REST via httpx, service role) + Supabase Auth (GitHub OAuth, anonymous sign-in) | `db/supabase_rest.py`, `frontend/src/lib/supabase.ts`, `migrations/` |
+| MCP | fastapi-mcp (mcp 1.x pinned) | `main.py` |
+| Frontend | React 19, TypeScript, Vite, react-router 7, Zustand, Tailwind v4, Recharts, Framer Motion, CodeMirror | `frontend/package.json` |
+| Infra | Docker, k8s manifests + Terraform (local minikube), nginx, Prometheus, Grafana, GitHub Actions | `k8s/`, `terraform/`, `observability/`, `.github/workflows/ci.yml` |
 
 ---
 
-## 4. Components — Detailed Breakdown
+## 4. Components
 
 ### 4a. Agents (`backend/src/agents/`)
 
-| Agent | File | LLM? | Role |
-|---|---|---|---|
-| **Orchestrator** | `orchestrator.py` (428 lines) | No | Wires all agents, manages both agentic loops, parallel execution via `asyncio.gather` |
-| **Planner** | `planner.py` (157 lines) | Hybrid | Rules-based fast path first (≥2 deviations → no LLM); falls back to the LLM for complex cases |
-| **Style Analyst** | `style_analyst.py` (155 lines) | Yes | Two-stage ChromaDB retrieval + LLM to find deviations from developer's personal patterns |
-| **Defect Hunter** | `defect_hunter.py` (203 lines) | Yes | Phase 1: Python AST analysis (instant); Phase 2: LLM for semantic bugs. Merged output |
-| **QA Checker** | `qa_checker.py` (149 lines) | Yes | Validates Style + Defect outputs are relevant to submitted code. Filters hallucinated findings |
-| **Confidence Evaluator** | `confidence_evaluator.py` (104 lines) | No | Rules-based scoring (4 factors, max 1.0). Triggers Loop 1 if < 0.70 |
-| **Insights Agent** | `insights_agent.py` (280 lines) | Yes | Answers Q&A grounded in fingerprints + reviews + optional ChromaDB code retrieval |
-
-### 4b. RAG Pipeline (`backend/src/core/embedder.py`)
-
-- **What gets embedded:** Every function extracted by `github_ingestor.py` + a file-level summary chunk per file (Ringer 2025 two-stage pattern)
-- **Model:** `jinaai/jina-embeddings-v2-base-code` via fastembed (ONNX), 768-dim vectors
-- **Vector store:** ChromaDB, cosine distance — HTTP server when `CHROMADB_URL` is set (k8s), else embedded persistent client at `backend/.chroma/`
-- **Collection naming:** `pcr-{sanitized_repo}-{md5_hash[:16]}` per user+repo
-- **Retrieval — `query_similar_staged()`** (L216-319):
-  - Stage 1: Query file-level chunks (`granularity="file"`) → top N file paths
-  - Stage 2: Query function-level chunks (`granularity="function"`) within those files
-- **Retrieval — `query_similar()`** (L158-213): Flat single-stage query (used nowhere in current code — only `query_similar_staged` is called)
-
-### 4c. Evaluation Pipeline (`backend/src/evaluation/`)
-
-| Component | File | Role |
+| Agent | LLM? | Role |
 |---|---|---|
-| **Pseudo-Reference Generator** | `pseudo_ref_gen.py` | AST-based refs (instant) + LLM refs. Combined list of "things a good review should mention" |
-| **STS Scorer** | `sts_scorer.py` | Encodes review sentences + pseudo-refs with MiniLM, computes pairwise cosine similarity. Produces comprehensiveness (recall), conciseness (precision), relevance (F1) |
-| **Quality Gate** | `quality_gate.py` | Rules-based pass/fail: comp ≥ 0.40, conc ≥ 0.30, rel ≥ 0.35. Sets `should_re_review` flag |
+| Orchestrator | No | Mediator: sequence, parallel Style ‖ Defect, both loops, trace, degraded/error on LLM failure |
+| Planner | Hybrid | Rules fast path when ≥2 fingerprint deviations are obvious; else LLM. Re-plans with the evaluator's or quality gate's feedback |
+| Style Analyst | Yes | Fingerprint + two-stage retrieval (3 files → up to 8 functions, same language) + LLM; direction filter and non-deviation suppression |
+| Defect Hunter | Yes | Phase 1 deterministic AST checks; phase 2 LLM semantic defects |
+| QA Checker | Yes | Drops findings irrelevant to the submitted code |
+| Confidence Evaluator | No | 4 hand-weighted rules (retrieval 0.3, QA 0.3, finding count 0.2, score sanity 0.2); threshold 0.7. A heuristic, not calibrated |
+| Insights Agent | Yes | Grounded Q&A with repo-scoped chat memory |
 
-### 4d. Persistence (Supabase PostgreSQL)
+### 4b. Retrieval (`core/embedder.py`)
 
-**Tables inferred from code** (no migration files exist — schema is defined in Supabase dashboard):
+Function-level and file-level chunks per repo; one collection per repository (`pcr-{repo}-{md5(owner__repo)[:16]}`), shared by everyone who analyzes it. `query_similar_staged()` is the retrieval used by the Style Analyst and Insights agent. Rebuilds go into `…-t…` and are swapped in only on success.
 
-| Table | Read by | Written by | Key columns (from code) |
-|---|---|---|---|
-| `fingerprints` | `cache_manager.py`, `insights_agent.py`, `review_routes.py` | `cache_manager.py` | `id`, `user_id` (UUID), `repo_url`, `repo_name`, `fingerprint_data` (jsonb), `num_functions`, `languages` (text[]), `last_commit_sha`, `updated_at` |
-| `user_reviews` | `insights_agent.py`, `frontend/lib/db.ts` | `frontend/lib/db.ts::saveReview()` | `id`, `user_id`, `repo_url`, `repo_name`, `submitted_code`, `overall_score`, `style_score`, `defect_score`, `comprehensiveness`, `conciseness`, `relevance`, `issues_count`, `issues` (jsonb), `status`, `agent_trace` (jsonb), `iterations`, `created_at` |
-| `user_repos` | `frontend/lib/db.ts::fetchRepos()`, `getUserAnalyzedRepos()` | `frontend/lib/db.ts::saveRepo()` | `id`, `user_id`, `repo_url`, `repo_name`, `functions_count`, `languages` (text[]), `analyzed_at` |
-| `user_chats` | `frontend/lib/db.ts` (load/save) | `frontend/lib/db.ts` (create/update) | `id`, `user_id`, `title`, `messages` (jsonb), `starred`, `last_repo_url`, `primary_repo_url`, `selected_repos` (jsonb), `updated_at` |
+### 4c. Evaluation layer (`backend/src/evaluation/`)
 
-**Note:** Backend writes to `fingerprints` via REST (`supabase_rest.py`). Frontend writes to `user_reviews`, `user_repos`, `user_chats` via the Supabase JS client directly. No backend route writes reviews or repos — that's all frontend-side.
+Pseudo-references (AST + LLM) → MiniLM STS → comprehensiveness / conciseness / relevance → quality gate (comp ≥ 0.40, conc ≥ 0.30, rel ≥ 0.35) that can trigger Loop 2. Internal signals only.
 
-### 4e. MCP Server (`backend/src/main.py:57-71`)
+### 4d. Persistence
 
-- Uses `fastapi-mcp` to auto-convert all FastAPI endpoints to MCP tools
-- Mounted at `/mcp` (SSE endpoint)
-- **Exposed tools** (from `mcp_config_examples.json`):
-  - `analyze_repo` — POST `/api/analyze-repo`
-  - `review_code` — POST `/api/review`
-  - `ask_insights` — POST `/api/chat`
-  - `health_check` — GET `/health`
-  - `cleanup_guest` — DELETE `/api/cleanup-guest/{session_id}`
-- Config examples provided for Claude Desktop, Cursor, VS Code Copilot, and production remote
+Schema and RLS are versioned in `migrations/001`–`010` (see `migrations/README.md`).
 
-### 4f. Frontend (`frontend/src/`)
-
-**Pages:**
-
-| Page | File | Description |
+| Table | Written by | RLS |
 |---|---|---|
-| Landing | `pages/LandingPage.tsx` | Marketing page with 9 sections: ticker, nav, hero, product showcase, how-it-works, bento features, stats, CTA, footer |
-| Login | `pages/LoginPage.tsx` (627 lines) | GitHub OAuth + guest mode. Animated fingerprint SVG visual. OAuth callback handler parses URL hash |
-| Chat | `pages/ChatPage.tsx` (436 lines) | Main interaction: sidebar + repo selector + message list + input. Routes input to analyze/review/Q&A based on content detection |
-| Dashboard | `pages/DashboardPage.tsx` (161 lines) | Summary cards, quality trend chart, issue breakdown, CRScore card, agent latency chart, loop health card, review history table |
+| `fingerprints` | backend `cache_manager.save_fingerprint` (service role) | service role only |
+| `user_repos` | worker `_record_user_repo` (service role); `lib/db.ts::saveRepo` on the sync fallback | own rows only (`auth.uid() = user_id`) |
+| `user_reviews` | `lib/db.ts::saveReview` (browser, user JWT) | own rows only |
+| `user_chats` | `lib/db.ts` chat helpers (browser) | own rows only |
+| `reviews`, `chat_messages`, `documentation`, `agent_traces` | nothing (legacy, empty) | locked (`010`) |
 
-**Key components:**
-- `chat/RepoSelector.tsx` — Multi-repo selection panel with primary repo indicator
-- `chat/FingerprintCard.tsx` — Rendered card for analyze results
-- `chat/ReviewResult.tsx` — Rendered card for review results with issues and scores
-- `chat/AgentTrace.tsx` — Expandable agent execution timeline
-- `dashboard/CRScoreCard.tsx`, `AgentLatencyChart.tsx`, `LoopHealthCard.tsx` — Advanced metrics
+Redis holds job records (`personacr:job:*`) and per-user analysis records (`personacr:analysis:*`), 7-day TTL.
 
-**State:** Zustand store with localStorage persistence (`useStore.ts`). Persists theme, accent, chats, selected repos, guest session. Messages are NOT persisted in localStorage — fetched from Supabase on load.
+### 4e. Frontend (`frontend/src/`)
 
-**Auth modes:**
-- **GitHub OAuth** — Full Supabase auth, data persisted across sessions
-- **Guest mode** — Random `guest_` UUID, ChromaDB collections cleaned on tab close via `sendBeacon`, no Supabase persistence for chats
+| Page | File | What it shows |
+|---|---|---|
+| Landing | `pages/LandingPage.tsx` | static marketing page |
+| Login | `pages/LoginPage.tsx` | GitHub OAuth, Continue as Guest (anonymous sign-in) |
+| Repositories | `pages/ReposPage.tsx` | repo cards, import dialog, live analysis status, Reanalyze |
+| Repo detail | `pages/RepoDetailPage.tsx` | Overview, Convention Atlas, Chats, Reviews |
+| Chat/Review Studio | `pages/ChatPage.tsx` | threads by repo, Ask / Review code, code panel with inline findings |
+| Review | `pages/ReviewPage.tsx` | a saved review with its trace |
+| Dashboard | `pages/DashboardPage.tsx` | all repos / one repo |
+| Settings | `pages/SettingsPage.tsx` | account, theme, accent, feature status |
 
-### 4g. Evals (`evals/`)
+`lib/api/http.ts` attaches the Supabase access token to every API call; `lib/api/capabilities.ts` gates features that aren't built ("coming soon", never mock data).
 
-- **Test set:** 19 labeled Python snippets (15 with defects, 4 clean) in `test_set.json`
-- **Runner:** `run_eval.py` — runs each snippet through `hunt_defects()` directly, measures catch-rate and false-positive rate
-- **Comparator:** `compare_runs.py` — compares two versioned runs for prompt regression detection
-- **Results:** `eval_v1.json` and `eval_v2.json` exist in `results/`
+### 4f. Evals (`evals/`)
+
+- **Personalization benchmark** (`minimal_a*`, `shared_scale_metric.py`): 7 in/off-style pairs on `psf/requests`, fair shared-scale metric, N=14, inconclusive (Llama 3.3 70B on Groq, July 2026).
+- **Defect Hunter eval** (`run_eval.py`, `compare_runs.py`, `test_set.json`): 19 Python snippets (15 seeded defects, 4 clean), keyword-scored; v1/v2 prompt results in `results/`.
+- **Ops measurements** (`results/ops_measurements.json` + `results/ops_logs/`): memory, batches, timings, image size, minikube verification, each value with provenance.
 
 ---
 
-## 5. Current Status
+## 5. Status
 
-| Feature | Status | Evidence |
-|---|---|---|
-| GitHub repo ingestion (PyGithub) | **Built** | `github_ingestor.py` — full implementation, Python AST + regex for other langs |
-| 30-feature fingerprint extraction | **Built** | `pattern_extractor.py` — all 30 Ghaleb MSR 2026 features computed (L443-483) |
-| Jina code embeddings + ChromaDB | **Built** | `embedder.py` — `embed_and_store()`, `query_similar_staged()` fully wired |
-| Two-stage retrieval (Ringer 2025) | **Built** | `embedder.py:216-319` — file-level then function-level |
-| Supabase fingerprint caching | **Built** | `cache_manager.py` — SHA-based staleness detection |
-| Planner (hybrid rules + LLM) | **Built** | `planner.py` — rules fast-path, LLM fallback |
-| Style Analyst (ChromaDB + LLM) | **Built** | `style_analyst.py` — two-stage retrieval + LLM comparison |
-| Defect Hunter (AST + LLM) | **Built** | `defect_hunter.py` — AST phase, LLM phase, merged |
-| QA Checker (hallucination filter) | **Built** | `qa_checker.py` — LLM validates + filters irrelevant findings |
-| Confidence Evaluator (rules) | **Built** | `confidence_evaluator.py` — 4-factor scoring, threshold 0.70 |
-| Agentic Loop 1 (confidence re-plan) | **Built** | `orchestrator.py:78-181` — while loop with break on confidence |
-| Agentic Loop 2 (quality gate re-review) | **Built** | `orchestrator.py:251-380` — re-runs full Layer 2+3 |
-| Parallel Style + Defect execution | **Built** | `orchestrator.py:93-106` — `asyncio.gather()` |
-| CRScore pseudo-reference generation | **Built** | `pseudo_ref_gen.py` — AST + LLM sources |
-| STS scoring (MiniLM) | **Built** | `sts_scorer.py` — pairwise cosine, comp/conc/rel metrics |
-| Quality gate | **Built** | `quality_gate.py` — threshold-based pass/fail |
-| MCP server | **Built** | `main.py:57-71` — fastapi-mcp, mounted at `/mcp` |
-| Insights / Q&A agent | **Built** | `insights_agent.py` — grounded in fingerprints + reviews + ChromaDB |
-| Frontend chat interface | **Built** | `ChatPage.tsx` — input routing, message persistence, repo selection |
-| Frontend dashboard | **Built** | `DashboardPage.tsx` — 7 dashboard components with advanced metrics |
-| Frontend landing page | **Built** | `LandingPage.tsx` — 9 marketing sections |
-| GitHub OAuth + guest mode | **Built** | `LoginPage.tsx`, `supabase.ts`, `useStore.ts` — full OAuth flow + guest fallback |
-| Defect Hunter eval harness | **Built** | `evals/run_eval.py` — 19-case test set, catch-rate + FP measurement |
-| Prompt regression testing | **Built** | `evals/compare_runs.py` — v1 vs v2 comparison with per-case regression detection |
-| PDF report generation | **Planned** | `requirements.txt:26` lists `reportlab` but no import exists anywhere in source |
-| pylint integration | **Planned** | `requirements.txt:19` lists `pylint`, `models.py:261` references `"pylint"` as a source type, but no code actually calls pylint |
-| Documentation generation | **Planned** | `models.py:161-176` defines `DocRequest`, `DocContent`, `DocResponse`, `DocumentationOutput` (L250-254) — no route or agent implements this |
-| Analytics API endpoint | **Planned** | `models.py:136-157` defines `MonthlyScore`, `IssueCategory`, `AnalyticsResponse` — no backend route serves these; dashboard computes stats client-side |
-| Job status tracking | **Built** | Async review via Redis/RQ: `POST /api/reviews` + `GET /api/reviews/{job_id}` wire `StatusResponse`; sync `POST /api/review` retained |
-| Report generation endpoint | **Built** | `GET /api/reviews/{job_id}/report` returns `ReportResponse` when job completed |
-| Old ChatRequest/ChatMessage models | **Planned** | `models.py:63-78` defines `ChatRequest` and `ChatMessage` — not used by any route (replaced by `InsightsChatRequest`) |
+| Feature | Status |
+|---|---|
+| Background analysis with live stages, heartbeat recovery, build-aside index swap | **Built**, verified on minikube |
+| ~30-feature fingerprint, Python AST + regex for 10 other languages | **Built** (approximations outside Python) |
+| One-line repo summary | **Built** |
+| Six-agent review on the worker, two loops, degraded/error handling | **Built** |
+| Line-level findings + repo-vs-code style metrics | **Built** |
+| Q&A with repo-scoped memory | **Built** |
+| JWT auth on every `/api` route, RLS, guest anonymous sign-in | **Built**, live RLS test passed |
+| Prometheus metrics + Grafana dashboard | **Built** (dev scale) |
+| k8s manifests for local minikube | **Built** (single node, not HA) |
+| Cloud deployment / live demo | **Not built** |
+| PDF reports (`reportlab`), pylint integration, documentation generation, analytics API | **Not built** (dependencies or models exist without code paths) |
+| Calibrated confidence | **Not built** (heuristic today) |
 
 ---
 
-## 6. Known Gaps & Dead Code
+## 6. Known gaps & dead code
 
-### Unused Pydantic Models (dead code)
-
-| Model | File:Line | Notes |
-|---|---|---|
-| `ChatRequest` | `models.py:63` | Not imported or used anywhere — superseded by `InsightsChatRequest` |
-| `ChatMessage` (backend) | `models.py:71` | Not imported or used anywhere — frontend has its own `ChatMessage` type |
-| `IssueFound` | `models.py:90` | Not imported or used anywhere |
-| `ReviewScores` | `models.py:97` | Not imported or used anywhere |
-| `ReviewOutput` | `models.py:104` | Not imported or used anywhere |
-| `ReviewResponse` | `models.py:114` | Not imported or used anywhere |
-| `MonthlyScore` | `models.py:136` | Not imported or used anywhere |
-| `IssueCategory` | `models.py:142` | Not imported or used anywhere |
-| `AnalyticsResponse` | `models.py:148` | Not imported or used anywhere |
-| `DocRequest` | `models.py:161` | Not imported or used anywhere |
-| `DocContent` | `models.py:166` | Not imported or used anywhere |
-| `DocResponse` | `models.py:172` | Not imported or used anywhere |
-| `DocumentationOutput` | `models.py:250` | Not imported or used anywhere |
-| `FingerprintResponse` | `models.py:52` | Not imported or used anywhere — routes return raw dicts |
-| `InsightsAgentInput` | `models.py:301` | Not imported or used anywhere |
-
-### Frontend Stubs
-
-None. The five unused 3-line stubs (`hooks/useTheme.ts`, `hooks/useInView.ts`, `components/ui/{Card,Button,Badge}.tsx`) had no importers and were removed. Landing components use `useInView` from `framer-motion`.
-
-### Unused Function
-
-| Function | File:Line | Notes |
-|---|---|---|
-| `query_similar()` | `embedder.py:158-213` | Flat single-stage query — only `query_similar_staged()` is used by `style_analyst.py` and `insights_agent.py` |
-
-### Dependency Gaps
-
-| Dependency | File | Issue |
-|---|---|---|
-| `reportlab` | `requirements.txt:26` | Listed but never imported — no PDF generation code exists |
-| `pylint` + `astroid` | `requirements.txt:19-20` | Listed but never imported — pseudo-ref model references `"pylint"` as a source string but no pylint analysis runs |
-| `sentence-transformers` | `sts_scorer.py:32` | Used at runtime but NOT listed in `requirements.txt` — comment on L23 says "no extra install" which is incorrect |
-| `numpy` | `sts_scorer.py:20` | Used at runtime but NOT listed in `requirements.txt` (transitive dep of sentence-transformers) |
-
-### Schema Gap
-
-- No SQL migration files exist. The Supabase schema is managed entirely through the Supabase dashboard. Column types are inferred from code usage, not from a source-controlled definition.
-
----
-
-## 7. Open Questions
-
-1. **`sentence-transformers` and `numpy` are not in `requirements.txt`** — the STS scorer imports `sentence_transformers` and `numpy` at runtime. The comment on `requirements.txt:23` says "no extra install" but this seems incorrect; `sentence-transformers` is a separate pip package. Is this installed implicitly by another dependency, or is it a missing requirement?
-
-2. **Backend writes fingerprints but frontend writes reviews** — `saveReview()` in `frontend/src/lib/db.ts:82` writes directly to Supabase via the JS client, while fingerprints are written by the backend via `supabase_rest.py`. This split means the backend never records reviews. Is this intentional? The Supabase RLS policy implications are unclear.
-
-3. **16 Pydantic models defined but never used** — `models.py` contains models for documentation generation, analytics, reports, job status, and old chat types that no route or agent references. Are these planned features, or should they be cleaned up?
+- **Unused Pydantic models** in `core/models.py` (no references outside the file): `ChatRequest`, `ChatMessage`, `IssueFound`, `ReviewScores`, `ReviewOutput`, `ReviewResponse`, `MonthlyScore`, `IssueCategory`, `AnalyticsResponse`, `DocRequest`, `DocContent`, `DocResponse`, `DocumentationOutput`, `FingerprintResponse`, `InsightsAgentInput`.
+- **Unused function:** `embedder.query_similar()` (flat single-stage query); only `query_similar_staged()` is called.
+- **Unused dependencies:** `reportlab`, `pylint`/`astroid` are in `requirements.txt` with no imports.
+- **Outside the Docker image**, `requirements.txt` resolves CUDA torch on Linux (the image installs the CPU build first).
+- **No end-to-end browser tests** in CI.
+- See README → Limitations for product-level limits (benchmark, scale, guests).
