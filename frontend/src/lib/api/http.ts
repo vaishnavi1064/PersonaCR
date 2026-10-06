@@ -2,7 +2,19 @@
 // and the Supabase access token on every call — the backend rejects /api/* without
 // one and takes the user from it (never from the body or query string).
 
-export const API_BASE: string = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+/**
+ * Base URL for API calls. "." or "/" (the nginx images) means same origin from
+ * the site root — "./api/…" would resolve against the current route, so on
+ * /repos/owner/name it hit /repos/owner/api/… and got index.html back.
+ * Unset falls back to the local dev backend.
+ */
+export function resolveApiBase(raw: string | undefined): string {
+  if (!raw) return 'http://localhost:8000'
+  if (raw === '.' || raw === '/') return ''
+  return raw.replace(/\/+$/, '')
+}
+
+export const API_BASE: string = resolveApiBase(import.meta.env.VITE_API_URL)
 
 export type ApiErrorKind = 'network' | 'timeout' | 'http' | 'parse'
 

@@ -57,7 +57,7 @@ docker build -t personacr-frontend:latest ./frontend `
   --build-arg VITE_SUPABASE_ANON_KEY="YOUR_ANON_KEY"
 ```
 
-`VITE_API_URL` defaults to `.` (same-origin) so the frontend nginx proxy can reach the backend Service without CORS pain.
+`VITE_API_URL` defaults to `.` — same origin, from the site root (`/api/…` on every route) — so the frontend nginx proxy can reach the backend Service without CORS pain.
 
 Alternative: `minikube image build -t personacr-backend:latest -f backend/Dockerfile backend`
 

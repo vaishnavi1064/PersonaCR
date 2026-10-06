@@ -4,7 +4,7 @@ vi.mock('../db', () => ({ saveRepo: vi.fn() }))
 
 import { askQuestion } from './chats'
 import { cleanupGuestOnUnload } from './guest'
-import { request, setAuthTokenProvider } from './http'
+import { request, resolveApiBase, setAuthTokenProvider } from './http'
 import { listRepos, startAnalyzeJob } from './repos'
 
 const USER = '3f2b8c1e-9a4d-4e57-8b1a-2c6d9e0f1a2b'
@@ -72,5 +72,20 @@ describe('the user is never sent — the server reads the token', () => {
     expect(lastCall().body).not.toHaveProperty('user_id')
     await askQuestion('q', 'https://github.com/acme/api', null)
     expect(lastCall().body).not.toHaveProperty('user_id')
+  })
+})
+
+describe('API base URL', () => {
+  it('same-origin builds ("." or "/") call /api from the site root on any route', () => {
+    expect(resolveApiBase('.')).toBe('')
+    expect(resolveApiBase('/')).toBe('')
+    // With base "" a call on /repos/owner/name goes to /api/repos, not /repos/owner/api/repos
+    expect(new URL(`${resolveApiBase('.')}/api/repos`, 'http://app/repos/owner/name').pathname).toBe('/api/repos')
+  })
+
+  it('unset → local dev backend; explicit URLs lose a trailing slash', () => {
+    expect(resolveApiBase(undefined)).toBe('http://localhost:8000')
+    expect(resolveApiBase('')).toBe('http://localhost:8000')
+    expect(resolveApiBase('https://api.example.com/')).toBe('https://api.example.com')
   })
 })
