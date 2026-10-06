@@ -161,7 +161,17 @@ def test_reanalyze_while_live_still_returns_the_running_job(client, redis):
     assert res.status_code == 200 and res.json()["job_id"] == "job-1" and client.enqueued == []
 
 
-def test_polling_a_dead_job_reports_failed(client, redis):
+def test_polling_a_dead_job_reports_failed(client, redis, monkeypatch):
+    from backend.src.routes import repo_routes
+
+    class NoSavedRepos:  # GET /api/repos must not reach the real database
+        def select_many(self, *a, **k):
+            return []
+
+        def select_raw(self, *a, **k):
+            return []
+
+    monkeypatch.setattr(repo_routes, "SupabaseREST", NoSavedRepos)
     _running_analysis(redis, age=liveness.STALE_AFTER_SECONDS + 5)
     body = client.get("/api/analyze-jobs/job-1").json()
     assert body["state"] == "failed" and body["error"] == liveness.WORKER_STOPPED

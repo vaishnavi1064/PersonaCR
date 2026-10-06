@@ -1,6 +1,7 @@
 """Shared fixtures for PersonaCR verification suite."""
 from __future__ import annotations
 
+import socket
 import sys
 from pathlib import Path
 
@@ -11,6 +12,37 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from backend.src.core.github_ingestor import CodeChunk
+
+# Hosts no test may reach: the real database/auth and the LLM providers. CI has no
+# secrets, and a test that only passes against the live project isn't testing the
+# code. Live checks opt in with @pytest.mark.integration / @pytest.mark.groq.
+_REAL_SERVICES = (".supabase.co", "anthropic.com", "groq.com")
+
+
+@pytest.fixture(autouse=True)
+def _no_real_services(request, monkeypatch):
+    """
+    Block DNS for real services and fail the test if it tried — even when the app
+    swallowed the error (several DB paths catch exceptions and carry on). Works for
+    every HTTP stack (httpx, the Anthropic SDK's httpx2, urllib) since all resolve here.
+    """
+    if request.node.get_closest_marker("integration") or request.node.get_closest_marker("groq"):
+        yield
+        return
+    attempts: list[str] = []
+    real_getaddrinfo = socket.getaddrinfo
+
+    def guarded(host, *args, **kwargs):
+        name = host.decode() if isinstance(host, bytes) else str(host)
+        if name.endswith(_REAL_SERVICES):
+            attempts.append(name)
+            raise OSError(f"tests must not reach {name} — mock it")
+        return real_getaddrinfo(host, *args, **kwargs)
+
+    monkeypatch.setattr(socket, "getaddrinfo", guarded)
+    yield
+    if attempts:
+        pytest.fail(f"test tried to reach real service(s) {sorted(set(attempts))}; mock the client instead")
 
 
 @pytest.fixture
