@@ -27,6 +27,8 @@ export interface Fingerprint {
   maxFunctionLength: number | null
   docstringCoverage: number | null
   typeHintUsage: number | null
+  /** Functions type hints were measured on (Python/TypeScript); null on fingerprints from before that field existed. */
+  typeHintFunctions: number | null
   errorHandlingRate: number | null
   avgComplexity: number | null
   namingConvention: NamingConvention | null

@@ -30,9 +30,17 @@ export default function ConventionAtlas({ fingerprint: fp, chunksAnalyzed }: Con
   const patterns = Object.entries(fp.patternFrequency).sort((a, b) => b[1] - a[1])
 
   function note(m: MetricDef): string | null {
+    if (m.key === 'type_hint_usage' && fp.typeHintFunctions != null) {
+      // Current fingerprints: measured on Python/TypeScript only, null when there are none
+      if (fp.typeHintFunctions === 0) return 'Not applicable — this repo has no Python or TypeScript functions.'
+      const total = fp.totalFunctions ?? py.total
+      return fp.typeHintFunctions < total
+        ? `Measured on the ${fp.typeHintFunctions.toLocaleString('en-US')} Python/TypeScript functions (of ${total.toLocaleString('en-US')}).`
+        : null
+    }
     if (!m.pythonOnly || py.total === 0) return null
     if (m.pythonOnly === 'assumed' && py.others.length > 0) {
-      return `Not measured outside Python — the ${py.others.map(languageLabel).join(', ')} functions are counted as typed, so this value overstates real usage.`
+      return `Not measured outside Python — this analysis predates the fix and counted the ${py.others.map(languageLabel).join(', ')} functions as typed. Reanalyze to measure it properly.`
     }
     if (m.pythonOnly === 'measured' && py.python < py.total) {
       return py.python === 0 ? 'Python only — this repo has no Python functions.' : `Python functions only (${py.python.toLocaleString('en-US')} of ${py.total.toLocaleString('en-US')}).`
@@ -59,7 +67,7 @@ export default function ConventionAtlas({ fingerprint: fp, chunksAnalyzed }: Con
             <dl className="divide-y divide-line">
               {g.metrics.map((m) => {
                 const caveat = note(m)
-                const unmeasured = caveat?.startsWith('Not measured') ?? false
+                const unmeasured = (caveat?.startsWith('Not measured') || caveat?.startsWith('Not applicable')) ?? false
                 const { value, exact } = formatMetric(m.kind, raw[m.key])
                 return (
                   <div key={m.key} className="flex items-start justify-between gap-4 px-4 py-3">

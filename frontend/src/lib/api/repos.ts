@@ -39,7 +39,7 @@ const NAMING: NamingConvention[] = ['snake_case', 'camelCase', 'PascalCase', 'un
 
 const KNOWN_KEYS = new Set([
   'total_functions', 'avg_function_length', 'max_function_length', 'docstring_coverage',
-  'type_hint_usage', 'error_handling_rate', 'avg_complexity', 'naming_convention', 'languages',
+  'type_hint_usage', 'type_hint_functions', 'error_handling_rate', 'avg_complexity', 'naming_convention', 'languages',
   'language_distribution', 'comment_density', 'avg_line_length', 'primary_indent_depth',
   'common_patterns', 'pattern_frequency',
 ])
@@ -84,6 +84,7 @@ export function normalizeFingerprint(raw: unknown): Fingerprint | null {
     maxFunctionLength: num(r.max_function_length),
     docstringCoverage: num(r.docstring_coverage),
     typeHintUsage: num(r.type_hint_usage),
+    typeHintFunctions: num(r.type_hint_functions),
     errorHandlingRate: num(r.error_handling_rate),
     avgComplexity: num(r.avg_complexity),
     namingConvention: naming,
@@ -100,10 +101,13 @@ export function normalizeFingerprint(raw: unknown): Fingerprint | null {
 
 /** 2–3 headline chips for a repo card, e.g. ["79% type hints", "snake_case", "41% docstrings"]. */
 /**
- * Type hints are only measured for Python: the extractor counts every
- * non-Python function as typed. False when the repo has non-Python functions.
+ * Whether the type-hint rate means something. Current fingerprints measure it on
+ * Python/TypeScript functions only (null when there are none). Older ones counted
+ * every non-Python function as typed, so for those it's only trusted when the
+ * repo is all Python.
  */
 export function typeHintsMeasured(fp: Fingerprint): boolean {
+  if (fp.typeHintFunctions != null) return fp.typeHintUsage != null && fp.typeHintFunctions > 0
   const langs = Object.keys(fp.languageDistribution).length ? Object.keys(fp.languageDistribution) : fp.languages
   return langs.every((l) => l.toLowerCase() === 'python')
 }

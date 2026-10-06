@@ -77,6 +77,37 @@ def _extract_python_functions(source: str, file_path: str) -> list[CodeChunk]:
     return chunks
 
 
+# Lines allowed between a doc comment and its function: annotations/attributes.
+_ANNOTATION_LINE = re.compile(r"^\s*(@[\w.]+(\(.*\))?|#\[.*\]|\[[\w.]+(\(.*\))?\])\s*$")
+
+
+def _has_leading_doc_comment(lines: list[str], start_line: int, language: str) -> bool:
+    """
+    True when a documentation comment sits directly above the function that
+    starts at 0-based ``start_line`` (only annotations/attributes in between):
+    ``/** … */`` (Javadoc, JSDoc, KDoc, Doxygen), ``///`` (Rust, C#, C++), or —
+    for Go, whose convention is plain ``//`` — any ``//`` comment line.
+    A function chunk starts at its signature, so this has to look at the file.
+    """
+    i = start_line - 1
+    while i >= 0 and _ANNOTATION_LINE.match(lines[i]):
+        i -= 1
+    if i < 0:
+        return False
+    above = lines[i].strip()
+    if above.startswith("///"):
+        return True
+    if language == "go" and above.startswith("//"):
+        return True
+    if above.endswith("*/"):
+        # Walk up to the opening of this block; doc blocks open with /**
+        j = i
+        while j >= 0 and "/*" not in lines[j]:
+            j -= 1
+        return j >= 0 and "/**" in lines[j]
+    return False
+
+
 def _extract_generic_functions(source: str, file_path: str, language: str) -> list[CodeChunk]:
     """
     Regex-based extraction for non-Python files.
@@ -106,6 +137,7 @@ def _extract_generic_functions(source: str, file_path: str, language: str) -> li
             source=func_source,
             start_line=start_line + 1,
             end_line=end_line + 1,
+            metadata={"doc_comment": _has_leading_doc_comment(lines, start_line, language)},
         ))
     return chunks
 

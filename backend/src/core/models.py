@@ -14,7 +14,10 @@ class FingerprintData(BaseModel):
     docstring_coverage: float = 0.0
     naming_convention: str = "unknown"       # snake_case | camelCase | PascalCase
     error_handling_rate: float = 0.0
-    type_hint_usage: float = 0.0
+    # Share of Python/TypeScript functions with annotations; None = not measured
+    # (no such functions — statically typed languages aren't counted as typed).
+    type_hint_usage: float | None = None
+    type_hint_functions: int = 0             # functions type_hint_usage is based on
     avg_complexity: float = 0.0
     common_patterns: list[str] = []
     pattern_frequency: dict[str, int] = {}

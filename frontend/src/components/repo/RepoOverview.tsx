@@ -39,7 +39,7 @@ export default function RepoOverview({ repo, chats, reviews, onTab }: RepoOvervi
             <StatTile
               icon={<Type size={16} />}
               value={fp.typeHintUsage != null && typeHintsMeasured(fp) ? pct(fp.typeHintUsage) : null}
-              label={typeHintsMeasured(fp) ? 'Type hints' : 'Type hints (Python only)'}
+              label={typeHintsMeasured(fp) ? 'Type hints' : 'Type hints (not measured)'}
             />
             <StatTile icon={<Sigma size={16} />} value={fp.avgComplexity != null ? fp.avgComplexity.toFixed(1) : null} label="Est. complexity" />
           </div>

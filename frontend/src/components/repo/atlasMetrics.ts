@@ -39,14 +39,14 @@ export const ATLAS_GROUPS: MetricGroup[] = [
     title: 'Naming & typing',
     metrics: [
       { key: 'naming_convention', label: 'Naming convention', kind: 'text', description: 'Most common style among function names (snake_case, camelCase or PascalCase).' },
-      { key: 'type_hint_usage', label: 'Type hints', kind: 'pct', pythonOnly: 'assumed', description: 'Share of functions with a parameter or return annotation, from the Python AST.' },
+      { key: 'type_hint_usage', label: 'Type hints', kind: 'pct', pythonOnly: 'assumed', description: 'Share of Python and TypeScript functions with a parameter or return annotation. Not measured for languages that always declare types (Java, Go, Rust, C#, Kotlin, C/C++) or for plain JavaScript.' },
     ],
   },
   {
     id: 'docs',
     title: 'Documentation & comments',
     metrics: [
-      { key: 'docstring_coverage', label: 'Docstring coverage', kind: 'pct', description: 'Share of functions with a docstring (Python AST). Other languages count a /** or /// doc comment.' },
+      { key: 'docstring_coverage', label: 'Docstring coverage', kind: 'pct', description: 'Python: a docstring (from the AST). Other languages: a doc comment directly above the function — /** … */ or /// (Go: any // comment line).' },
       { key: 'comment_density', label: 'Comment density', kind: 'pct', description: 'Comment lines ÷ all lines, averaged per function.' },
       { key: 'comment_to_code_ratio', label: 'Comment-to-code ratio', kind: 'ratio', description: 'All comment lines ÷ all code lines, across every function.' },
       { key: 'inline_comment_ratio', label: 'Inline comments', kind: 'pct', description: 'Share of comments that share a line with code, rather than standing on their own line (whole-line comments and docstring lines).' },
@@ -88,7 +88,7 @@ export const ATLAS_GROUPS: MetricGroup[] = [
 ]
 
 /** Fields shown elsewhere on the page (languages, patterns) or not useful as rows. */
-export const ATLAS_SPECIAL_KEYS = new Set(['languages', 'language_distribution', 'common_patterns', 'pattern_frequency'])
+export const ATLAS_SPECIAL_KEYS = new Set(['languages', 'language_distribution', 'common_patterns', 'pattern_frequency', 'type_hint_functions'])
 
 export const PATTERN_LABEL: Record<string, string> = {
   early_return: 'Early return',

@@ -54,6 +54,33 @@ def _has_type_hints(source: str) -> bool:
         return ":" in source and "->" in source
 
 
+# Languages where type annotations are optional, so their share means something.
+# Statically typed languages (Java, Go, Rust, C#, Kotlin, C/C++) always declare
+# types, and plain JavaScript has no annotation syntax: not measured.
+TYPE_HINT_LANGUAGES = frozenset({"python", "typescript"})
+
+_TS_SIGNATURE = re.compile(r"\(([^)]{0,200})\)\s*(:\s*[^{;]+?)?\s*(?:=>\s*)?\{", re.S)
+_TS_PARAM_ANNOTATION = re.compile(r"[\w$\]}]\s*\??\s*:\s*[^\s,)]")
+
+
+def _ts_has_type_annotations(source: str) -> bool:
+    """TypeScript: a parameter annotation (``x: T``, ``x?: T``) or a return type (``): T``)."""
+    m = _TS_SIGNATURE.search(source[:800])
+    if not m:
+        return False
+    params, return_type = m.group(1), m.group(2)
+    return bool(return_type) or bool(_TS_PARAM_ANNOTATION.search(params))
+
+
+def _has_type_hints_for(source: str, language: str) -> bool | None:
+    """Whether a function is annotated; None when the language isn't measured."""
+    if language == "python":
+        return _has_type_hints(source)
+    if language == "typescript":
+        return _ts_has_type_annotations(source)
+    return None
+
+
 def _has_error_handling(source: str) -> bool:
     """Detect try/except (Python) or try/catch (others)."""
     return bool(re.search(r"\btry\b", source) and re.search(r"\b(except|catch)\b", source))
@@ -119,12 +146,14 @@ def _comment_stats(source: str, language: str) -> dict:
     block_count = 0
     code_lines = 0
 
-    if language == "python":
+    if language in ("python", "ruby"):
+        # Hash comments; Python docstring lines count as whole-line comments
+        markers = ("#", '"""', "'''") if language == "python" else ("#",)
         for line in lines:
             stripped = line.strip()
-            if stripped.startswith(("#", '"""', "'''")):
+            if stripped.startswith(markers):
                 block_count += 1
-            elif "#" in line or '"""' in line or "'''" in line:
+            elif any(m in line for m in markers):
                 inline_count += 1
                 code_lines += 1
             elif stripped:
@@ -365,10 +394,14 @@ def extract_fingerprint(chunks: list) -> dict:
 
         if lang == "python":
             has_docstring_list.append(_has_docstring(source))
-            has_type_hints_list.append(_has_type_hints(source))
         else:
-            has_docstring_list.append(bool(re.search(r"/\*\*|///", source)))
-            has_type_hints_list.append(True)
+            # Doc comment directly above the function, found by the ingestor
+            # (the chunk itself starts at the signature).
+            has_docstring_list.append(bool(chunk.metadata.get("doc_comment", False)))
+
+        hinted = _has_type_hints_for(source, lang)
+        if hinted is not None:
+            has_type_hints_list.append(hinted)
 
         all_patterns.extend(_detect_patterns(source))
 
@@ -447,7 +480,12 @@ def extract_fingerprint(chunks: list) -> dict:
         "docstring_coverage": round(sum(has_docstring_list) / total, 3),
         "naming_convention": _detect_naming_convention(function_names),
         "error_handling_rate": round(sum(has_error_handling_list) / total, 3),
-        "type_hint_usage": round(sum(has_type_hints_list) / total, 3),
+        # Share of Python/TypeScript functions with annotations; None when the repo
+        # has none (statically typed languages aren't counted as "typed").
+        "type_hint_usage": (
+            round(sum(has_type_hints_list) / len(has_type_hints_list), 3) if has_type_hints_list else None
+        ),
+        "type_hint_functions": len(has_type_hints_list),
         "avg_complexity": round(mean(complexity_scores), 2),
         "common_patterns": list(pattern_counts.keys()),
         "pattern_frequency": dict(pattern_counts),

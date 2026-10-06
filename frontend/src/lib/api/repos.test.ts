@@ -48,3 +48,12 @@ describe('fingerprint', () => {
     expect(normalizeFingerprint(null)).toBeNull()
   })
 })
+
+describe('type hints on current fingerprints', () => {
+  it('trusts the measured rate and treats null as not measured', () => {
+    const java = normalizeFingerprint({ type_hint_usage: null, type_hint_functions: 0, naming_convention: 'camelCase', language_distribution: { java: 10 } })
+    expect(fingerprintChips(java)).toEqual(['camelCase'])
+    const mixed = normalizeFingerprint({ type_hint_usage: 0.5, type_hint_functions: 2, language_distribution: { python: 2, java: 3 } })
+    expect(fingerprintChips(mixed)).toEqual(['50% type hints'])
+  })
+})

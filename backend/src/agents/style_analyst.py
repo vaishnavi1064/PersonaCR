@@ -260,6 +260,13 @@ def build_fingerprint_direction_guide(fingerprint: dict) -> str:
         key = spec["fp_key"]
         if key not in fingerprint:
             continue
+        if fingerprint[key] is None:
+            # e.g. type_hint_usage for a Java/Go/Rust repo: no habit was measured
+            lines.append(
+                f"  - {key}=not measured for this repo's languages: do NOT flag "
+                f"deviations from the developer's habit for this feature."
+            )
+            continue
         try:
             rate = float(fingerprint[key])
         except (TypeError, ValueError):
