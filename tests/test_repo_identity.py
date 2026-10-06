@@ -96,7 +96,9 @@ def test_analyze_as_user_a_review_as_user_b_shares_collection(isolated_chroma, m
     monkeypatch.setattr(analysis_mod, "SupabaseREST", MagicMock())
 
     user_a = str(uuid.uuid4())
-    out = ar.analyze_repo(ar.AnalyzeRequest(repo_url=REPO_URL, user_id=user_a, force_refresh=True))
+    from backend.src.core.auth import AuthUser
+
+    out = ar.analyze_repo(ar.AnalyzeRequest(repo_url=REPO_URL, force_refresh=True), AuthUser(user_a, False))
     assert out["embedding"]["status"] == "ok"
 
     # Review path (any caller — here "user B") derives the namespace from the repo URL.

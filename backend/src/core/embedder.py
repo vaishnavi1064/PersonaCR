@@ -10,6 +10,7 @@ import logging
 import os
 import re
 import hashlib
+import uuid
 from typing import Any
 from urllib.parse import urlparse
 
@@ -217,19 +218,78 @@ def embed_and_store(
     client = _get_client()
 
     col_name = _collection_name(user_id, repo_name)
+    _drop_leftovers(client, col_name)
 
-    # Delete and recreate collection to avoid stale embeddings
-    try:
-        client.delete_collection(col_name)
-    except Exception:
-        pass
+    # Build into a temporary collection; the live one keeps serving reviews and is
+    # replaced only once every chunk is in (see _swap_in). A failed or killed build
+    # never leaves the repo with a partial index.
+    tmp_name = f"{col_name}-t{uuid.uuid4().hex[:8]}"
     collection = client.create_collection(
-        name=col_name,
+        name=tmp_name,
         metadata={"hnsw:space": "cosine", "user_id": user_id, "analyzed_by": analyzed_by or user_id},
     )
+    try:
+        batches = _embed_into(collection, chunks, model, batch_size)
+        _swap_in(client, collection, col_name)
+    except BaseException:
+        _delete_quietly(client, tmp_name)
+        raise
 
-    # Embed + upsert one bounded batch at a time; vectors are never accumulated
-    # across batches.
+    logger.info(
+        "Stored %s chunks in Chroma collection %s (%s batches)",
+        len(chunks), col_name, len(batches),
+    )
+    return {"collection": col_name, "chunks_embedded": len(chunks), "batches": len(batches)}
+
+
+# Temporary (-t…) and displaced (-o…) collections: _collection_name is at most 51
+# chars, so a 10-char suffix stays inside Chroma's 63-char limit.
+def _is_leftover(name: str, col_name: str) -> bool:
+    return name.startswith(f"{col_name}-t") or name.startswith(f"{col_name}-o")
+
+
+def _collection_names(client: Any) -> list[str]:
+    return [c if isinstance(c, str) else c.name for c in client.list_collections()]
+
+
+def _drop_leftovers(client: Any, col_name: str) -> None:
+    """Remove temp/displaced collections a killed earlier build left behind."""
+    try:
+        for name in _collection_names(client):
+            if _is_leftover(name, col_name):
+                _delete_quietly(client, name)
+    except Exception as e:
+        logger.warning("Could not list Chroma collections for cleanup: %s", e)
+
+
+def _delete_quietly(client: Any, name: str) -> None:
+    try:
+        client.delete_collection(name)
+    except Exception:
+        pass
+
+
+def _swap_in(client: Any, built: Any, col_name: str) -> None:
+    """Make the fully built collection the live one; the old one is kept until then."""
+    old_name = f"{col_name}-o{uuid.uuid4().hex[:8]}"
+    try:
+        old = client.get_collection(col_name)
+    except Exception:
+        old = None  # first build
+    if old is not None:
+        old.modify(name=old_name)
+    try:
+        built.modify(name=col_name)
+    except Exception:
+        if old is not None:
+            old.modify(name=col_name)  # put the previous index back
+        raise
+    if old is not None:
+        _delete_quietly(client, old_name)
+
+
+def _embed_into(collection: Any, chunks: list, model: Any, batch_size: int | None) -> list[list[int]]:
+    """Embed + add one bounded batch at a time (vectors never accumulate across batches)."""
     texts_all = [_truncate_text(c.source) for c in chunks]
     batches = _token_budget_batches(
         _token_counts(model, texts_all),
@@ -259,12 +319,7 @@ def embed_and_store(
             ids=ids,
             metadatas=metadatas,
         )
-
-    logger.info(
-        "Stored %s chunks in Chroma collection %s (%s batches)",
-        len(chunks), col_name, len(batches),
-    )
-    return {"collection": col_name, "chunks_embedded": len(chunks), "batches": len(batches)}
+    return batches
 
 
 def query_similar(

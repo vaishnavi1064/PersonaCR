@@ -50,7 +50,9 @@ def test_analyze_as_user_a_review_as_user_b_has_retrieval_examples(isolated_chro
     monkeypatch.setattr(analysis_mod, "get_cached_fingerprint", lambda *a, **k: None)
     monkeypatch.setattr(analysis_mod, "save_fingerprint", MagicMock())
     monkeypatch.setattr(analysis_mod, "SupabaseREST", MagicMock())
-    ar.analyze_repo(ar.AnalyzeRequest(repo_url=REPO_URL, user_id=str(uuid.uuid4()), force_refresh=True))
+    from backend.src.core.auth import AuthUser
+
+    ar.analyze_repo(ar.AnalyzeRequest(repo_url=REPO_URL, force_refresh=True), AuthUser(str(uuid.uuid4()), False))
 
     # A different caller ("user B") reviews: the review path derives identity from the URL.
     import backend.src.core.llm_client as llm_client
