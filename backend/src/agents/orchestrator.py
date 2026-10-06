@@ -40,6 +40,8 @@ from backend.src.core.metrics import (
     track_agent_latency,
 )
 from backend.src.core import llm_client
+from backend.src.core.issues import build_issues
+from backend.src.core.style_metrics import measure_code
 from backend.src.core.llm_client import LLMTracker
 from backend.src.agents.planner import plan_review
 from backend.src.agents.style_analyst import analyze_style
@@ -278,26 +280,11 @@ async def _run_review(
             record_self_correction(1, "failed")
 
     # ── Build issue list (needed by Layer 3 before we return) ────────────────
-    all_issues: list[dict] = []
-
-    for f in qa_output.filtered_style_findings:
-        all_issues.append({
-            "type": "style",
-            "category": f.category,
-            "severity": f.severity,
-            "description": f.description,
-            "fingerprint_value": f.fingerprint_value,
-            "submitted_value": f.submitted_value,
-        })
-
-    for f in qa_output.filtered_defect_findings:
-        all_issues.append({
-            "type": "defect",
-            "category": f.category,
-            "severity": f.severity,
-            "description": f.description,
-            "line_hint": f.line_hint,
-        })
+    # Integer lines (verified against the code) + numeric repo-vs-code style metrics
+    code_fp = measure_code(code, language)
+    all_issues: list[dict] = build_issues(
+        qa_output.filtered_style_findings, qa_output.filtered_defect_findings, code, fingerprint, code_fp,
+    )
 
     # ── Layer 3: Quality evaluation (CRScore-inspired) ────────────────────────
     review_sentences = [
@@ -451,18 +438,9 @@ async def _run_review(
         ))
 
         # Build re-review issues into a separate list — do not wipe first pass yet.
-        rereview_issues: list[dict] = []
-        for f in qa_output.filtered_style_findings:
-            rereview_issues.append({
-                "type": "style", "category": f.category, "severity": f.severity,
-                "description": f.description, "fingerprint_value": f.fingerprint_value,
-                "submitted_value": f.submitted_value,
-            })
-        for f in qa_output.filtered_defect_findings:
-            rereview_issues.append({
-                "type": "defect", "category": f.category, "severity": f.severity,
-                "description": f.description, "line_hint": f.line_hint,
-            })
+        rereview_issues: list[dict] = build_issues(
+            qa_output.filtered_style_findings, qa_output.filtered_defect_findings, code, fingerprint, code_fp,
+        )
 
         rereview_has_errors = any(
             issue.get("category") == "error" for issue in rereview_issues

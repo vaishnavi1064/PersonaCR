@@ -25,14 +25,14 @@ export const capabilities: Record<CapabilityKey, Capability> = {
     detail: 'Answers that remember your past chats about the same repo. Today each question is answered on its own.',
   },
   findingLines: {
-    level: 'partial',
+    level: 'available',
     label: 'Line numbers on findings',
-    detail: 'Bug findings from static checks carry a line; style findings and some LLM findings do not yet.',
+    detail: 'Each finding carries a line checked against the code (exact for static checks, verified by quoting for LLM findings); unverifiable ones say "line n/a".',
   },
   styleMetrics: {
-    level: 'partial',
+    level: 'available',
     label: '"Your repo vs this code" metrics',
-    detail: 'Style findings describe the difference in words; exact percentages are not sent yet.',
+    detail: 'Style findings show the repo’s value next to the same metric measured on the submitted code.',
   },
   analyzeJobs: {
     level: 'available',

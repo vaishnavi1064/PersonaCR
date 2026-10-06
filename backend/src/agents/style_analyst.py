@@ -538,7 +538,9 @@ def analyze_style(
         '      "severity": "high|medium|low",\n'
         '      "description": "What deviates and how",\n'
         '      "fingerprint_value": "What the developer usually does",\n'
-        '      "submitted_value": "What the submitted code does instead"\n'
+        '      "submitted_value": "What the submitted code does instead",\n'
+        '      "line": "1-based line in the submitted code it is about, or null if about the whole code",\n'
+        '      "evidence": "That line of code copied verbatim (empty when line is null)"\n'
         "    }\n"
         "  ],\n"
         '  "overall_style_score": 0-100\n'

@@ -1,5 +1,5 @@
 import { Bug, Palette } from 'lucide-react'
-import { AGENT_LABEL, type Finding } from '../../lib/api'
+import { AGENT_LABEL, formatMetricValue, type Finding } from '../../lib/api'
 import { cn } from '../../lib/cn'
 import StatusPill from '../ui/StatusPill'
 import { SEVERITY_TONE } from './severity'
@@ -24,12 +24,19 @@ export default function FindingCard({ finding: f, active, showLine, onSelect }: 
         </span>
         <StatusPill tone={SEVERITY_TONE[f.severity]} className="!py-0 text-[11px]">{f.severity}</StatusPill>
         <span className="text-[11px] text-fg-3">{f.category.replace(/_/g, ' ')}</span>
-        {showLine && (
-          <span className="ml-auto font-mono text-[11px] text-fg-3">{f.line != null ? `line ${f.line}` : 'line n/a'}</span>
+        {(showLine || f.lineSource === 'stated') && (
+          <span className="ml-auto font-mono text-[11px] text-fg-3" title={f.lineSource === 'stated' ? 'Line given by the agent, not verified against the code' : undefined}>
+            {f.line != null ? `${f.lineSource === 'stated' ? '≈ ' : ''}line ${f.line}` : 'line n/a'}
+          </span>
         )}
       </div>
       <p className="mt-1 text-[13px] leading-5 text-fg">{f.description}</p>
-      {f.kind === 'style' && (f.repoValue || f.codeValue) && (
+      {f.metric ? (
+        <p className="mt-1 text-xs text-fg-3">
+          {f.metric.label} — your repo: <span className="font-medium tabular-nums text-fg-2">{formatMetricValue(f.metric.kind, f.metric.repoValue)}</span>
+          {' · '}this code: <span className="font-medium tabular-nums text-fg-2">{formatMetricValue(f.metric.kind, f.metric.codeValue)}</span>
+        </p>
+      ) : f.kind === 'style' && (f.repoValue || f.codeValue) && (
         <p className="mt-1 text-xs text-fg-3">
           {f.repoValue && <>Your repo: <span className="text-fg-2">{f.repoValue}</span></>}
           {f.repoValue && f.codeValue && ' · '}

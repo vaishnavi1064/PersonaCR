@@ -100,6 +100,14 @@ export type AgentName =
   | 'confidence_evaluator' | 'loop1_skip' | 'pseudo_ref_generator'
   | 'sts_scorer' | 'quality_gate' | 'quality_gate_reloop'
 
+export interface StyleMetric {
+  key: string
+  label: string
+  kind: 'pct' | 'number' | 'lines' | 'text'
+  repoValue: number | string
+  codeValue: number | string
+}
+
 export interface Finding {
   id: string
   kind: 'style' | 'defect'
@@ -110,6 +118,14 @@ export interface Finding {
   description: string
   /** 1-based line in the submitted code; null when unknown. */
   line: number | null
+  /**
+   * How the line was established: "ast" (static analysis, exact), "evidence"
+   * (the agent quoted the code and it was found), "stated" (agent's number,
+   * unverified). null for old reviews / no line.
+   */
+  lineSource: 'ast' | 'evidence' | 'stated' | null
+  /** Style findings: the repo's value vs the submitted code's, same extractor. */
+  metric: StyleMetric | null
   /** Style evidence. Text today; numbers once capability `styleMetrics` ships. */
   repoValue: string | null
   codeValue: string | null

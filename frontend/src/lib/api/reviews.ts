@@ -1,7 +1,7 @@
 // Reviews: POST /api/review and the normalizer that turns its JSON (also what
 // chat messages persist) into the Review domain type.
 import { request } from './http'
-import type { AgentName, BackendReviewStatus, Finding, Review, ReviewState, Severity, TraceStep } from './types'
+import type { AgentName, BackendReviewStatus, Finding, Review, ReviewState, Severity, StyleMetric, TraceStep } from './types'
 
 /** Raw /api/review response — persisted as-is in review chat messages. */
 export interface RawReview {
@@ -22,9 +22,30 @@ export interface RawIssue {
   severity?: string
   description?: string
   line_hint?: string
-  line?: number
+  line?: number | null
+  line_source?: string | null
   fingerprint_value?: unknown
   submitted_value?: unknown
+  metric?: { key?: string; label?: string; kind?: string; repo_value?: unknown; code_value?: unknown } | null
+}
+
+const LINE_SOURCES = ['ast', 'evidence', 'stated'] as const
+const METRIC_KINDS = ['pct', 'number', 'lines', 'text'] as const
+
+function normalizeMetric(m: RawIssue['metric']): StyleMetric | null {
+  if (!m || typeof m !== 'object') return null
+  const ok = (v: unknown): v is number | string => (typeof v === 'number' && Number.isFinite(v)) || (typeof v === 'string' && v !== '')
+  if (!ok(m.repo_value) || !ok(m.code_value) || !str(m.label)) return null
+  const kind = (METRIC_KINDS as readonly string[]).includes(m.kind ?? '') ? (m.kind as StyleMetric['kind']) : 'number'
+  return { key: str(m.key) ?? '', label: str(m.label)!, kind, repoValue: m.repo_value, codeValue: m.code_value }
+}
+
+/** 0.79 → "79%", 28.1 → "28.1 lines", "snake_case" as is. */
+export function formatMetricValue(kind: StyleMetric['kind'], v: number | string): string {
+  if (typeof v === 'string') return v
+  if (kind === 'pct') return `${Math.round(v * 100)}%`
+  if (kind === 'lines') return `${Number.isInteger(v) ? v : v.toFixed(1)} lines`
+  return Number.isInteger(v) ? String(v) : v.toFixed(1)
 }
 
 export const REVIEW_LANGUAGES = [
@@ -88,6 +109,12 @@ function evidence(v: unknown): string | null {
 
 export function normalizeFinding(raw: RawIssue, index: number, lineCount?: number): Finding {
   const kind = raw.type === 'style' ? 'style' : 'defect'
+  const fromInt = parseLineHint(raw.line, lineCount)
+  // Reviews saved before integer lines only have the free-text hint (unverified)
+  const line = fromInt ?? parseLineHint(raw.line_hint, lineCount)
+  const source = (LINE_SOURCES as readonly string[]).includes(raw.line_source ?? '')
+    ? (raw.line_source as Finding['lineSource'])
+    : line != null ? 'stated' : null
   return {
     id: String(index),
     kind,
@@ -95,10 +122,11 @@ export function normalizeFinding(raw: RawIssue, index: number, lineCount?: numbe
     category: str(raw.category) ?? kind,
     severity: severity(raw.severity),
     description: str(raw.description) ?? '',
-    // An integer `line` (future backend) wins over the free-text hint.
-    line: parseLineHint(raw.line, lineCount) ?? parseLineHint(raw.line_hint, lineCount),
+    line,
+    lineSource: line == null ? null : source,
     repoValue: evidence(raw.fingerprint_value),
     codeValue: evidence(raw.submitted_value),
+    metric: normalizeMetric(raw.metric),
   }
 }
 

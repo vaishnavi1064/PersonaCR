@@ -19,6 +19,7 @@ import time
 
 from dotenv import load_dotenv
 
+from backend.src.core.finding_lines import line_of_offset, parse_line_hint
 from backend.src.core.models import DefectFinding, DefectHunterOutput
 
 load_dotenv("backend/.env")
@@ -34,11 +35,14 @@ def _ast_analysis(code: str, language: str) -> list[DefectFinding]:
     findings: list[DefectFinding] = []
 
     if language != "python":
-        if re.search(r"\bcatch\s*\(\s*Exception\b", code):
+        m = re.search(r"\bcatch\s*\(\s*Exception\b", code)
+        if m:
             findings.append(DefectFinding(
                 severity="medium",
                 description="Catches generic Exception — use specific exception types",
                 category="smell",
+                line=line_of_offset(code, m.start()),
+                line_source="ast",
             ))
         return findings
 
@@ -124,6 +128,12 @@ def hunt_defects(code: str, language: str) -> tuple[DefectHunterOutput, int]:
 
     # ── Phase 1: local AST (instant) ─────────────────────────────────────────
     ast_findings = _ast_analysis(code, language)
+    for f in ast_findings:
+        # AST line numbers are exact
+        if f.line is None and f.line_hint:
+            f.line = parse_line_hint(f.line_hint)
+        if f.line is not None:
+            f.line_source = "ast"
 
     # ── Phase 2: LLM semantic analysis ──────────────────────────────────
     from backend.src.core.llm_client import complete
@@ -141,13 +151,14 @@ def hunt_defects(code: str, language: str) -> tuple[DefectHunterOutput, int]:
         "security vulnerabilities, and code smells.\n\n"
         "Return ONLY valid JSON:\n"
         "{\n"
-        '  "bugs": [{"severity": "critical|high|medium|low", "description": "...", "line_hint": "line N", "category": "bug"}],\n'
-        '  "code_smells": [{"severity": "...", "description": "...", "line_hint": "...", "category": "smell"}],\n'
-        '  "security_issues": [{"severity": "...", "description": "...", "line_hint": "...", "category": "security"}],\n'
+        '  "bugs": [{"severity": "critical|high|medium|low", "description": "...", "line": N, "evidence": "exact code on that line", "category": "bug"}],\n'
+        '  "code_smells": [{"severity": "...", "description": "...", "line": N, "evidence": "...", "category": "smell"}],\n'
+        '  "security_issues": [{"severity": "...", "description": "...", "line": N, "evidence": "...", "category": "security"}],\n'
         '  "defect_score": 0-100\n'
         "}\n\n"
         "Score 100 = no defects found. Score 0 = critical bugs. "
-        "Be specific — cite line numbers where possible."
+        "Be specific. \"line\" is the 1-based line number in the code below (null if the issue isn't "
+        "tied to one line); \"evidence\" is that line's code copied verbatim (used to verify the line). "
         "Only report genuine defects. If the code is correct and well-written, report nothing. Do not invent issues for simple or trivial code."
     )
 

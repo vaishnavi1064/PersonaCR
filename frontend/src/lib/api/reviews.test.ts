@@ -146,3 +146,30 @@ describe('explainDegraded', () => {
     expect(explainDegraded(null).summary).toMatch(/without a trustworthy score/)
   })
 })
+
+describe('normalizeFinding — integer lines and style metrics', () => {
+  it('keeps the verified line and its source; numeric metric formatted', async () => {
+    const { normalizeFinding, formatMetricValue } = await import('./reviews')
+    const f = normalizeFinding({
+      type: 'style', category: 'documentation', description: 'Missing docstring', line: 1, line_source: 'evidence',
+      metric: { key: 'docstring_coverage', label: 'Docstrings', kind: 'pct', repo_value: 0.79, code_value: 0 },
+    }, 0, 7)
+    expect(f).toMatchObject({ line: 1, lineSource: 'evidence' })
+    expect(f.metric).toEqual({ key: 'docstring_coverage', label: 'Docstrings', kind: 'pct', repoValue: 0.79, codeValue: 0 })
+    expect(formatMetricValue('pct', 0.79)).toBe('79%')
+    expect(formatMetricValue('lines', 28.1)).toBe('28.1 lines')
+    expect(formatMetricValue('text', 'snake_case')).toBe('snake_case')
+  })
+
+  it('old reviews: line from the free-text hint is marked unverified', async () => {
+    const { normalizeFinding } = await import('./reviews')
+    expect(normalizeFinding({ type: 'defect', line_hint: 'line 4' }, 0, 7)).toMatchObject({ line: 4, lineSource: 'stated', metric: null })
+    expect(normalizeFinding({ type: 'defect', line: null, line_source: null }, 0, 7)).toMatchObject({ line: null, lineSource: null })
+  })
+
+  it('a metric missing a side is dropped (never shown as 0)', async () => {
+    const { normalizeFinding } = await import('./reviews')
+    const f = normalizeFinding({ type: 'style', metric: { key: 'type_hint_usage', label: 'Type hints', kind: 'pct', repo_value: null, code_value: 0 } }, 0)
+    expect(f.metric).toBeNull()
+  })
+})

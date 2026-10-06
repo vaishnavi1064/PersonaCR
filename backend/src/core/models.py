@@ -2,7 +2,10 @@
 Pydantic data models for all PersonaCR V2 entities.
 """
 from __future__ import annotations
-from pydantic import BaseModel, Field
+
+import re
+
+from pydantic import BaseModel, Field, field_validator
 
 
 # ── Layer 1: Fingerprint ────────────────────────────────────────────────────
@@ -195,7 +198,37 @@ class PlannerOutput(BaseModel):
     priority_issues: list[str] = []
 
 
-class StyleFinding(BaseModel):
+def _coerce_line(v: object) -> int | None:
+    """LLMs return 12, "12", "line 12" or junk — never let a bad line drop a finding."""
+    if isinstance(v, bool) or v is None:
+        return None
+    if isinstance(v, int):
+        return v if v > 0 else None
+    if isinstance(v, str):
+        m = re.search(r"\d+", v)
+        return int(m.group()) if m and int(m.group()) > 0 else None
+    return None
+
+
+class _LineMixin(BaseModel):
+    # 1-based line in the submitted code as claimed by the agent, plus the exact
+    # code it refers to; core.finding_lines verifies/corrects it and sets line_source.
+    line: int | None = None
+    evidence: str = ""
+    line_source: str = ""  # "ast" | "evidence" | "stated" | ""
+
+    @field_validator("line", mode="before")
+    @classmethod
+    def _line(cls, v: object) -> int | None:
+        return _coerce_line(v)
+
+    @field_validator("evidence", mode="before")
+    @classmethod
+    def _evidence(cls, v: object) -> str:
+        return v if isinstance(v, str) else ""
+
+
+class StyleFinding(_LineMixin):
     category: str = ""
     severity: str = "medium"  # "high" | "medium" | "low"
     description: str = ""
@@ -210,7 +243,7 @@ class StyleAnalysisOutput(BaseModel):
     similar_functions_found: int = 0
 
 
-class DefectFinding(BaseModel):
+class DefectFinding(_LineMixin):
     severity: str = "medium"  # "critical" | "high" | "medium" | "low"
     description: str = ""
     line_hint: str = ""
