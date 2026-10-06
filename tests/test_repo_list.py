@@ -47,9 +47,10 @@ def fake_redis():
 
 
 @pytest.fixture
-def client():
+def client(login):
     from backend.src.main import app
 
+    login(USER)
     with TestClient(app) as c:
         yield c
 
@@ -72,7 +73,7 @@ def test_joins_fingerprint_and_dedupes_newest_first(client, monkeypatch):
         ],
     ))
 
-    res = client.get("/api/repos", params={"user_id": USER})
+    res = client.get("/api/repos")
     assert res.status_code == 200
     repos = res.json()["repos"]
 
@@ -89,19 +90,20 @@ def test_joins_fingerprint_and_dedupes_newest_first(client, monkeypatch):
 
 
 @pytest.mark.parametrize("user_id", ["guest_1234", "anonymous", "not-a-uuid"])
-def test_non_account_ids_get_empty_list_without_db(client, monkeypatch, user_id):
+def test_non_account_ids_get_empty_list_without_db(client, monkeypatch, login, user_id):
     def no_db():
         raise AssertionError("must not touch the database")
 
     monkeypatch.setattr(repo_routes, "SupabaseREST", no_db)
-    res = client.get("/api/repos", params={"user_id": user_id})
+    login(user_id)
+    res = client.get("/api/repos")
     assert res.status_code == 200
     assert res.json() == {"repos": []}
 
 
 def test_no_repos_skips_fingerprint_lookup(client, monkeypatch):
     db = _use(monkeypatch, FakeDB(user_repos=[], fingerprints=[]))
-    res = client.get("/api/repos", params={"user_id": USER})
+    res = client.get("/api/repos")
     assert res.json() == {"repos": []}
     assert db.fp_params is None
 
@@ -113,12 +115,15 @@ def test_database_failure_is_502_not_empty(client, monkeypatch, fail):
         fingerprints=[],
         fail=fail,
     ))
-    res = client.get("/api/repos", params={"user_id": USER})
+    res = client.get("/api/repos")
     assert res.status_code == 502
 
 
-def test_user_id_is_required(client):
-    assert client.get("/api/repos").status_code == 422
+def test_user_id_query_param_is_ignored(client, monkeypatch):
+    # FakeDB asserts the user_repos filter is the token's user, not the query string
+    _use(monkeypatch, FakeDB(user_repos=[], fingerprints=[]))
+    res = client.get("/api/repos", params={"user_id": "11111111-2222-4333-8444-555555555555"})
+    assert res.status_code == 200 and res.json() == {"repos": []}
 
 
 # ── POST /api/analyze-repo reports when the analysis it returns was made ─────
@@ -126,6 +131,7 @@ def test_user_id_is_required(client):
 def test_analyze_cached_returns_stored_timestamp(monkeypatch):
     from unittest.mock import MagicMock
 
+    from backend.src.core.auth import AuthUser
     from backend.src.routes import analyze_routes as ar
 
     from backend.src.core import analysis as analysis_mod
@@ -135,7 +141,7 @@ def test_analyze_cached_returns_stored_timestamp(monkeypatch):
         "_cache_status": "fresh", "repo_name": "api", "fingerprint_data": {"type_hint_usage": 0.5},
         "num_functions": 7, "last_commit_sha": "abc", "updated_at": "2026-09-30T12:00:00+00:00",
     })
-    out = ar.analyze_repo(ar.AnalyzeRequest(repo_url="https://github.com/acme/api", user_id=USER))
+    out = ar.analyze_repo(ar.AnalyzeRequest(repo_url="https://github.com/acme/api"), AuthUser(USER, False))
     assert out["cache_status"] == "fresh"
     # a cache hit must not look like it was analyzed just now
     assert out["analyzed_at"] == "2026-09-30T12:00:00+00:00"
@@ -145,6 +151,7 @@ def test_analyze_fresh_returns_now(monkeypatch, tmp_path):
     from datetime import datetime, timedelta, timezone
     from unittest.mock import MagicMock
 
+    from backend.src.core.auth import AuthUser
     from backend.src.routes import analyze_routes as ar
 
     from backend.src.core import analysis as analysis_mod
@@ -154,7 +161,7 @@ def test_analyze_fresh_returns_now(monkeypatch, tmp_path):
     monkeypatch.setattr(analysis_mod, "ingest_repo", lambda url, token=None, **_: ([make_chunk("f", "def f(x: int) -> int:\n    return x")], "sha1"))
     monkeypatch.setattr(analysis_mod, "embed_and_store", lambda *a, **k: {"collection": "c", "chunks_embedded": 1})
     monkeypatch.setattr(analysis_mod, "save_fingerprint", MagicMock())
-    out = ar.analyze_repo(ar.AnalyzeRequest(repo_url="https://github.com/acme/api", user_id=USER, force_refresh=True))
+    out = ar.analyze_repo(ar.AnalyzeRequest(repo_url="https://github.com/acme/api", force_refresh=True), AuthUser(USER, False))
     assert out["cache_status"] == "new"
     analyzed = datetime.fromisoformat(out["analyzed_at"])
     assert abs(datetime.now(timezone.utc) - analyzed) < timedelta(seconds=30)

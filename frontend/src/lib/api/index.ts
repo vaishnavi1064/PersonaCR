@@ -2,7 +2,7 @@
 // Domain modules (repos, reviews, chats) are added slice by slice.
 export * from './types'
 export * from './capabilities'
-export { ApiError, API_BASE, request, setAuthTokenProvider } from './http'
+export { ApiError, API_BASE, request, sendKeepalive, setAuthTokenProvider } from './http'
 export type { ApiErrorKind } from './http'
 export {
   parseRepoUrl, normalizeFingerprint, repoSummaryOf, fingerprintChips, typeHintsMeasured, typeHintsRepresentative, topLanguages,
@@ -16,3 +16,4 @@ export type { RawReview, RawIssue, ReviewLanguage } from './reviews'
 export { askQuestion, chatRepoUrl, groupChatsByRepo, historyFor, repoShortName } from './chats'
 export type { Answer, ChatGroup, ChatMemory, HistoryTurn } from './chats'
 export { fetchAllReviews, fetchRepoReviews, fetchRepoChats, fetchSavedReview, reviewFromRow, SAVED_CODE_LIMIT } from './history'
+export { cleanupGuestOnUnload, cleanupGuestSession } from './guest'

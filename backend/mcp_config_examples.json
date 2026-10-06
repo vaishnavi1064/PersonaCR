@@ -1,5 +1,6 @@
 {
   "_comment": "PersonaCR MCP configuration examples. Copy the relevant section to your tool's MCP config file.",
+  "_auth": "MCP tools call the /api routes, which require a Supabase access token. With mcp-remote add: \"--header\", \"Authorization: Bearer ${PERSONACR_TOKEN}\" to args (and PERSONACR_TOKEN in env).",
 
   "claude_desktop": {
     "_config_file": "~/Library/Application Support/Claude/claude_desktop_config.json  (macOS)",

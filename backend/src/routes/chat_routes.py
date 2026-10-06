@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from backend.src.core.auth import AuthUser, current_user
 from backend.src.core.models import InsightsChatRequest, InsightsChatResponse
 from backend.src.agents.insights_agent import get_insights
 
@@ -20,7 +21,7 @@ router = APIRouter(prefix="/api", tags=["chat"])
 
 
 @router.post("/chat", operation_id="ask_insights")
-def ask_insights(payload: InsightsChatRequest) -> InsightsChatResponse:
+def ask_insights(payload: InsightsChatRequest, user: AuthUser = Depends(current_user)) -> InsightsChatResponse:
     """
     Ask a natural-language question about your analyzed repositories.
 
@@ -43,7 +44,7 @@ def ask_insights(payload: InsightsChatRequest) -> InsightsChatResponse:
 
     logger.info(
         "Chat request from user=%s with %d repo(s): %s",
-        payload.user_id,
+        user.user_id,
         len(payload.selected_repo_urls),
         payload.message[:80],
     )
@@ -52,7 +53,7 @@ def ask_insights(payload: InsightsChatRequest) -> InsightsChatResponse:
         result = get_insights(
             question=payload.message,
             selected_repo_urls=payload.selected_repo_urls,
-            user_id=payload.user_id,
+            user_id=user.user_id,
             history=payload.history,
             chat_id=payload.chat_id,
         )

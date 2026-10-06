@@ -1,11 +1,11 @@
 """
 Repo list route — the user's imported repos joined with their cached fingerprints
 and their latest background-analysis status.
-GET /api/repos?user_id=...  →  {"repos": [...]}, most recently analyzed first
+GET /api/repos  →  {"repos": [...]}, most recently analyzed first
 
 Reads with the service role so the browser never needs direct access to the
-`fingerprints` table. `user_id` is trusted from the query string for now, like
-every other route; the backend-auth slice replaces it with the JWT subject.
+`fingerprints` table (RLS keeps it service-role only). The user is the access
+token's subject — never a query parameter.
 """
 from __future__ import annotations
 
@@ -13,9 +13,10 @@ import logging
 from typing import Any
 
 import httpx
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from backend.src.core import analysis_store
+from backend.src.core.auth import AuthUser, current_user
 from backend.src.core.repo_identity import as_uuid_or_none
 from backend.src.db.supabase_rest import SupabaseREST
 
@@ -60,12 +61,13 @@ def _item_from_record(url: str, rec: dict[str, Any]) -> dict[str, Any]:
 
 
 @router.get("/repos", operation_id="list_repos")
-def list_repos(user_id: str) -> dict:
+def list_repos(user: AuthUser = Depends(current_user)) -> dict:
     """
-    List the repos a user has imported, each with its fingerprint (or null if
+    List the repos the caller has imported, each with its fingerprint (or null if
     none is cached) and `analysis` (latest background analysis, or null).
-    Guests get the repos analyzed in their session; "anonymous" gets none.
+    Guests get the repos analyzed in their session.
     """
+    user_id = user.user_id
     records = _analysis_records(user_id) if user_id.startswith("guest_") or as_uuid_or_none(user_id) else {}
 
     if as_uuid_or_none(user_id) is None:

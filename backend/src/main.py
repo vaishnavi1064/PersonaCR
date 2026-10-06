@@ -1,8 +1,9 @@
 import logging
 
-from fastapi import FastAPI, Response
+from fastapi import Depends, FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.src.core.auth import current_user
 from backend.src.routes.analyze_routes import router as analyze_router
 from backend.src.routes.review_routes import router as review_router
 from backend.src.routes.chat_routes import router as chat_router
@@ -40,10 +41,14 @@ app.add_middleware(
 )
 
 # ── Routes ───────────────────────────────────────────────────────────────────
-app.include_router(analyze_router)
-app.include_router(review_router)
-app.include_router(chat_router)
-app.include_router(repo_router)
+# Every /api router requires a verified Supabase token (core/auth.py); /health and
+# /metrics stay open. Handlers that need the caller take Depends(current_user)
+# too — FastAPI resolves it once per request.
+_auth = [Depends(current_user)]
+app.include_router(analyze_router, dependencies=_auth)
+app.include_router(review_router, dependencies=_auth)
+app.include_router(chat_router, dependencies=_auth)
+app.include_router(repo_router, dependencies=_auth)
 
 
 @app.get("/health", operation_id="health_check")

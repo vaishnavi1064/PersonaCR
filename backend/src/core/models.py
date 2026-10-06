@@ -342,9 +342,9 @@ class ChatMemoryInfo(BaseModel):
 
 
 class InsightsChatRequest(BaseModel):
+    # No user_id: the caller is the access token's subject (core/auth.py).
     message: str
     selected_repo_urls: list[str]
-    user_id: str
     chat_id: str | None = None
     # Earlier turns of this chat (client-side), for follow-up questions
     history: list[ChatTurn] = Field(default_factory=list)

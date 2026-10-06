@@ -10,7 +10,25 @@ from typing import Any
 import httpx
 from dotenv import load_dotenv
 
+from backend.src.core.repo_identity import as_uuid_or_none
+
 load_dotenv("backend/.env")
+
+# Per-user tables (user_id uuid, RLS auth.uid() = user_id). This client uses the
+# service role, which bypasses RLS, so it checks the invariant itself before any
+# request: user_id is a Supabase auth uuid, never guest_<sub> or "anonymous"
+# (Postgres would also reject those, but with an opaque 400 mid-flow).
+USER_TABLES = frozenset({"user_reviews", "user_repos", "user_chats"})
+
+
+def _checked(table: str, payload: dict[str, Any], *, required: bool) -> dict[str, Any]:
+    """Payload with user_id normalized; ValueError for a non-uuid user_id on a user table."""
+    if table not in USER_TABLES or ("user_id" not in payload and not required):
+        return payload
+    uid = as_uuid_or_none(payload.get("user_id"))
+    if uid is None:
+        raise ValueError(f"Refusing to write {table}.user_id={payload.get('user_id')!r}: not a Supabase user uuid")
+    return {**payload, "user_id": uid}
 
 
 class SupabaseREST:
@@ -35,6 +53,7 @@ class SupabaseREST:
     # ── Write ────────────────────────────────────────────────────────────────
 
     def insert(self, table: str, payload: dict[str, Any]) -> dict[str, Any]:
+        payload = _checked(table, payload, required=True)
         resp = httpx.post(self._url(table), headers=self.headers, json=payload, timeout=30.0)
         resp.raise_for_status()
         data = resp.json()
@@ -42,6 +61,7 @@ class SupabaseREST:
 
     def upsert(self, table: str, payload: dict[str, Any], on_conflict: str = "id") -> dict[str, Any]:
         """Insert or update if conflict on the specified column."""
+        payload = _checked(table, payload, required=True)
         headers = {**self.headers, "Prefer": "return=representation,resolution=merge-duplicates"}
         resp = httpx.post(self._url(table), headers=headers, json=payload, timeout=30.0)
         resp.raise_for_status()
@@ -55,6 +75,7 @@ class SupabaseREST:
         payload: dict[str, Any],
         id_col: str = "id",
     ) -> dict[str, Any]:
+        payload = _checked(table, payload, required=False)
         params = {id_col: f"eq.{record_id}"}
         resp = httpx.patch(
             self._url(table), headers=self.headers, params=params, json=payload, timeout=30.0

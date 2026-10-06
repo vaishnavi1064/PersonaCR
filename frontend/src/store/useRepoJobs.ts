@@ -68,11 +68,11 @@ export const useRepoJobs = create<RepoJobsState>()(persist((set, get) => {
     setJob(url, { state: 'failed', url, fullName, startedAt, finishedAt: Date.now(), error, force })
   }
 
-  async function runInBackground(url: string, fullName: string, userId: string, force: boolean): Promise<boolean> {
+  async function runInBackground(url: string, fullName: string, force: boolean): Promise<boolean> {
     let jobId: string
     let startedAt = Date.now()
     try {
-      const started = await startAnalyzeJob(url, userId, { force })
+      const started = await startAnalyzeJob(url, { force })
       jobId = started.jobId
       if (started.startedAt) startedAt = Date.parse(started.startedAt) || startedAt
     } catch (err) {
@@ -110,7 +110,7 @@ export const useRepoJobs = create<RepoJobsState>()(persist((set, get) => {
     startAnalyze: async ({ url, fullName }, userId, opts = {}) => {
       if (get().jobs[url]?.state === 'analyzing') return
       const force = !!opts.force
-      if (capabilities.analyzeJobs.level === 'available' && (await runInBackground(url, fullName, userId, force))) return
+      if (capabilities.analyzeJobs.level === 'available' && (await runInBackground(url, fullName, force))) return
 
       // Synchronous fallback: the request stays open for the whole analysis
       const startedAt = Date.now()

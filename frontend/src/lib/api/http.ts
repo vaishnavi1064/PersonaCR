@@ -1,5 +1,6 @@
 // Single fetch wrapper for the FastAPI backend: base URL, timeout, typed errors,
-// and the hook where the Supabase access token gets attached (backend auth slice).
+// and the Supabase access token on every call — the backend rejects /api/* without
+// one and takes the user from it (never from the body or query string).
 
 export const API_BASE: string = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -19,10 +20,18 @@ export class ApiError extends Error {
 
 type TokenProvider = () => Promise<string | null>
 let tokenProvider: TokenProvider | null = null
+/** Last token sent — for keepalive requests on tab close, which can't await the provider. */
+let lastToken: string | null = null
 
-/** Register how to get the current access token. Wired up when backend auth lands. */
+/** Register how to get the current access token (App wires in the Supabase session). */
 export function setAuthTokenProvider(provider: TokenProvider | null): void {
   tokenProvider = provider
+  lastToken = null
+}
+
+async function authHeaders(): Promise<Record<string, string>> {
+  lastToken = tokenProvider ? await tokenProvider() : null
+  return lastToken ? { Authorization: `Bearer ${lastToken}` } : {}
 }
 
 interface RequestOptions {
@@ -48,10 +57,8 @@ function detailMessage(payload: unknown): string | null {
 export async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, timeoutMs = 180_000, signal } = opts
 
-  const headers: Record<string, string> = {}
+  const headers: Record<string, string> = await authHeaders()
   if (body !== undefined) headers['Content-Type'] = 'application/json'
-  const token = tokenProvider ? await tokenProvider() : null
-  if (token) headers.Authorization = `Bearer ${token}`
 
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort('timeout'), timeoutMs)
@@ -86,4 +93,18 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
     throw new ApiError('http', detailMessage(payload) ?? `Request failed (${res.status})`, res.status)
   }
   return payload as T
+}
+
+/**
+ * Fire-and-forget POST that outlives the page (tab close). Unlike sendBeacon it
+ * can carry the Authorization header; uses the token from the last request.
+ */
+export function sendKeepalive(path: string): void {
+  try {
+    void fetch(`${API_BASE}${path}`, {
+      method: 'POST',
+      keepalive: true,
+      headers: lastToken ? { Authorization: `Bearer ${lastToken}` } : {},
+    }).catch(() => {})
+  } catch { /* best effort — the page is going away */ }
 }

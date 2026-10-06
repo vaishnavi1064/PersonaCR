@@ -218,10 +218,8 @@ export function isAccountUserId(userId: string | null | undefined): userId is st
 export async function listRepos(userId: string, signal?: AbortSignal): Promise<Repo[]> {
   const guest = userId.startsWith('guest_')
   if (!guest && !isAccountUserId(userId)) return []
-  const res = await request<{ repos: RepoListItem[] }>(
-    `/api/repos?user_id=${encodeURIComponent(userId)}`,
-    { timeoutMs: 30_000, signal },
-  )
+  // The server lists the token's user's repos; userId only decides whether to ask.
+  const res = await request<{ repos: RepoListItem[] }>('/api/repos', { timeoutMs: 30_000, signal })
   return res.repos.map(repoFromListItem)
 }
 
@@ -283,7 +281,7 @@ export async function analyzeRepo(
 ): Promise<AnalyzeResult> {
   const r = await request<AnalyzeResponse>('/api/analyze-repo', {
     method: 'POST',
-    body: { repo_url: url, user_id: userId, force_refresh: !!opts.force },
+    body: { repo_url: url, force_refresh: !!opts.force },
     // Synchronous on the backend: big repos can take several minutes.
     timeoutMs: 15 * 60_000,
   })
@@ -313,12 +311,11 @@ export interface AnalyzeJobStatus {
 /** Queue an analysis; an analysis already queued/running for this repo is reused. */
 export async function startAnalyzeJob(
   url: string,
-  userId: string,
   opts: { force?: boolean } = {},
 ): Promise<{ jobId: string; startedAt: string | null }> {
   const r = await request<{ job_id: string; analysis: AnalysisWire | null }>('/api/analyze-jobs', {
     method: 'POST',
-    body: { repo_url: url, user_id: userId, force_refresh: !!opts.force },
+    body: { repo_url: url, force_refresh: !!opts.force },
     timeoutMs: 20_000,
   })
   return { jobId: r.job_id, startedAt: r.analysis?.started_at ?? null }

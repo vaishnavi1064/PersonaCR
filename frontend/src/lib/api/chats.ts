@@ -59,13 +59,12 @@ export function historyFor(messages: MessageLike[]): HistoryTurn[] {
 export async function askQuestion(
   question: string,
   repoUrl: string,
-  userId: string,
   chatId: string | null,
   history: HistoryTurn[] = [],
 ): Promise<Answer> {
   const r = await request<InsightsResponse>('/api/chat', {
     method: 'POST',
-    body: { message: question, selected_repo_urls: [repoUrl], user_id: userId, chat_id: chatId, history },
+    body: { message: question, selected_repo_urls: [repoUrl], chat_id: chatId, history },
     timeoutMs: 3 * 60_000,
   })
   if (r.error) throw new Error(r.error)

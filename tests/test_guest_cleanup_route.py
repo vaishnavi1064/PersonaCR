@@ -1,4 +1,4 @@
-"""Guest cleanup must work from navigator.sendBeacon, which can only POST."""
+"""Guest cleanup: POST (keepalive on tab close) or DELETE, and only for the caller's own guest session."""
 from __future__ import annotations
 
 import pytest
@@ -8,9 +8,10 @@ from backend.src.routes import analyze_routes as ar
 
 
 @pytest.fixture
-def client():
+def client(login):
     from backend.src.main import app
 
+    login("guest_abc123")
     with TestClient(app) as c:
         yield c
 
@@ -30,9 +31,15 @@ def deleted(monkeypatch):
 @pytest.mark.parametrize("method", ["post", "delete"])
 def test_guest_cleanup_accepts_beacon_post_and_delete(client, deleted, method):
     res = getattr(client, method)("/api/cleanup-guest/guest_abc123")
-    assert res.status_code == 200  # was 405 for POST — sendBeacon never cleaned up
+    assert res.status_code == 200  # was 405 for POST — tab-close cleanup never ran
     assert res.json()["deleted"] == 2
     assert deleted == ["guest_abc123"]
+
+
+def test_another_guests_session_is_403(client, deleted):
+    res = client.post("/api/cleanup-guest/guest_someone_else")
+    assert res.status_code == 403
+    assert deleted == []
 
 
 def test_beacon_post_ignores_non_guest_ids(client, deleted):

@@ -241,6 +241,10 @@ npm install
 npm run dev
 ```
 
+### Auth
+
+Every `/api/*` route requires `Authorization: Bearer <Supabase access token>`; `/health` and `/metrics` are open. The backend takes the user from the token's `sub` (never the request body) and verifies it against the project's JWKS — no extra secret. Guests use Supabase **anonymous sign-in** (enable it under Authentication → Sign In / Providers), so they carry a real token too. Row Level Security (`migrations/007`, `008`) limits each user to their own `user_reviews` / `user_repos` / `user_chats` rows; `fingerprints` is service-role only.
+
 ### Redis async queue (optional)
 
 Requires Docker:
@@ -276,9 +280,15 @@ python -m pytest -m "not groq"
 
 Excludes live-LLM tests (marker name `groq` kept for CI; they now call Claude). Deterministic CI job runs the same marker set.
 
+Live RLS check against the real Supabase project (opt-in; signs in two throwaway anonymous users):
+
+```bash
+PERSONACR_RLS_LIVE=1 python -m pytest -m integration tests/test_rls_live.py -v
+```
+
 ### MCP (optional)
 
-With the API running, MCP is mounted at `/mcp` (`fastapi-mcp`). Example remote wiring lives under `backend/mcp_config_examples.json`.
+With the API running, MCP is mounted at `/mcp` (`fastapi-mcp`). Example remote wiring lives under `backend/mcp_config_examples.json`. Tool calls go through the authenticated `/api` routes, so the MCP client must send `Authorization: Bearer <access token>` (fastapi-mcp forwards that header).
 
 ---
 

@@ -13,6 +13,24 @@ if str(ROOT) not in sys.path:
 from backend.src.core.github_ingestor import CodeChunk
 
 
+@pytest.fixture
+def login():
+    """
+    Sign API requests in as a backend user id: an account uuid, or guest_<sub> for
+    an anonymous sign-in. Skips token verification — tests/test_auth.py covers that.
+    """
+    from backend.src.core.auth import AuthUser, current_user
+    from backend.src.main import app
+
+    def _login(user_id: str) -> AuthUser:
+        user = AuthUser(sub=user_id.removeprefix("guest_"), is_anonymous=user_id.startswith("guest_"))
+        app.dependency_overrides[current_user] = lambda: user
+        return user
+
+    yield _login
+    app.dependency_overrides.pop(current_user, None)
+
+
 @pytest.fixture(autouse=True)
 def _no_real_repo_summary(monkeypatch):
     """run_analysis generates a repo summary (GitHub fetch + one LLM call).

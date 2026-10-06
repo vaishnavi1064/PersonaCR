@@ -32,13 +32,14 @@ def _now() -> str:
 
 def _record_user_repo(user_id: str, result: dict[str, Any]) -> None:
     """Add the repo to the user's list (what the browser used to do after a sync analyze)."""
-    if as_uuid_or_none(user_id) is None:
-        return  # guests / anonymous have no saved list
+    uid = as_uuid_or_none(user_id)
+    if uid is None:
+        return  # guests (guest_<sub>) have no saved list; SupabaseREST would refuse the row anyway
     repo_url = result["repo_url"]
     fp = result.get("fingerprint") or {}
     languages = list((fp.get("language_distribution") or {}).keys()) or fp.get("languages") or []
     SupabaseREST().insert("user_repos", {
-        "user_id": user_id,
+        "user_id": uid,
         "repo_url": repo_url,
         "repo_name": "/".join(repo_url.split("/")[-2:]),
         "functions_count": result.get("num_functions", 0),

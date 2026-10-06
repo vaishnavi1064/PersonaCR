@@ -138,12 +138,13 @@ def test_llm_failure_is_flagged_not_a_fake_answer(insights, monkeypatch):
     assert out.answer == "" and "model call failed" in out.error
 
 
-def test_route_passes_history_and_returns_memory(insights):
+def test_route_passes_history_and_returns_memory(insights, login):
     from backend.src.main import app
 
+    login(USER)
     with TestClient(app) as c:
         res = c.post("/api/chat", json={
-            "message": "follow-up", "selected_repo_urls": [API], "user_id": USER, "chat_id": "current",
+            "message": "follow-up", "selected_repo_urls": [API], "chat_id": "current",
             "history": [{"role": "user", "content": "first q"}, {"role": "assistant", "content": "first a"}],
         })
     body = res.json()

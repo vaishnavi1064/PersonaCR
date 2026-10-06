@@ -11,11 +11,12 @@ import json
 import logging
 import uuid
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from backend.src.agents.orchestrator import review_code_sync
 from backend.src.core import job_store
+from backend.src.core.auth import AuthUser, current_user
 from backend.src.core.cache_manager import get_cached_fingerprint
 from backend.src.core.repo_identity import repo_identity
 from backend.src.core.models import ReportResponse, StatusResponse
@@ -143,7 +144,9 @@ def review_code(req: CodeReviewRequest) -> dict:
     response_model=StatusResponse,
     status_code=202,
 )
-def enqueue_review(req: AsyncReviewRequest, response: Response) -> StatusResponse:
+def enqueue_review(
+    req: AsyncReviewRequest, response: Response, user: AuthUser = Depends(current_user)
+) -> StatusResponse:
     """
     Enqueue an async review job (Redis-backed RQ queue).
 
@@ -167,7 +170,7 @@ def enqueue_review(req: AsyncReviewRequest, response: Response) -> StatusRespons
         payload["fingerprint_cache_status"] = cache_status
 
     job_id = str(uuid.uuid4())
-    status = job_store.create_job(job_id, message="queued")
+    status = job_store.create_job(job_id, message="queued", meta={"kind": "review", "user_id": user.user_id})
 
     try:
         enqueue_review_job(job_id, payload)
@@ -191,9 +194,9 @@ def enqueue_review(req: AsyncReviewRequest, response: Response) -> StatusRespons
     operation_id="get_review_job",
     response_model=StatusResponse,
 )
-def get_review_job(job_id: str) -> StatusResponse:
+def get_review_job(job_id: str, user: AuthUser = Depends(current_user)) -> StatusResponse:
     """Return async review job status; includes result when completed."""
-    job = job_store.get_job(job_id)
+    job = job_store.get_owned_job(job_id, user.user_id)
     if job is None:
         raise HTTPException(status_code=404, detail=f"Unknown job_id: {job_id}")
     return job
@@ -204,9 +207,9 @@ def get_review_job(job_id: str) -> StatusResponse:
     operation_id="get_review_report",
     response_model=ReportResponse,
 )
-def get_review_report(job_id: str) -> ReportResponse:
+def get_review_report(job_id: str, user: AuthUser = Depends(current_user)) -> ReportResponse:
     """Return ReportResponse when the job has completed (orphaned model wired)."""
-    job = job_store.get_job(job_id)
+    job = job_store.get_owned_job(job_id, user.user_id)
     if job is None:
         raise HTTPException(status_code=404, detail=f"Unknown job_id: {job_id}")
     report = job_store.to_report_response(job)

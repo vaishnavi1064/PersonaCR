@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 
 from backend.src.core.chat_memory import format_memory, load_past_chats, recent_history
 from backend.src.core.models import ChatMemoryInfo, ChatTurn, InsightsAgentOutput
-from backend.src.core.repo_identity import repo_identity
+from backend.src.core.repo_identity import as_uuid_or_none, repo_identity
 from backend.src.db.supabase_rest import SupabaseREST
 
 load_dotenv("backend/.env")
@@ -93,6 +93,8 @@ def _load_recent_reviews(
     db: SupabaseREST, repo_url: str, user_id: str, limit: int = 5
 ) -> list[dict[str, Any]]:
     """Load the most recent reviews for a repo from Supabase."""
+    if as_uuid_or_none(user_id) is None:
+        return []  # guests have no saved reviews (and user_id is a uuid column)
     try:
         rows = db.select_many(
             "user_reviews",

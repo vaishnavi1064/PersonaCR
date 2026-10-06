@@ -1,9 +1,11 @@
 import { useCallback } from 'react'
 import { useStore } from '../store/useStore'
+import { cleanupGuestSession } from './api'
 import { supabase } from './supabase'
 
 interface SupabaseUserLike {
   id?: string
+  is_anonymous?: boolean
   email?: string
   name?: string
   user_metadata?: { full_name?: string; name?: string; avatar_url?: string; user_name?: string }
@@ -13,12 +15,11 @@ interface SupabaseUserLike {
 /** Display info for the signed-in user (or guest) plus sign-out. */
 export function useCurrentUser() {
   const user = useStore((s) => s.user) as SupabaseUserLike | null
-  const session = useStore((s) => s.session)
-  const isGuest = useStore((s) => s.isGuest)
-  const setIsGuest = useStore((s) => s.setIsGuest)
-  const guestSessionId = useStore((s) => s.guestSessionId)
 
-  const guestMode = isGuest && !session
+  // Guests are Supabase anonymous sign-ins. Their id mirrors the backend's
+  // (core/auth.py): guest_<uid>, so "has a saved account" checks stay false.
+  const guestMode = !!user?.is_anonymous
+  const userId = !user?.id ? 'anonymous' : guestMode ? `guest_${user.id}` : user.id
 
   const displayName = guestMode
     ? 'Guest'
@@ -29,18 +30,15 @@ export function useCurrentUser() {
     : displayName.split(/[\s@]/).filter(Boolean).map((w) => w[0]).slice(0, 2).join('').toUpperCase() || 'G'
 
   const signOut = useCallback(async () => {
-    if (guestMode) {
-      // Guest: clearing the flag sends AuthGuard back to /login
-      setIsGuest(false)
-    } else {
-      // onAuthStateChange clears the session → AuthGuard redirects
-      await supabase.auth.signOut()
-    }
-  }, [guestMode, setIsGuest])
+    // A signed-out guest can never come back, so wipe its server-side data first
+    if (guestMode) await cleanupGuestSession(userId)
+    // onAuthStateChange clears the session → AuthGuard redirects
+    await supabase.auth.signOut()
+  }, [guestMode, userId])
 
   return {
-    /** Same resolution as ChatPage: Supabase id → guest session id → 'anonymous'. */
-    userId: user?.id ?? guestSessionId ?? 'anonymous',
+    /** Account uuid, guest_<uid>, or 'anonymous'. For client-side use — the backend reads the token. */
+    userId,
     guestMode,
     displayName,
     initials,

@@ -8,6 +8,10 @@ python-dotenv==1.2.2
 httpx==0.28.1
 pydantic==2.12.5
 
+# Auth — verify Supabase access tokens (ES256 via JWKS; [crypto] pulls cryptography)
+PyJWT[crypto]==2.12.1
+cryptography==46.0.7
+
 # GitHub access
 PyGithub==2.9.0
 

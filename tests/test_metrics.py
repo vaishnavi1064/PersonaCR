@@ -38,9 +38,10 @@ def fake_redis():
 
 
 @pytest.fixture()
-def client(metrics_registry):
+def client(metrics_registry, login):
     from backend.src.main import app
 
+    login("3f2b8c1e-9a4d-4e57-8b1a-2c6d9e0f1a2b")  # /metrics is open; POST /api/reviews isn't
     with TestClient(app) as c:
         yield c
 

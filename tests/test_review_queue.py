@@ -24,9 +24,10 @@ def fake_redis():
 
 
 @pytest.fixture()
-def client(fake_redis):
+def client(fake_redis, login):
     from backend.src.main import app
 
+    login("3f2b8c1e-9a4d-4e57-8b1a-2c6d9e0f1a2b")
     with TestClient(app) as c:
         yield c
 

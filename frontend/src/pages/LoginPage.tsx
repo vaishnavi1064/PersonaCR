@@ -260,10 +260,10 @@ export default function LoginPage() {
   const session = useStore((s) => s.session)
   const setSession = useStore((s) => s.setSession)
   const setUser = useStore((s) => s.setUser)
-  const setIsGuest = useStore((s) => s.setIsGuest)
   const navigate = useNavigate()
   const [authError, setAuthError] = useState<string | null>(null)
   const [githubLoading, setGithubLoading] = useState(false)
+  const [guestLoading, setGuestLoading] = useState(false)
   // Derive initial completing from hash so we don't sync-setState in the effect.
   const [completing, setCompleting] = useState(() => {
     const params = new URLSearchParams(window.location.hash.slice(1))
@@ -294,7 +294,6 @@ export default function LoginPage() {
         // Session established — update store then go to chat
         setSession(data.session as unknown as Record<string, unknown>)
         setUser(data.session.user as unknown as Record<string, unknown>)
-        setIsGuest(false)
         // Clean hash from URL so it doesn't confuse anything on back-navigation
         window.history.replaceState(null, '', window.location.pathname)
         navigate('/repos', { replace: true })
@@ -304,7 +303,7 @@ export default function LoginPage() {
         setCompleting(false)
         setAuthError(err instanceof Error ? err.message : 'Sign-in failed.')
       })
-  }, [navigate, setSession, setUser, setIsGuest])
+  }, [navigate, setSession, setUser])
 
   if (session) return <Navigate to="/repos" replace />
 
@@ -327,8 +326,6 @@ export default function LoginPage() {
   const handleGitHub = async () => {
     setAuthError(null)
     setGithubLoading(true)
-    // Ensure stale guest mode never masks real OAuth login.
-    setIsGuest(false)
     try {
       await signInWithGitHub()
       // signInWithOAuth triggers window.location navigation — browser will leave
@@ -345,8 +342,19 @@ export default function LoginPage() {
     // the button stays in "Redirecting…" state until the browser navigates away.
   }
 
-  const handleGuest = () => {
-    setIsGuest(true)
+  // Guests get a Supabase anonymous session — a real access token, so the backend
+  // verifies them like everyone else. Nothing is saved to an account.
+  const handleGuest = async () => {
+    setAuthError(null)
+    setGuestLoading(true)
+    const { data, error } = await supabase.auth.signInAnonymously()
+    if (error || !data.session) {
+      setGuestLoading(false)
+      setAuthError(error?.message ?? 'Could not start a guest session. Please try again.')
+      return
+    }
+    setSession(data.session as unknown as Record<string, unknown>)
+    setUser(data.session.user as unknown as Record<string, unknown>)
     navigate('/repos', { replace: true })
   }
 
@@ -514,6 +522,7 @@ export default function LoginPage() {
             <motion.div variants={item}>
               <button
                 onClick={handleGuest}
+                disabled={guestLoading}
                 style={{
                   width: '100%',
                   display: 'flex',
@@ -528,7 +537,7 @@ export default function LoginPage() {
                   fontFamily: 'var(--font-body)',
                   fontWeight: 500,
                   fontSize: 15,
-                  cursor: 'pointer',
+                  cursor: guestLoading ? 'not-allowed' : 'pointer',
                   transition: 'border-color 0.2s, background 0.2s, color 0.2s',
                 }}
                 onMouseEnter={(e) => {
@@ -547,7 +556,7 @@ export default function LoginPage() {
                   <circle cx="12" cy="8" r="4" />
                   <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
                 </svg>
-                Continue as Guest
+                {guestLoading ? 'Starting guest session…' : 'Continue as Guest'}
               </button>
 
               <p style={{

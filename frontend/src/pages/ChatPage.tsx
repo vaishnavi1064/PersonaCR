@@ -4,10 +4,9 @@ import { useStore } from '../store/useStore'
 import type { ChatMessage, PersistedMessage } from '../store/useStore'
 import { toUI, toPersisted } from '../store/useStore'
 import {
-  ApiError, askQuestion, chatRepoUrl, historyFor, isAccountUserId, repoShortName, reviewCode,
+  ApiError, askQuestion, chatRepoUrl, cleanupGuestOnUnload, historyFor, isAccountUserId, repoShortName, reviewCode,
   REVIEW_LANGUAGES, topLanguages, type ChatMode, type Finding,
 } from '../lib/api'
-import { cleanupGuestSession } from '../lib/api/legacy'
 import {
   createChat, generateTitle, loadChatMessages, loadChats, saveChatMessages, saveReview, updateChatSelectedRepos,
 } from '../lib/db'
@@ -56,7 +55,6 @@ export default function ChatPage() {
     activeChatId, setActiveChatId,
     activeMessages, setActiveMessages, appendMessage,
     chats, setChats, upsertChatMeta,
-    isGuest, guestSessionId,
     selectedRepoUrlsByChatId, setSelectedRepoUrls,
     clearNewChatRequest,
   } = useStore()
@@ -88,11 +86,11 @@ export default function ChatPage() {
 
   // Wipe guest ChromaDB collections when the tab closes
   useEffect(() => {
-    if (!isGuest || !guestSessionId) return
-    const cleanup = () => cleanupGuestSession(guestSessionId)
+    if (!guestMode) return
+    const cleanup = () => cleanupGuestOnUnload(userId)
     window.addEventListener('beforeunload', cleanup)
     return () => window.removeEventListener('beforeunload', cleanup)
-  }, [isGuest, guestSessionId])
+  }, [guestMode, userId])
 
   // ── Loading / switching chats ───────────────────────────────────────────────
   const resetView = useCallback(() => {
@@ -214,7 +212,7 @@ export default function ChatPage() {
       const history = historyFor(useStore.getState().activeMessages)
       const cid = await ensureChat(repoUrl)
       await addMessage(makeUserMsg(text, { mode: 'ask' }), text)
-      const answer = await askQuestion(text, repoUrl, userId, cid, history)
+      const answer = await askQuestion(text, repoUrl, cid, history)
       await addMessage(makeBotMsg('text', answer.text, { snippetsUsed: answer.snippetsUsed, memory: answer.memory }))
     } catch (err) {
       await addMessage(makeBotMsg('text', errorText(err, 'ask'), { error: true }))

@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useStore } from './store/useStore'
 import { supabase } from './lib/supabase'
+import { setAuthTokenProvider } from './lib/api'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import ChatPage from './pages/ChatPage'
@@ -25,10 +26,14 @@ try {
   document.documentElement.setAttribute('data-accent', 'purple')
 }
 
+// Every backend call carries the current Supabase access token (supabase-js
+// refreshes it before expiry). Registered before any route can mount.
+setAuthTokenProvider(async () => (await supabase.auth.getSession()).data.session?.access_token ?? null)
+
 export default function App() {
   const {
     theme, accent, authLoading,
-    setSession, setUser, setAuthLoading, setIsGuest,
+    setSession, setUser, setAuthLoading,
   } = useStore()
 
   // Keep theme/accent in sync at runtime
@@ -46,7 +51,6 @@ export default function App() {
         if (session) {
           setSession(session as unknown as Record<string, unknown>)
           setUser(session.user as unknown as Record<string, unknown>)
-          setIsGuest(false)   // real auth always overrides guest mode
         } else {
           setSession(null)
           setUser(null)
@@ -66,7 +70,6 @@ export default function App() {
       if (session) {
         setSession(session as unknown as Record<string, unknown>)
         setUser(session.user as unknown as Record<string, unknown>)
-        setIsGuest(false)
       } else {
         setSession(null)
         setUser(null)
@@ -78,7 +81,7 @@ export default function App() {
     })
 
     return () => subscription.unsubscribe()
-  }, [setSession, setUser, setAuthLoading, setIsGuest])
+  }, [setSession, setUser, setAuthLoading])
 
   // Do not render router until auth bootstrap is complete.
   if (authLoading) {

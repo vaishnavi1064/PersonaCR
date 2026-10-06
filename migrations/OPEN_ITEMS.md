@@ -33,15 +33,16 @@ Schema below was inferred from TypeScript interfaces, insert/select payloads, an
 
 | Item | Status |
 |------|--------|
-| Row Level Security enabled? | **Unknown** — docs/PROJECT_OVERVIEW notes unclear RLS implications of frontend-vs-backend write split |
-| Policies (`auth.uid() = user_id`, service-role bypass, etc.) | **Unknown** — no policy SQL in repo |
-| Grants for `anon` / `authenticated` / `service_role` | **Unknown** |
+| Row Level Security enabled? | **Defined** in `007` (user tables) and `008` (fingerprints) |
+| Policies | `user_reviews` / `user_repos` / `user_chats`: select/insert/update/delete only where `auth.uid() = user_id` (role `authenticated`, which includes anonymous guests). `user_id` is uuid in all three since `009` — see README. `fingerprints`: no policies; service role bypasses RLS |
+| Grants for `anon` / `authenticated` / `service_role` | `anon`: none on these four tables. `authenticated`: select/insert/update/delete on the three user tables only. `service_role`: unchanged (bypasses RLS) |
+| Verified live? | Yes — `PERSONACR_RLS_LIVE=1 pytest -m integration tests/test_rls_live.py` passes against the live project (after `009`) |
 
 ## Behavioral notes (not schema bugs, but relevant)
 
 1. **`last_repo_url`** — selected in `ChatMeta` / `loadChats`, and used as backfill source for `primary_repo_url` in `006`, but **no current TypeScript writer** sets `last_repo_url`. May be legacy or set only via dashboard/manual SQL.
 2. **`analyzed_at` / `created_at` defaults** — `saveRepo` / `saveReview` omit these fields; migrations assume `DEFAULT now()`. If the live table lacks defaults, inserts would fail or leave nulls (ordering would break).
-3. **Guest users** — guest IDs are `guest_<uuid>` strings. Chat/review/repo persistence to Supabase only runs when `session.user.id` exists, so guest strings should not hit UUID columns. Fingerprints may store `user_id = NULL` for anonymous.
+3. **Guest users** — guests are Supabase anonymous sign-ins; the backend keys them as `guest_<sub>`. All three user tables' `user_id` is uuid (since `009`), so Postgres rejects that string; `SupabaseREST` also refuses it before sending, and RLS blocks it from the browser. Fingerprints store `user_id = NULL` for guests.
 4. **ChromaDB** — vector collections are local/filesystem, not Postgres tables; out of scope.
 5. **Auth tables** — `auth.users` and related Supabase Auth schema are managed by Supabase; not duplicated here.
 

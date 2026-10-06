@@ -98,6 +98,14 @@ def get_job(job_id: str) -> StatusResponse | None:
     return StatusResponse.model_validate(data)
 
 
+def get_owned_job(job_id: str, user_id: str) -> StatusResponse | None:
+    """The job if it was created for user_id; None for unknown jobs and other users' jobs alike."""
+    data = get_job_dict(job_id)
+    if data is None or (data.get("meta") or {}).get("user_id") != user_id:
+        return None
+    return StatusResponse.model_validate(data)
+
+
 def to_report_response(job: StatusResponse) -> ReportResponse | None:
     """Map a completed job onto the orphaned ReportResponse model."""
     if job.state != "completed" or job.result is None:

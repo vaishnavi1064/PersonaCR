@@ -28,9 +28,10 @@ def fake_redis():
 
 
 @pytest.fixture()
-def client(fake_redis):
+def client(fake_redis, login):
     from backend.src.main import app
 
+    login(USER)
     with TestClient(app) as c:
         yield c
 
@@ -76,13 +77,13 @@ def test_job_lifecycle_persists_status_and_adds_repo(client, fake_redis, pipelin
     monkeypatch.setattr(analysis_store, "update_record", spy)
     monkeypatch.setattr(analyze_jobs, "_PROGRESS_INTERVAL_S", 0)
 
-    res = client.post("/api/analyze-jobs", json={"repo_url": REPO + "/", "user_id": USER, "force_refresh": True})
+    res = client.post("/api/analyze-jobs", json={"repo_url": REPO + "/", "force_refresh": True})
     assert res.status_code == 202
     job_id = res.json()["job_id"]
     assert res.json()["state"] == "queued"
 
     # Before a worker runs: the repo already shows as queued in the list
-    queued = client.get("/api/repos", params={"user_id": USER}).json()["repos"]
+    queued = client.get("/api/repos").json()["repos"]
     assert queued[0]["repo_url"] == REPO and queued[0]["analysis"]["state"] == "queued"
     assert queued[0]["fingerprint"] is None
 
@@ -115,33 +116,34 @@ def test_failure_is_persisted_with_reason(client, fake_redis, pipeline, monkeypa
         raise ValueError("Could not access repo acme/api: 404")
 
     monkeypatch.setattr(analysis_mod, "ingest_repo", boom)
-    job_id = client.post("/api/analyze-jobs", json={"repo_url": REPO, "user_id": USER}).json()["job_id"]
+    job_id = client.post("/api/analyze-jobs", json={"repo_url": REPO}).json()["job_id"]
     drain(fake_redis)
 
     job = client.get(f"/api/analyze-jobs/{job_id}").json()
     assert job["state"] == "failed" and "404" in job["error"]
-    listed = client.get("/api/repos", params={"user_id": USER}).json()["repos"]
+    listed = client.get("/api/repos").json()["repos"]
     assert listed[0]["analysis"]["state"] == "failed"
     assert "404" in listed[0]["analysis"]["error"]
     pipeline["db"].insert.assert_not_called()  # a failed first import isn't added to the list
 
 
 def test_repeat_request_while_active_returns_same_job(client, fake_redis, pipeline):
-    first = client.post("/api/analyze-jobs", json={"repo_url": REPO, "user_id": USER})
-    second = client.post("/api/analyze-jobs", json={"repo_url": REPO + ".git", "user_id": USER})
+    first = client.post("/api/analyze-jobs", json={"repo_url": REPO})
+    second = client.post("/api/analyze-jobs", json={"repo_url": REPO + ".git"})
     assert first.status_code == 202 and second.status_code == 200
     assert first.json()["job_id"] == second.json()["job_id"]
     assert len(Queue(analyze_jobs.QUEUE_NAME, connection=fake_redis)) == 1
     # Once finished, a new request starts a new job
     drain(fake_redis)
-    third = client.post("/api/analyze-jobs", json={"repo_url": REPO, "user_id": USER})
+    third = client.post("/api/analyze-jobs", json={"repo_url": REPO})
     assert third.status_code == 202 and third.json()["job_id"] != first.json()["job_id"]
 
 
-def test_other_users_do_not_see_each_others_jobs(client, fake_redis, pipeline):
-    client.post("/api/analyze-jobs", json={"repo_url": REPO, "user_id": USER})
-    other = "11111111-2222-4333-8444-555555555555"
-    assert client.get("/api/repos", params={"user_id": other}).json()["repos"] == []
+def test_other_users_do_not_see_each_others_jobs(client, fake_redis, pipeline, login):
+    job_id = client.post("/api/analyze-jobs", json={"repo_url": REPO}).json()["job_id"]
+    login("11111111-2222-4333-8444-555555555555")
+    assert client.get("/api/repos").json()["repos"] == []
+    assert client.get(f"/api/analyze-jobs/{job_id}").status_code == 404  # not even by job id
 
 
 def test_queue_offline_is_503_not_a_silent_success(client, pipeline, monkeypatch):
@@ -152,17 +154,17 @@ def test_queue_offline_is_503_not_a_silent_success(client, pipeline, monkeypatch
             return fail
 
     set_redis(Down())
-    res = client.post("/api/analyze-jobs", json={"repo_url": REPO, "user_id": USER})
+    res = client.post("/api/analyze-jobs", json={"repo_url": REPO})
     assert res.status_code == 503
     # …and the repo list still loads (no analysis status)
-    assert client.get("/api/repos", params={"user_id": USER}).status_code == 200
+    assert client.get("/api/repos").status_code == 200
 
 
-def test_guest_analysis_lists_from_its_record(client, fake_redis, pipeline):
-    guest = "guest_abc"
-    client.post("/api/analyze-jobs", json={"repo_url": REPO, "user_id": guest})
+def test_guest_analysis_lists_from_its_record(client, fake_redis, pipeline, login):
+    login("guest_abc")
+    client.post("/api/analyze-jobs", json={"repo_url": REPO})
     drain(fake_redis)
-    repos = client.get("/api/repos", params={"user_id": guest}).json()["repos"]
+    repos = client.get("/api/repos").json()["repos"]
     assert len(repos) == 1
     assert repos[0]["analysis"]["state"] == "completed"
     assert repos[0]["fingerprint"]["type_hint_usage"] == 0.5  # kept with the record — not in the DB
@@ -171,7 +173,7 @@ def test_guest_analysis_lists_from_its_record(client, fake_redis, pipeline):
 
 
 def test_bad_url_is_400(client, fake_redis, pipeline):
-    assert client.post("/api/analyze-jobs", json={"repo_url": "not-a-repo", "user_id": USER}).status_code == 400
+    assert client.post("/api/analyze-jobs", json={"repo_url": "not-a-repo"}).status_code == 400
 
 
 def test_unknown_job_is_404(client, fake_redis):
@@ -179,7 +181,7 @@ def test_unknown_job_is_404(client, fake_redis):
 
 
 def test_sync_route_still_works(client, fake_redis, pipeline):
-    res = client.post("/api/analyze-repo", json={"repo_url": REPO, "user_id": USER, "force_refresh": True})
+    res = client.post("/api/analyze-repo", json={"repo_url": REPO, "force_refresh": True})
     assert res.status_code == 200 and res.json()["num_functions"] == 2
 
 
