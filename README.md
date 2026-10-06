@@ -730,4 +730,4 @@ Papers from [`research/RELATED_WORK.md`](research/RELATED_WORK.md) and the compo
 ## Author
 
 **Vaishnavi Chaughule**, MS Computer Science, Northeastern University (Seattle)
-GitHub: [vaishnavi1064](https://github.com/vaishnavi1064) · LinkedIn: [Vaishnavi Chaughule](https://linkedin.com/in/vaishnavi-chaughule)
+GitHub: [vaishnavi1064](https://github.com/vaishnavi1064) · LinkedIn: [Vaishnavi Chaughule](https://www.linkedin.com/in/vaishnavichaughule/)
