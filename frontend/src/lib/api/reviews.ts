@@ -1,9 +1,11 @@
-// Reviews: POST /api/review and the normalizer that turns its JSON (also what
-// chat messages persist) into the Review domain type.
-import { request } from './http'
+// Reviews: run on the background worker (POST /api/reviews, then poll
+// GET /api/reviews/{id}), and the normalizer that turns the result JSON (also
+// what chat messages persist) into the Review domain type. The synchronous
+// POST /api/review stays on the backend for API/MCP clients only.
+import { ApiError, request } from './http'
 import type { AgentName, BackendReviewStatus, Finding, Review, ReviewState, Severity, StyleMetric, TraceStep } from './types'
 
-/** Raw /api/review response — persisted as-is in review chat messages. */
+/** Raw review result (the job's `result`) — persisted as-is in review chat messages. */
 export interface RawReview {
   repo_url?: string
   language?: string
@@ -64,13 +66,63 @@ export const REVIEW_LANGUAGES = [
 
 export type ReviewLanguage = typeof REVIEW_LANGUAGES[number]['value']
 
-export async function reviewCode(repoUrl: string, code: string, language: string): Promise<RawReview> {
-  return request<RawReview>('/api/review', {
+interface ReviewJobWire {
+  job_id: string
+  state: 'queued' | 'running' | 'completed' | 'failed'
+  message: string | null
+  error: string | null
+  result: RawReview | null
+}
+
+export interface ReviewProgress { state: 'queued' | 'running'; message: string | null }
+
+/** Six agents + two self-correction loops; several LLM calls. */
+const REVIEW_TIMEOUT_MS = 10 * 60_000
+const POLL_MS = 1500
+const MAX_POLL_ERRORS = 5
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/**
+ * Review `code` against the repo's fingerprint on the background worker:
+ * enqueue, then poll until the job completes. `onProgress` reports queued /
+ * running. A failed job throws ApiError with the server's reason; a queue that
+ * is offline surfaces as the enqueue's 503 (there is no in-API fallback).
+ */
+export async function reviewCode(
+  repoUrl: string,
+  code: string,
+  language: string,
+  opts: { onProgress?: (p: ReviewProgress) => void; pollMs?: number } = {},
+): Promise<RawReview> {
+  const { onProgress, pollMs = POLL_MS } = opts
+  let job = await request<ReviewJobWire>('/api/reviews', {
     method: 'POST',
     body: { repo_url: repoUrl, code, language },
-    // Six agents + two self-correction loops; several LLM calls.
-    timeoutMs: 10 * 60_000,
+    timeoutMs: 30_000,
   })
+  const deadline = Date.now() + REVIEW_TIMEOUT_MS
+  let errors = 0
+  for (;;) {
+    if (job.state === 'completed') {
+      if (!job.result) throw new ApiError('parse', 'Review finished without a result')
+      return job.result
+    }
+    if (job.state === 'failed') throw new ApiError('http', job.error ?? 'Review failed', 500)
+    onProgress?.({ state: job.state, message: job.message })
+    if (Date.now() > deadline) {
+      throw new ApiError('timeout', `Review timed out after ${Math.round(REVIEW_TIMEOUT_MS / 60_000)} minutes`)
+    }
+    await sleep(pollMs)
+    try {
+      job = await request<ReviewJobWire>(`/api/reviews/${encodeURIComponent(job.job_id)}`, { timeoutMs: 15_000 })
+      errors = 0
+    } catch (err) {
+      // A blip while polling shouldn't lose a review that's still running
+      const transient = err instanceof ApiError && (err.kind === 'network' || err.kind === 'timeout' || (err.status ?? 0) >= 502)
+      if (!transient || ++errors >= MAX_POLL_ERRORS) throw err
+    }
+  }
 }
 
 // ── Normalization ─────────────────────────────────────────────────────────────

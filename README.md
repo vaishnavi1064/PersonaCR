@@ -257,7 +257,7 @@ python -m backend.src.workers.worker
 docker compose --profile worker up -d redis worker
 ```
 
-Sync `POST /api/review` remains available without Redis. Async path: `POST /api/reviews` enqueues on the Redis queue `reviews`; an RQ worker process (`backend.src.workers.worker` — the `worker` Deployment in `k8s/`, or the Compose `worker` profile) runs the review; `GET /api/reviews/{job_id}` polls status/result. Without a running worker, jobs stay `queued` (local/dev scale).
+The UI's reviews use the async path; sync `POST /api/review` stays for API/MCP clients (and works without Redis). Async path: `POST /api/reviews` enqueues on the Redis queue `reviews`; an RQ worker process (`backend.src.workers.worker` — the `worker` Deployment in `k8s/`, or the Compose `worker` profile) runs the review; `GET /api/reviews/{job_id}` polls status/result. Without a running worker, jobs stay `queued` (local/dev scale).
 
 ### Observability (optional)
 

@@ -40,6 +40,9 @@ function errorText(err: unknown, action: 'ask' | 'review'): string {
   if (err instanceof ApiError) {
     if (err.kind === 'network') return 'Could not reach the PersonaCR server. Is the backend running?'
     if (err.kind === 'timeout') return `${err.message}. Try a smaller piece of code.`
+    if (action === 'review' && err.status === 503) {
+      return 'Reviews are unavailable right now — the background job queue is offline. Try again shortly.'
+    }
     if (err.status === 404 && /fingerprint/i.test(err.message)) {
       return 'This repo has no saved analysis on the server, so it can’t be reviewed yet. Reanalyze it from Repositories while signed in.'
     }
@@ -230,7 +233,12 @@ export default function ChatPage() {
       await ensureChat(reviewTarget)
       // A retry re-runs the code already in the chat — no second copy of it
       if (!opts.retryOf) await addMessage(makeUserMsg(code, { mode: 'review', language }), code)
-      const raw = await reviewCode(reviewTarget, code, language)
+      // Runs on the background worker; show "queued" until a worker picks it up
+      const raw = await reviewCode(reviewTarget, code, language, {
+        onProgress: ({ state }) => setPending((p) => p && p.kind === 'review'
+          ? { ...p, queued: state === 'queued', queuedAt: state === 'queued' ? p.queuedAt ?? Date.now() : p.queuedAt }
+          : p),
+      })
       const msg = makeBotMsg('review', undefined, { ...raw, code, language, repo_url: reviewTarget, retry_of: opts.retryOf ?? null })
       await addMessage(msg)
       setPanelReviewId(msg.id)

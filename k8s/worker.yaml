@@ -3,7 +3,7 @@
 #
 # Same image as the backend; runs backend/src/workers/worker.py (one RQ Worker
 # listening on both queues) instead of uvicorn:
-#   - POST /api/reviews       → review jobs
+#   - POST /api/reviews       → review jobs (the UI's reviews run here)
 #   - POST /api/analyze-jobs  → repo analysis (fetch, fingerprint, embed, summary)
 # Results/status go back to Redis (GET /api/reviews/{id}, GET /api/analyze-jobs/{id},
 # GET /api/repos). No Service: it only talks out to Redis, Chroma (HttpClient via

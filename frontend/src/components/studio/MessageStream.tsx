@@ -11,7 +11,17 @@ import { reviewFromMessage } from './reviewMessage'
 import FingerprintCard from '../chat/FingerprintCard'
 import RichText from './RichText'
 
-export interface Pending { kind: 'ask' | 'review'; startedAt: number }
+export interface Pending {
+  kind: 'ask' | 'review'
+  startedAt: number
+  /** Review job still waiting for the background worker. */
+  queued?: boolean
+  /** When it was queued (for the no-worker hint). */
+  queuedAt?: number
+}
+
+/** After this long in the queue, say that no worker may be running (same as repo analysis). */
+const STUCK_QUEUED_MS = 30_000
 
 interface MessageStreamProps {
   messages: ChatMessage[]
@@ -209,11 +219,14 @@ function PendingBubble({ pending }: { pending: Pending }) {
       <div className="text-sm text-fg-2">
         <p className="flex items-center gap-2">
           <Loader2 size={14} className="animate-spin text-accent" aria-hidden />
-          {pending.kind === 'review' ? 'Reviewing' : 'Thinking'}… {elapsed(now - pending.startedAt)} elapsed
+          {pending.kind === 'review' ? (pending.queued ? 'Queued — waiting for a worker' : 'Reviewing') : 'Thinking'}…{' '}
+          {elapsed(now - pending.startedAt)} elapsed
         </p>
         {pending.kind === 'review' && (
           <p className="mt-1 text-xs text-fg-3">
-            Planner → Style Analyst ∥ Defect Hunter → QA Checker → Confidence → CRScore quality gate.
+            {pending.queued && pending.queuedAt && now - pending.queuedAt > STUCK_QUEUED_MS
+              ? 'No worker has picked this up yet — is the background worker running?'
+              : 'Planner → Style Analyst ∥ Defect Hunter → QA Checker → Confidence → CRScore quality gate.'}
           </p>
         )}
       </div>
