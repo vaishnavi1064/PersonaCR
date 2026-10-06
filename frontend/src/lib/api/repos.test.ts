@@ -31,6 +31,15 @@ describe('fingerprint', () => {
     expect(fingerprintChips(normalizeFingerprint({ naming_convention: 'unknown', error_handling_rate: 0 }))).toEqual(['0% error handling'])
   })
 
+  it('drops the type-hint chip when the repo has non-Python functions (always counted as typed)', () => {
+    const java = normalizeFingerprint({ type_hint_usage: 1, naming_convention: 'camelCase', language_distribution: { java: 108 } })
+    expect(fingerprintChips(java)).toEqual(['camelCase'])
+    const mixed = normalizeFingerprint({ type_hint_usage: 0.44, language_distribution: { python: 500, javascript: 54 } })
+    expect(fingerprintChips(mixed)).toEqual([])
+    const py = normalizeFingerprint({ type_hint_usage: 0.44, language_distribution: { python: 554 } })
+    expect(fingerprintChips(py)).toEqual(['44% type hints'])
+  })
+
   it('a partial cached row keeps missing fields null, not 0', () => {
     const fp = normalizeFingerprint({ avg_function_length: 15 })!
     expect(fp.avgFunctionLength).toBe(15)

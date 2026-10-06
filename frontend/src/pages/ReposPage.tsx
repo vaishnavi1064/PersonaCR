@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { FolderGit2, Plus, SearchX, TriangleAlert } from 'lucide-react'
 import { ApiError, listRepos, type Repo, type RepoStatus } from '../lib/api'
 import { useRepoJobs, type RepoJob } from '../store/useRepoJobs'
@@ -40,7 +40,7 @@ function placeholderRepo(job: RepoJob): Repo {
   const [owner = '', name = job.fullName] = job.fullName.split('/')
   return {
     url: job.url, fullName: job.fullName, owner, name, status: 'added', error: null,
-    languages: [], functionsCount: null, analyzedAt: null, fingerprint: null, summary: null,
+    languages: [], functionsCount: null, analyzedAt: null, lastCommitSha: null, fingerprint: null, summary: null,
   }
 }
 
@@ -56,7 +56,10 @@ export default function ReposPage() {
 
   const [list, setList] = useState<ListState>({ status: 'loading' })
   const [reloadKey, setReloadKey] = useState(0)
-  const [importOpen, setImportOpen] = useState(false)
+  const [params, setParams] = useSearchParams()
+  // ?import=owner/repo (from a repo page for an unknown repo) opens the dialog prefilled
+  const importParam = params.get('import')
+  const [importOpen, setImportOpen] = useState(() => importParam != null)
   const [query, setQuery] = useState('')
   const [language, setLanguage] = useState('all')
   const [status, setStatus] = useState<'all' | RepoStatus>('all')
@@ -222,7 +225,8 @@ export default function ReposPage() {
       {importOpen && (
         <ImportRepoDialog
           userId={userId}
-          onClose={() => setImportOpen(false)}
+          initialValue={importParam ?? ''}
+          onClose={() => { setImportOpen(false); if (importParam != null) setParams({}, { replace: true }) }}
           onStartChat={(repo) => { setImportOpen(false); startChat(repo) }}
         />
       )}

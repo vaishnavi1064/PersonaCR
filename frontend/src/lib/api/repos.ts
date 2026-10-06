@@ -66,6 +66,14 @@ export function normalizeFingerprint(raw: unknown): Fingerprint | null {
     if (typeof v === 'number' || typeof v === 'string' || v === null) extra[k] = v
   }
 
+  const patterns: Record<string, number> = {}
+  if (r.pattern_frequency && typeof r.pattern_frequency === 'object') {
+    for (const [k, v] of Object.entries(r.pattern_frequency as Record<string, unknown>)) {
+      const n = num(v)
+      if (n != null) patterns[k] = n
+    }
+  }
+
   const naming = typeof r.naming_convention === 'string' && NAMING.includes(r.naming_convention as NamingConvention)
     ? (r.naming_convention as NamingConvention)
     : null
@@ -84,15 +92,26 @@ export function normalizeFingerprint(raw: unknown): Fingerprint | null {
     commentDensity: num(r.comment_density),
     avgLineLength: num(r.avg_line_length),
     primaryIndentDepth: num(r.primary_indent_depth),
+    patternFrequency: patterns,
     extra,
+    raw: r,
   }
 }
 
 /** 2–3 headline chips for a repo card, e.g. ["79% type hints", "snake_case", "41% docstrings"]. */
+/**
+ * Type hints are only measured for Python: the extractor counts every
+ * non-Python function as typed. False when the repo has non-Python functions.
+ */
+export function typeHintsMeasured(fp: Fingerprint): boolean {
+  const langs = Object.keys(fp.languageDistribution).length ? Object.keys(fp.languageDistribution) : fp.languages
+  return langs.every((l) => l.toLowerCase() === 'python')
+}
+
 export function fingerprintChips(fp: Fingerprint | null, max = 3): string[] {
   if (!fp) return []
   const chips: string[] = []
-  if (fp.typeHintUsage != null) chips.push(`${pct(fp.typeHintUsage)} type hints`)
+  if (fp.typeHintUsage != null && typeHintsMeasured(fp)) chips.push(`${pct(fp.typeHintUsage)} type hints`)
   if (fp.namingConvention && fp.namingConvention !== 'unknown') chips.push(fp.namingConvention)
   if (fp.docstringCoverage != null) chips.push(`${pct(fp.docstringCoverage)} docstrings`)
   if (fp.errorHandlingRate != null) chips.push(`${pct(fp.errorHandlingRate)} error handling`)
@@ -132,6 +151,7 @@ function repoFromListItem(item: RepoListItem): Repo {
     languages: item.languages ?? fingerprint?.languages ?? [],
     functionsCount: num(item.functions_count),
     analyzedAt: item.analyzed_at,
+    lastCommitSha: item.last_commit_sha,
     fingerprint,
     summary: null, // capability repoSummary
   }
@@ -202,6 +222,7 @@ export async function analyzeRepo(
     languages,
     functionsCount: num(r.num_functions),
     analyzedAt: r.analyzed_at ?? null,
+    lastCommitSha: r.last_commit_sha || null,
     fingerprint,
     summary: null,
   }

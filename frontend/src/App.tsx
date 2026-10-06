@@ -8,6 +8,7 @@ import ChatPage from './pages/ChatPage'
 import DashboardPage from './pages/DashboardPage'
 import ReposPage from './pages/ReposPage'
 import RepoDetailPage from './pages/RepoDetailPage'
+import ReviewPage from './pages/ReviewPage'
 import SettingsPage from './pages/SettingsPage'
 import NotFoundPage from './pages/NotFoundPage'
 import AuthGuard from './components/layout/AuthGuard'
@@ -102,6 +103,7 @@ export default function App() {
         <Route element={<AuthGuard><AppShell /></AuthGuard>}>
           <Route path="/repos" element={<ReposPage />} />
           <Route path="/repos/:owner/:name" element={<RepoDetailPage />} />
+          <Route path="/reviews/:id" element={<ReviewPage />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/settings" element={<SettingsPage />} />

@@ -20,11 +20,19 @@ export default function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
   const chats = useStore((s) => s.chats)
   const activeChatId = useStore((s) => s.activeChatId)
 
-  const root = '/' + (pathname.split('/')[1] ?? '')
-  const section = SECTION[root] ?? ''
-  const chatTitle = root === '/chat'
-    ? chats.find((c) => c.id === activeChatId)?.title ?? 'New chat'
-    : null
+  // Breadcrumb: section (linked when there's a deeper crumb) → current page
+  const parts = pathname.split('/').filter(Boolean)
+  const root = '/' + (parts[0] ?? '')
+  const crumbs: { label: string; to?: string }[] = []
+  if (root === '/chat') {
+    crumbs.push({ label: 'Chats' }, { label: chats.find((c) => c.id === activeChatId)?.title ?? 'New chat' })
+  } else if (root === '/repos' && parts.length >= 3) {
+    crumbs.push({ label: 'Repositories', to: '/repos' }, { label: `${decodeURIComponent(parts[1])}/${decodeURIComponent(parts[2])}` })
+  } else if (root === '/reviews') {
+    crumbs.push({ label: 'Repositories', to: '/repos' }, { label: 'Review' })
+  } else if (SECTION[root]) {
+    crumbs.push({ label: SECTION[root] })
+  }
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line bg-canvas px-4 sm:px-6">
@@ -33,13 +41,17 @@ export default function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
 
       <nav aria-label="Breadcrumb" className="min-w-0 flex-1">
         <ol className="flex min-w-0 items-center gap-2 text-sm">
-          <li className={chatTitle ? 'hidden shrink-0 text-fg-3 sm:block' : 'truncate font-medium text-fg'}>{section}</li>
-          {chatTitle && (
-            <>
-              <li className="hidden text-fg-3 sm:block" aria-hidden>/</li>
-              <li className="truncate font-medium text-fg" aria-current="page">{chatTitle}</li>
-            </>
-          )}
+          {crumbs.map((c, i) => {
+            const last = i === crumbs.length - 1
+            return (
+              <li key={i} className={last ? 'flex min-w-0 items-center gap-2' : 'hidden shrink-0 items-center gap-2 sm:flex'}>
+                {i > 0 && <span className="hidden text-fg-3 sm:inline" aria-hidden>/</span>}
+                {last
+                  ? <span className="truncate font-medium text-fg" aria-current="page">{c.label}</span>
+                  : c.to ? <Link to={c.to} className="text-fg-3 hover:text-fg">{c.label}</Link> : <span className="text-fg-3">{c.label}</span>}
+              </li>
+            )
+          })}
         </ol>
       </nav>
 

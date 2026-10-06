@@ -129,6 +129,8 @@
   --syn-def: #1D4ED8;
   --syn-type: #A16207;
   --syn-prop: #0E7490;
+  /* Accent text: the light accent shades are tuned for dark backgrounds */
+  --accent-text: var(--accent-dark);
   /* Darker status colors so they stay readable on white */
   --success: #15803D;
   --warning: #B45309;

@@ -5,7 +5,7 @@ export * from './capabilities'
 export { ApiError, API_BASE, request, setAuthTokenProvider } from './http'
 export type { ApiErrorKind } from './http'
 export {
-  parseRepoUrl, normalizeFingerprint, fingerprintChips, topLanguages,
+  parseRepoUrl, normalizeFingerprint, fingerprintChips, typeHintsMeasured, topLanguages,
   isAccountUserId, listRepos, analyzeRepo,
 } from './repos'
 export type { ParsedRepoUrl, AnalyzeResult } from './repos'
@@ -15,3 +15,4 @@ export {
 export type { RawReview, RawIssue, ReviewLanguage } from './reviews'
 export { askQuestion, chatRepoUrl, groupChatsByRepo, repoShortName } from './chats'
 export type { Answer, ChatGroup } from './chats'
+export { fetchRepoReviews, fetchRepoChats, fetchSavedReview, reviewFromRow, SAVED_CODE_LIMIT } from './history'

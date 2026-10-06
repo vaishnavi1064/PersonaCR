@@ -51,7 +51,7 @@ export default function CodePanel({
       <div className="flex h-12 shrink-0 items-center gap-2 border-b border-line px-4">
         <Code2 size={15} className="text-fg-3" aria-hidden />
         <h2 className="text-sm font-semibold text-fg">Reviewed code</h2>
-        {review && <span className="truncate text-xs text-fg-3">{langLabel} · {lineCount} lines</span>}
+        {review && <span className="truncate text-xs text-fg-3">{[langLabel, `${lineCount} lines`].filter(Boolean).join(' · ')}</span>}
         <div className="ml-auto flex items-center gap-1.5">
           {options.length > 1 && selectedId && (
             <FilterSelect label="Review" value={selectedId} options={options.map((o) => ({ value: o.id, label: o.label }))} onChange={onSelectReview} className="max-w-44" />

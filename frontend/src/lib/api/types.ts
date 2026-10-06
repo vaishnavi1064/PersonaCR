@@ -36,8 +36,12 @@ export interface Fingerprint {
   commentDensity: number | null
   avgLineLength: number | null
   primaryIndentDepth: number | null
+  /** Pattern → number of functions where it was detected. */
+  patternFrequency: Record<string, number>
   /** Every other scalar field, kept for the Convention Atlas. */
   extra: Record<string, number | string | null>
+  /** The backend record as received (Convention Atlas reads exact values from it). */
+  raw: Record<string, unknown>
 }
 
 export interface Repo {
@@ -53,6 +57,8 @@ export interface Repo {
   languages: string[]
   functionsCount: number | null
   analyzedAt: string | null
+  /** Commit the fingerprint was built from. */
+  lastCommitSha: string | null
   fingerprint: Fingerprint | null
   /** One-line summary — null until capability `repoSummary` ships. */
   summary: string | null

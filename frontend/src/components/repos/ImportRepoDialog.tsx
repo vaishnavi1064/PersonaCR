@@ -11,6 +11,7 @@ import GitHubMark from '../ui/GitHubMark'
 
 interface ImportRepoDialogProps {
   userId: string
+  initialValue?: string
   onClose: () => void
   onStartChat: (repo: Repo) => void
 }
@@ -20,11 +21,11 @@ interface ImportRepoDialogProps {
  * request, so all we know is that it's running and for how long.
  * Mount it only while open so its state resets each time.
  */
-export default function ImportRepoDialog({ userId, onClose, onStartChat }: ImportRepoDialogProps) {
+export default function ImportRepoDialog({ userId, initialValue = '', onClose, onStartChat }: ImportRepoDialogProps) {
   const titleId = useId()
   const errorId = useId()
   const dialogRef = useRef<HTMLDivElement>(null)
-  const [value, setValue] = useState('')
+  const [value, setValue] = useState(initialValue)
   const [invalid, setInvalid] = useState(false)
   const [target, setTarget] = useState<ParsedRepoUrl | null>(null)
 

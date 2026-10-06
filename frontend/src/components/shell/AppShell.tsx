@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import NavSidebar from './NavSidebar'
+import { useStore } from '../../store/useStore'
+import { useCurrentUser } from '../../lib/useCurrentUser'
+import { isAccountUserId } from '../../lib/api'
+import { loadChats } from '../../lib/db'
 import TopBar from './TopBar'
 
 /** Signed-in layout: sidebar (drawer below lg) + top bar + routed page. */
@@ -8,6 +12,16 @@ export default function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   // The Chat Studio has its own threads pane; the app nav shrinks to a rail there.
   const studio = useLocation().pathname.startsWith('/chat')
+  const { userId } = useCurrentUser()
+  const setChats = useStore((s) => s.setChats)
+
+  // Sidebar chat history for signed-in users, on any page (the Studio reloads it too)
+  useEffect(() => {
+    if (!isAccountUserId(userId)) return
+    let alive = true
+    loadChats(userId).then((chats) => { if (alive && chats.length > 0) setChats(chats) })
+    return () => { alive = false }
+  }, [userId, setChats])
 
   useEffect(() => {
     if (!drawerOpen) return

@@ -3,7 +3,8 @@ import { explainDegraded, type Review, type Severity } from '../../lib/api'
 import { pct } from '../../lib/format'
 import { cn } from '../../lib/cn'
 import Button from '../ui/Button'
-import StatusPill, { type PillTone } from '../ui/StatusPill'
+import StatusPill from '../ui/StatusPill'
+import { scoreColor, statePill } from './reviewMeta'
 import { severityColor } from '../studio/severity'
 import TraceTimeline from './TraceTimeline'
 
@@ -18,20 +19,6 @@ interface ReviewSummaryProps {
 }
 
 const SEVERITIES: Severity[] = ['critical', 'high', 'medium', 'low']
-
-function scoreColor(score: number): string {
-  if (score >= 70) return 'var(--success)'
-  if (score >= 50) return 'var(--warning)'
-  return 'var(--error)'
-}
-
-function statePill(r: Review): { tone: PillTone; label: string } {
-  if (r.state === 'error') return { tone: 'danger', label: 'Error' }
-  if (r.state === 'degraded') return { tone: 'warning', label: 'Degraded' }
-  if (r.state === 'low_confidence') return { tone: 'warning', label: 'Low confidence' }
-  if (r.backendStatus === 'quality_gate_failed') return { tone: 'warning', label: 'Quality gate failed' }
-  return { tone: 'success', label: 'Passed' }
-}
 
 const fmt2 = (v: number | null) => (v == null ? '—' : v.toFixed(2))
 
@@ -54,7 +41,7 @@ export default function ReviewSummary({ review: r, active, onOpenCode, onRetry, 
         <p className="flex items-baseline gap-1" aria-label={r.score == null ? 'No score' : `Score ${Math.round(r.score)} out of 100`}>
           <span
             className="text-[34px] font-bold leading-none tracking-tight tabular-nums"
-            style={{ color: r.score == null ? 'var(--text-tertiary)' : scoreColor(r.score) }}
+            style={{ color: scoreColor(r.score) }}
             aria-hidden
           >
             {r.score == null ? '—' : Math.round(r.score)}
