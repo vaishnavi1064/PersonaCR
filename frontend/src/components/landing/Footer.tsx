@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { API_BASE } from '../../lib/api/http'
 
 function DiamondLogo() {
   return (
@@ -158,8 +159,9 @@ export default function Footer() {
             <FooterColHeading>Product</FooterColHeading>
             <FooterLink href="/chat">Chat</FooterLink>
             <FooterLink href="/dashboard">Dashboard</FooterLink>
-            <FooterLink href="http://localhost:8000/docs" external>API</FooterLink>
-            <FooterLink href="http://localhost:8000/mcp" external>MCP</FooterLink>
+            {/* Served by the backend: /docs and /mcp behind nginx, localhost:8000 in dev */}
+            <FooterLink href={`${API_BASE}/docs`} external>API</FooterLink>
+            <FooterLink href={`${API_BASE}/mcp`} external>MCP</FooterLink>
           </div>
 
           {/* Right — Connect */}
