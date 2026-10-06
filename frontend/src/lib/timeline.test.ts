@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { TraceStep } from '../../lib/api'
+import type { TraceStep } from './api'
 import { layoutTimeline } from './timeline'
 
 const step = (agent: string, durationMs: number | null, parallel = false, iteration = 1): TraceStep => ({

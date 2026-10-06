@@ -15,6 +15,7 @@
   --color-line: var(--border);
   --color-line-strong: var(--border-hover);
   --color-accent: var(--accent);
+  --color-chart: var(--chart-series);
   --color-accent-strong: var(--accent-dark);
   --color-accent-soft: var(--accent-surface);
   --color-accent-glow: var(--accent-glow);
@@ -46,6 +47,9 @@
   --accent-surface: rgba(139,124,246,0.06);
   --accent-text: #B4A9FA;
   --on-accent: #FFFFFF;
+  /* Single-series chart color per theme (validated: lightness band, chroma, contrast) */
+  --chart-series-dark: #8B7CF6;
+  --chart-series-light: #6C5CE7;
 
   /* Semantic */
   --success: #4ADE80;
@@ -63,6 +67,8 @@
   --accent-surface: rgba(91,141,239,0.06);
   --accent-text: #8CB4F7;
   --on-accent: #FFFFFF;
+  --chart-series-dark: #5B8DEF;
+  --chart-series-light: #3B6FD4;
 }
 
 /* Teal accent option */
@@ -73,6 +79,8 @@
   --accent-surface: rgba(78,205,196,0.06);
   --accent-text: #7EDDD6;
   --on-accent: #04201D;
+  --chart-series-dark: #279C8E;
+  --chart-series-light: #2EAD9E;
 }
 
 /* Coral accent option */
@@ -83,6 +91,8 @@
   --accent-surface: rgba(240,113,103,0.06);
   --accent-text: #F5968F;
   --on-accent: #FFFFFF;
+  --chart-series-dark: #D45750;
+  --chart-series-light: #BF4841;
 }
 
 /* Dark theme — near-black canvas, slightly raised surfaces, hairline borders */
@@ -98,6 +108,7 @@
   --border: rgba(255,255,255,0.09);
   --border-hover: rgba(255,255,255,0.17);
   --pop-shadow: 0 12px 32px rgba(0,0,0,0.5);
+  --chart-series: var(--chart-series-dark);
   /* Syntax */
   --syn-keyword: #C4A7FF;
   --syn-string: #9CD69B;
@@ -121,6 +132,7 @@
   --border: rgba(0,0,0,0.10);
   --border-hover: rgba(0,0,0,0.20);
   --pop-shadow: 0 12px 32px rgba(20,20,40,0.12);
+  --chart-series: var(--chart-series-light);
   /* Syntax */
   --syn-keyword: #7C3AED;
   --syn-string: #15803D;

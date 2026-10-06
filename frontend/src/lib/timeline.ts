@@ -1,4 +1,4 @@
-import type { TraceStep } from '../../lib/api'
+import type { TraceStep } from './api'
 
 export interface TimelineRow {
   step: TraceStep

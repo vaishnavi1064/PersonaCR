@@ -15,4 +15,4 @@ export {
 export type { RawReview, RawIssue, ReviewLanguage } from './reviews'
 export { askQuestion, chatRepoUrl, groupChatsByRepo, repoShortName } from './chats'
 export type { Answer, ChatGroup } from './chats'
-export { fetchRepoReviews, fetchRepoChats, fetchSavedReview, reviewFromRow, SAVED_CODE_LIMIT } from './history'
+export { fetchAllReviews, fetchRepoReviews, fetchRepoChats, fetchSavedReview, reviewFromRow, SAVED_CODE_LIMIT } from './history'

@@ -26,6 +26,16 @@ export async function fetchRepoReviews(userId: string, repoUrl: string): Promise
   return (data ?? []) as ReviewRow[]
 }
 
+export async function fetchAllReviews(userId: string): Promise<ReviewRow[]> {
+  const { data, error } = await supabase
+    .from('user_reviews')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+  if (error) throw new Error(error.message)
+  return (data ?? []) as ReviewRow[]
+}
+
 export async function fetchRepoChats(userId: string, repoUrl: string): Promise<ChatMeta[]> {
   const { data, error } = await supabase
     .from('user_chats')

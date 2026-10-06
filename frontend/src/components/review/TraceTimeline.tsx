@@ -2,7 +2,7 @@ import { useId, useMemo, useState, type ReactNode } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { AGENT_LABEL, type AgentName, type TraceStep } from '../../lib/api'
 import { cn } from '../../lib/cn'
-import { formatMs, layoutTimeline } from './timeline'
+import { formatMs, layoutTimeline } from '../../lib/timeline'
 
 function agentLabel(agent: string): string {
   return AGENT_LABEL[agent as AgentName] ?? agent.replace(/_/g, ' ')
