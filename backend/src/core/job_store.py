@@ -10,6 +10,7 @@ import json
 from datetime import datetime, timezone
 from typing import Any
 
+from backend.src.core import liveness
 from backend.src.core.models import ReportResponse, StatusResponse
 from backend.src.core.redis_client import get_redis
 
@@ -83,12 +84,45 @@ def update_job(
 
 
 def get_job_dict(job_id: str) -> dict[str, Any] | None:
+    """The job; a running job whose worker stopped beating is marked failed first (core/liveness.py)."""
     raw = get_redis().get(_key(job_id))
     if raw is None:
         return None
     if isinstance(raw, bytes):
         raw = raw.decode("utf-8")
-    return json.loads(raw)
+    data = json.loads(raw)
+    if liveness.is_stale(data):
+        data = _mark_failed(data, liveness.WORKER_STOPPED)
+    return data
+
+
+def _mark_failed(data: dict[str, Any], error: str) -> dict[str, Any]:
+    data = {**data, "state": "failed", "progress": 100, "message": "failed", "error": error, "updated_at": _now()}
+    get_redis().set(_key(data["job_id"]), json.dumps(data), ex=JOB_TTL_SECONDS)
+    return data
+
+
+def touch(job_id: str) -> None:
+    """Heartbeat: refresh updated_at of a running job (no-op otherwise)."""
+    raw = get_redis().get(_key(job_id))
+    if raw is None:
+        return
+    data = json.loads(raw.decode("utf-8") if isinstance(raw, bytes) else raw)
+    if data.get("state") == "running":
+        data["updated_at"] = _now()
+        get_redis().set(_key(job_id), json.dumps(data), ex=JOB_TTL_SECONDS)
+
+
+def fail_if_active(job_id: str, error: str) -> bool:
+    """Mark a queued/running job failed (RQ failure hooks). False if it already finished."""
+    raw = get_redis().get(_key(job_id))
+    if raw is None:
+        return False
+    data = json.loads(raw.decode("utf-8") if isinstance(raw, bytes) else raw)
+    if data.get("state") not in ("queued", "running"):
+        return False
+    _mark_failed(data, error)
+    return True
 
 
 def get_job(job_id: str) -> StatusResponse | None:

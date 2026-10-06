@@ -1,11 +1,18 @@
-# RQ worker Deployment — consumes async review jobs from Redis queue "reviews".
-# Local/dev minikube demo — 1 replica, not HA.
+# RQ worker Deployment — runs background jobs from Redis queues "reviews" and
+# "analyze". Local/dev minikube demo — 1 replica, not HA.
 #
-# Same image as the backend; runs backend/src/workers/worker.py (an RQ Worker on
-# QUEUE_NAME="reviews" from backend/src/workers/review_jobs.py) instead of uvicorn.
-# POST /api/reviews enqueues; this pod runs the review and writes the result back
-# to Redis for GET /api/reviews/{job_id}. No Service: it only talks out to Redis,
-# Chroma (HttpClient via CHROMADB_URL) and Groq/Supabase.
+# Same image as the backend; runs backend/src/workers/worker.py (one RQ Worker
+# listening on both queues) instead of uvicorn:
+#   - POST /api/reviews       → review jobs
+#   - POST /api/analyze-jobs  → repo analysis (fetch, fingerprint, embed, summary)
+# Results/status go back to Redis (GET /api/reviews/{id}, GET /api/analyze-jobs/{id},
+# GET /api/repos). No Service: it only talks out to Redis, Chroma (HttpClient via
+# CHROMADB_URL), Anthropic, GitHub and Supabase.
+#
+# Shutdown: on SIGTERM RQ finishes the current job before exiting, so a rollout
+# or pod delete doesn't cut a review/analysis short if it ends within the grace
+# period. Jobs killed anyway (longer, crash, OOM) are marked failed by the
+# heartbeat check (backend/src/core/liveness.py) and can be retried.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -25,6 +32,7 @@ spec:
         app.kubernetes.io/name: worker
         app.kubernetes.io/part-of: personacr
     spec:
+      terminationGracePeriodSeconds: 300
       # Block until Redis answers PING so the worker doesn't crash-loop on
       # "Connection refused" when the whole stack starts at once.
       initContainers:

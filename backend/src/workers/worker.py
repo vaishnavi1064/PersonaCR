@@ -18,6 +18,7 @@ from rq.timeouts import TimerDeathPenalty
 
 from backend.src.core.redis_client import get_redis_url
 from backend.src.workers.analyze_jobs import QUEUE_NAME as ANALYZE_QUEUE
+from backend.src.workers.failures import on_work_horse_killed
 from backend.src.workers.review_jobs import QUEUE_NAME as REVIEW_QUEUE
 
 logging.basicConfig(
@@ -42,7 +43,9 @@ def main() -> None:
     queues = [Queue(name, connection=conn) for name in names]
     worker_cls = WindowsWorker if os.name == "nt" else Worker
     logger.info("Starting RQ %s on queues=%s redis=%s", worker_cls.__name__, names, url)
-    worker = worker_cls(queues, connection=conn)
+    # RQ runs no on_failure callback when the forked job process dies (e.g. OOM);
+    # this handler marks our records failed in that case.
+    worker = worker_cls(queues, connection=conn, work_horse_killed_handler=on_work_horse_killed)
     worker.work(with_scheduler=False)
 
 

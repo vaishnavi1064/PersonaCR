@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from backend.src.core import analysis_store, job_store
+from backend.src.core.liveness import Heartbeat
 from backend.src.core.analysis import AnalysisError, run_analysis
 from backend.src.core.repo_identity import as_uuid_or_none
 from backend.src.db.supabase_rest import SupabaseREST
@@ -49,6 +50,17 @@ def _record_user_repo(user_id: str, result: dict[str, Any]) -> None:
 
 def process_analyze_job(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     """payload: repo_url, user_id, force_refresh, github_token (optional)."""
+    user_id, repo_url = payload["user_id"], payload["repo_url"]
+
+    def beat() -> None:  # liveness while a stage reports no progress (e.g. embedding)
+        job_store.touch(job_id)
+        analysis_store.beat(user_id, repo_url, job_id)
+
+    with Heartbeat(beat):
+        return _analyze(job_id, payload)
+
+
+def _analyze(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     user_id = payload["user_id"]
     repo_url = payload["repo_url"]
     last_write = 0.0
@@ -60,7 +72,9 @@ def process_analyze_job(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
             return
         last_write = now
         job_store.update_job(job_id, state="running", progress=progress, message=message)
-        analysis_store.update_record(user_id, repo_url, state="running", stage=stage, progress=progress, message=message)
+        analysis_store.update_record(
+            user_id, repo_url, only_job_id=job_id, state="running", stage=stage, progress=progress, message=message,
+        )
 
     report("start", 2, "Starting")
     try:
@@ -88,7 +102,7 @@ def process_analyze_job(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         }
         job_store.update_job(job_id, state="completed", progress=100, message="completed", result=result, error=None)
         analysis_store.update_record(
-            user_id, repo_url, state="completed", stage="done", progress=100, message="Done",
+            user_id, repo_url, only_job_id=job_id, state="completed", stage="done", progress=100, message="Done",
             finished_at=_now(), summary=summary, error=None,
         )
         return result
@@ -99,7 +113,7 @@ def process_analyze_job(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         try:
             job_store.update_job(job_id, state="failed", progress=100, message="failed", error=detail)
             analysis_store.update_record(
-                user_id, repo_url, state="failed", stage="failed", message="Failed", error=detail, finished_at=_now(),
+                user_id, repo_url, only_job_id=job_id, state="failed", stage="failed", message="Failed", error=detail, finished_at=_now(),
             )
         except Exception:
             logger.exception("Failed to mark analyze job %s as failed", job_id)

@@ -8,6 +8,9 @@ Keys:
 A record survives page reloads and closed tabs (7-day TTL). GET /api/repos
 merges it into the repo list, so the UI can show Analyzing / Failed without
 having started the job itself. Ready comes from the saved fingerprint.
+
+A running record whose worker stopped beating is marked failed when read
+(core/liveness.py), so it neither shows "Analyzing" forever nor blocks a new run.
 """
 from __future__ import annotations
 
@@ -16,6 +19,7 @@ import json
 from datetime import datetime, timezone
 from typing import Any
 
+from backend.src.core import job_store, liveness
 from backend.src.core.redis_client import get_redis
 
 RECORD_TTL_SECONDS = 60 * 60 * 24 * 7
@@ -50,8 +54,23 @@ def _decode(raw: Any) -> dict[str, Any] | None:
     return json.loads(raw)
 
 
+def _reconciled(user_id: str, record: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not liveness.is_stale(record):
+        return record
+    assert record is not None
+    if record.get("job_id"):
+        job_store.fail_if_active(record["job_id"], liveness.WORKER_STOPPED)
+    return _failed(user_id, record, liveness.WORKER_STOPPED)
+
+
+def _failed(user_id: str, record: dict[str, Any], error: str) -> dict[str, Any]:
+    return put_record(user_id, record["repo_url"], {
+        **record, "state": "failed", "stage": "failed", "message": "Failed", "error": error, "finished_at": _now(),
+    })
+
+
 def get_record(user_id: str, repo_url: str) -> dict[str, Any] | None:
-    return _decode(get_redis().get(_key(user_id, repo_url)))
+    return _reconciled(user_id, _decode(get_redis().get(_key(user_id, repo_url))))
 
 
 def put_record(user_id: str, repo_url: str, record: dict[str, Any]) -> dict[str, Any]:
@@ -78,11 +97,30 @@ def start_record(user_id: str, repo_url: str, job_id: str, *, force: bool) -> di
     })
 
 
-def update_record(user_id: str, repo_url: str, **fields: Any) -> dict[str, Any] | None:
-    current = get_record(user_id, repo_url)
-    if current is None:
+def update_record(
+    user_id: str, repo_url: str, *, only_job_id: str | None = None, **fields: Any
+) -> dict[str, Any] | None:
+    """Merge fields into the record. With only_job_id, skip it if a newer job owns the record."""
+    current = _decode(get_redis().get(_key(user_id, repo_url)))
+    if current is None or (only_job_id is not None and current.get("job_id") != only_job_id):
         return None
     return put_record(user_id, repo_url, {**current, **fields})
+
+
+def beat(user_id: str, repo_url: str, job_id: str) -> None:
+    """Heartbeat: refresh updated_at while this job's analysis is running."""
+    current = _decode(get_redis().get(_key(user_id, repo_url)))
+    if current and current.get("job_id") == job_id and current.get("state") == "running":
+        put_record(user_id, repo_url, current)
+
+
+def fail_if_active(user_id: str, repo_url: str, job_id: str, error: str) -> bool:
+    """Mark this job's analysis failed if it's still queued/running (RQ failure hooks)."""
+    current = _decode(get_redis().get(_key(user_id, repo_url)))
+    if not current or current.get("job_id") != job_id or current.get("state") not in ACTIVE_STATES:
+        return False
+    _failed(user_id, current, error)
+    return True
 
 
 def list_records(user_id: str) -> list[dict[str, Any]]:
@@ -90,7 +128,7 @@ def list_records(user_id: str) -> list[dict[str, Any]]:
     hashes = [h.decode() if isinstance(h, bytes) else h for h in r.smembers(_index(user_id))]
     records: list[dict[str, Any]] = []
     for h in hashes:
-        rec = _decode(r.get(f"personacr:analysis:{user_id}:{h}"))
+        rec = _reconciled(user_id, _decode(r.get(f"personacr:analysis:{user_id}:{h}")))
         if rec is not None:
             records.append(rec)
         else:

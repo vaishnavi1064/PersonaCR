@@ -13,6 +13,7 @@ import uuid
 from typing import Any
 
 from backend.src.core import job_store
+from backend.src.core.liveness import Heartbeat
 from backend.src.core.repo_identity import repo_identity
 
 logger = logging.getLogger(__name__)
@@ -39,6 +40,12 @@ def _canned_result(repo_url: str, language: str) -> dict[str, Any]:
 
 
 def process_review_job(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    """Worker entry; beats while it runs so a dead worker's job goes stale (core/liveness.py)."""
+    with Heartbeat(lambda: job_store.touch(job_id)):
+        return _review(job_id, payload)
+
+
+def _review(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     """
     Worker entry: queued → running → completed | failed.
 
