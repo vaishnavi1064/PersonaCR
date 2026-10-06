@@ -3,7 +3,10 @@
 # Optional build-args for Supabase (baked into the Vite bundle at build time).
 
 # ── Stage 1: build ──────────────────────────────────────────────────────────
-FROM node:24-alpine AS build
+# Pinned: a floating tag pulled a newer npm that rejected the lockfile. Keep this
+# equal to frontend/.nvmrc (CI reads that file) and regenerate package-lock.json
+# with this npm when bumping it.
+FROM node:24.21.0-alpine AS build
 
 WORKDIR /app
 

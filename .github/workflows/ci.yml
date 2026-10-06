@@ -57,20 +57,16 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          # GHA currently forces Node 24 for JS actions; align the toolchain.
-          node-version: "24"
+          # Same Node/npm as the frontend image (frontend/Dockerfile pins it too),
+          # so the lockfile CI accepts is the one the image build accepts.
+          node-version-file: frontend/.nvmrc
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install frontend deps
         working-directory: frontend
-        # Prefer lockfile-strict install; fall back once if optional-dep drift
-        # between npm clients leaves the lock briefly unsatisfiable.
-        run: |
-          npm ci --no-fund --no-audit || {
-            echo "::warning::npm ci failed; regenerating install from package-lock via npm install"
-            npm install --no-fund --no-audit
-          }
+        # Lockfile-strict: drift must fail here, not later in the image build.
+        run: npm ci --no-fund --no-audit
 
       - name: TypeScript check (tsc --noEmit via project build mode)
         working-directory: frontend
