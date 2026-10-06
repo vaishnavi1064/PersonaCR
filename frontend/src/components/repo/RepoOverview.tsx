@@ -1,5 +1,5 @@
 import { Braces, Bug, FileText, GitBranch, Ruler, Sigma, Type } from 'lucide-react'
-import { typeHintsMeasured, type Repo } from '../../lib/api'
+import { typeHintsMeasured, typeHintsRepresentative, type Repo } from '../../lib/api'
 import { absoluteTime, count, pct, relativeTime } from '../../lib/format'
 import Card from '../ui/Card'
 import StatTile from '../ui/StatTile'
@@ -39,7 +39,7 @@ export default function RepoOverview({ repo, chats, reviews, onTab }: RepoOvervi
             <StatTile
               icon={<Type size={16} />}
               value={fp.typeHintUsage != null && typeHintsMeasured(fp) ? pct(fp.typeHintUsage) : null}
-              label={typeHintsMeasured(fp) ? 'Type hints' : 'Type hints (not measured)'}
+              label={!typeHintsMeasured(fp) ? 'Type hints (not measured)' : typeHintsRepresentative(fp) || fp.typeHintFunctions == null ? 'Type hints' : `Type hints (${fp.typeHintFunctions} of ${fp.totalFunctions} fn)`}
             />
             <StatTile icon={<Sigma size={16} />} value={fp.avgComplexity != null ? fp.avgComplexity.toFixed(1) : null} label="Est. complexity" />
           </div>

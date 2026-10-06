@@ -112,10 +112,20 @@ export function typeHintsMeasured(fp: Fingerprint): boolean {
   return langs.every((l) => l.toLowerCase() === 'python')
 }
 
+/**
+ * The type-hint rate describes the repo only when most of its functions were
+ * measured — e.g. 2 Python helpers in a Java repo don't make it "100% typed".
+ */
+export function typeHintsRepresentative(fp: Fingerprint): boolean {
+  if (!typeHintsMeasured(fp)) return false
+  if (fp.typeHintFunctions == null || fp.totalFunctions == null || fp.totalFunctions === 0) return true
+  return fp.typeHintFunctions / fp.totalFunctions >= 0.5
+}
+
 export function fingerprintChips(fp: Fingerprint | null, max = 3): string[] {
   if (!fp) return []
   const chips: string[] = []
-  if (fp.typeHintUsage != null && typeHintsMeasured(fp)) chips.push(`${pct(fp.typeHintUsage)} type hints`)
+  if (fp.typeHintUsage != null && typeHintsRepresentative(fp)) chips.push(`${pct(fp.typeHintUsage)} type hints`)
   if (fp.namingConvention && fp.namingConvention !== 'unknown') chips.push(fp.namingConvention)
   if (fp.docstringCoverage != null) chips.push(`${pct(fp.docstringCoverage)} docstrings`)
   if (fp.errorHandlingRate != null) chips.push(`${pct(fp.errorHandlingRate)} error handling`)

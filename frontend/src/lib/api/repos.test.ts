@@ -57,3 +57,12 @@ describe('type hints on current fingerprints', () => {
     expect(fingerprintChips(mixed)).toEqual(['50% type hints'])
   })
 })
+
+describe('type-hint chip needs a representative sample', () => {
+  it('2 annotated Python helpers in a Java repo are not "100% type hints"', () => {
+    const oulad = normalizeFingerprint({ type_hint_usage: 1, type_hint_functions: 2, total_functions: 130, naming_convention: 'camelCase', language_distribution: { java: 128, python: 2 } })
+    expect(fingerprintChips(oulad)).toEqual(['camelCase'])
+    const mostlyPy = normalizeFingerprint({ type_hint_usage: 0.435, type_hint_functions: 460, total_functions: 463, language_distribution: { python: 460, javascript: 3 } })
+    expect(fingerprintChips(mostlyPy)).toEqual(['44% type hints'])
+  })
+})

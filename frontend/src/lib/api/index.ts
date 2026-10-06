@@ -5,7 +5,7 @@ export * from './capabilities'
 export { ApiError, API_BASE, request, setAuthTokenProvider } from './http'
 export type { ApiErrorKind } from './http'
 export {
-  parseRepoUrl, normalizeFingerprint, fingerprintChips, typeHintsMeasured, topLanguages,
+  parseRepoUrl, normalizeFingerprint, fingerprintChips, typeHintsMeasured, typeHintsRepresentative, topLanguages,
   isAccountUserId, listRepos, analyzeRepo,
 } from './repos'
 export type { ParsedRepoUrl, AnalyzeResult } from './repos'
