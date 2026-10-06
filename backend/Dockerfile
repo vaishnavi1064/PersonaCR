@@ -15,8 +15,17 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential curl \
     && rm -rf /var/lib/apt/lists/*
 
+# CPU-only torch. sentence-transformers (STS scoring) pulls torch; the default
+# Linux wheel is the CUDA build (+~4 GB of nvidia-*/triton wheels) that nothing
+# here can use. Installing the CPU wheel first satisfies that requirement, and
+# the check fails the build if a CUDA package sneaks back in. Keep the version
+# equal to what requirements.txt resolves.
+ARG TORCH_VERSION=2.14.1
+RUN pip install --no-cache-dir "torch==${TORCH_VERSION}" --index-url https://download.pytorch.org/whl/cpu
+
 COPY requirements.txt /app/backend/requirements.txt
-RUN pip install --no-cache-dir -r /app/backend/requirements.txt
+RUN pip install --no-cache-dir -r /app/backend/requirements.txt \
+    && if pip list 2>/dev/null | grep -iE '^(nvidia|triton|cuda)'; then echo "CUDA packages found — expected CPU-only torch" >&2; exit 1; fi
 
 COPY . /app/backend/
 
