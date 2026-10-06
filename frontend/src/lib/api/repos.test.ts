@@ -66,3 +66,13 @@ describe('type-hint chip needs a representative sample', () => {
     expect(fingerprintChips(mostlyPy)).toEqual(['44% type hints'])
   })
 })
+
+describe('repo summary', () => {
+  it('comes from the fingerprint; blank or missing → null', async () => {
+    const { repoSummaryOf } = await import('./repos')
+    expect(repoSummaryOf(normalizeFingerprint({ repo_summary: '  An HTTP API for orders. ', total_functions: 3 }))).toBe('An HTTP API for orders.')
+    expect(repoSummaryOf(normalizeFingerprint({ repo_summary: '   ', total_functions: 3 }))).toBeNull()
+    expect(repoSummaryOf(normalizeFingerprint({ total_functions: 3 }))).toBeNull()
+    expect(repoSummaryOf(null)).toBeNull()
+  })
+})

@@ -109,6 +109,8 @@ def _load_recent_reviews(
 def _summarize_fingerprint(fp_data: dict[str, Any]) -> str:
     """Create a concise summary of key fingerprint features."""
     lines = []
+    if fp_data.get("repo_summary"):
+        lines.append(f"  - What the repo is: {fp_data['repo_summary']}")
     key_fields = [
         ("avg_function_length", "Avg function length", "{:.1f} lines"),
         ("docstring_coverage", "Docstring coverage", "{:.0%}"),

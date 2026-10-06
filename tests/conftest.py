@@ -13,6 +13,13 @@ if str(ROOT) not in sys.path:
 from backend.src.core.github_ingestor import CodeChunk
 
 
+@pytest.fixture(autouse=True)
+def _no_real_repo_summary(monkeypatch):
+    """run_analysis generates a repo summary (GitHub fetch + one LLM call).
+    Never let tests reach the network for it; tests that care patch it themselves."""
+    monkeypatch.setattr("backend.src.core.analysis.generate_repo_summary", lambda *a, **k: None)
+
+
 def make_chunk(
     name: str,
     source: str,

@@ -15,9 +15,9 @@ export type CapabilityKey = 'repoSummary' | 'repoChatMemory' | 'findingLines' | 
 
 export const capabilities: Record<CapabilityKey, Capability> = {
   repoSummary: {
-    level: 'unavailable',
+    level: 'available',
     label: 'Repo summary',
-    detail: 'A one-line description generated for each imported repo.',
+    detail: 'A one-line description written once at analysis from the repo’s description, README and files. Repos analyzed earlier get one when reanalyzed.',
   },
   repoChatMemory: {
     level: 'unavailable',

@@ -88,7 +88,7 @@ export const ATLAS_GROUPS: MetricGroup[] = [
 ]
 
 /** Fields shown elsewhere on the page (languages, patterns) or not useful as rows. */
-export const ATLAS_SPECIAL_KEYS = new Set(['languages', 'language_distribution', 'common_patterns', 'pattern_frequency', 'type_hint_functions'])
+export const ATLAS_SPECIAL_KEYS = new Set(['languages', 'language_distribution', 'common_patterns', 'pattern_frequency', 'type_hint_functions', 'repo_summary', 'repo_summary_generated_at'])
 
 export const PATTERN_LABEL: Record<string, string> = {
   early_return: 'Early return',

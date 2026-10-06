@@ -497,7 +497,8 @@ def analyze_style(
     fp_summary = {
         k: v
         for k, v in fingerprint.items()
-        if k not in ("common_patterns", "pattern_frequency", "language_distribution", "languages")
+        if k not in ("common_patterns", "pattern_frequency", "language_distribution", "languages",
+                     "repo_summary", "repo_summary_generated_at")
     }
 
     focus_hint = ""

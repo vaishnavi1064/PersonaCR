@@ -16,6 +16,7 @@ from backend.src.core.embedder import embed_and_store
 from backend.src.core.github_ingestor import ingest_repo
 from backend.src.core.pattern_extractor import extract_fingerprint
 from backend.src.core.repo_identity import repo_identity
+from backend.src.core.repo_summary import generate_repo_summary
 from backend.src.db.supabase_rest import SupabaseREST
 
 logger = logging.getLogger(__name__)
@@ -108,6 +109,17 @@ def run_analysis(
     except Exception as e:
         logger.exception("ChromaDB embedding failed for %s", repo_url)
         embedding_info = {"status": "failed", "collection": None, "chunks_embedded": 0, "error": str(e)}
+
+    # ── One-line summary (one LLM call; failure leaves it unset) ─────────────
+    stage("summary", 90, "Writing a one-line summary")
+    summary = generate_repo_summary(
+        repo_url,
+        [c.file_path for c in chunks],
+        fingerprint.get("language_distribution") or {},
+        github_token,
+    )
+    fingerprint["repo_summary"] = summary["text"] if summary else None
+    fingerprint["repo_summary_generated_at"] = summary["generated_at"] if summary else None
 
     # ── Save — skipped for guest sessions (no persistent account) ────────────
     stage("save", 95, "Saving the fingerprint")

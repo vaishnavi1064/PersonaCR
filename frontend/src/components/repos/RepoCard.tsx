@@ -8,7 +8,6 @@ import Card, { CardDivider } from '../ui/Card'
 import Button from '../ui/Button'
 import Chip from '../ui/Chip'
 import StatTile from '../ui/StatTile'
-import ComingSoon from '../ui/ComingSoon'
 import GitHubMark from '../ui/GitHubMark'
 import { buttonClass } from '../ui/styles'
 import RepoStatusPill from './RepoStatusPill'
@@ -65,9 +64,9 @@ export default function RepoCard({ repo, job, placeholder, onAnalyze, onStartCha
           ) : repo.status === 'failed' && repo.error ? (
             <p className="line-clamp-2 text-danger" title={repo.error}>{repo.error}</p>
           ) : repo.summary ? (
-            <p className="line-clamp-2 text-fg-2">{repo.summary}</p>
+            <p className="line-clamp-2 text-fg-2" title={repo.summary}>{repo.summary}</p>
           ) : (
-            <ComingSoon feature="Summary" compact />
+            <p className="text-xs text-fg-3">{hasFingerprint ? 'No summary yet — reanalyze to generate one.' : 'Summary appears after analysis.'}</p>
           )}
         </div>
       </div>

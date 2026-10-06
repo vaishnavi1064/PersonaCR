@@ -41,7 +41,7 @@ const KNOWN_KEYS = new Set([
   'total_functions', 'avg_function_length', 'max_function_length', 'docstring_coverage',
   'type_hint_usage', 'type_hint_functions', 'error_handling_rate', 'avg_complexity', 'naming_convention', 'languages',
   'language_distribution', 'comment_density', 'avg_line_length', 'primary_indent_depth',
-  'common_patterns', 'pattern_frequency',
+  'common_patterns', 'pattern_frequency', 'repo_summary', 'repo_summary_generated_at',
 ])
 
 export function normalizeFingerprint(raw: unknown): Fingerprint | null {
@@ -139,6 +139,12 @@ export function topLanguages(repo: Pick<Repo, 'languages' | 'fingerprint'>, max 
   return [...new Set(langs)].sort((a, b) => (dist[b] ?? 0) - (dist[a] ?? 0)).slice(0, max)
 }
 
+/** One-line summary stored inside the fingerprint at analysis time (null if none was generated). */
+export function repoSummaryOf(fp: Fingerprint | null): string | null {
+  const v = fp?.raw.repo_summary
+  return typeof v === 'string' && v.trim() ? v.trim() : null
+}
+
 // ── List ──────────────────────────────────────────────────────────────────────
 
 interface AnalysisWire {
@@ -196,7 +202,7 @@ export function repoFromListItem(item: RepoListItem): Repo {
     analyzedAt: item.analyzed_at,
     lastCommitSha: item.last_commit_sha,
     fingerprint,
-    summary: null, // capability repoSummary
+    summary: repoSummaryOf(fingerprint),
     analysis,
   }
 }
@@ -258,7 +264,7 @@ function resultFromResponse(r: AnalyzeResponse, url: string): AnalyzeResult {
       analyzedAt: r.analyzed_at ?? null,
       lastCommitSha: r.last_commit_sha || null,
       fingerprint,
-      summary: null,
+      summary: repoSummaryOf(fingerprint),
       analysis: null,
     },
     cacheStatus: r.cache_status,

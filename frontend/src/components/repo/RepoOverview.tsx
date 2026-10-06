@@ -3,7 +3,6 @@ import { typeHintsMeasured, typeHintsRepresentative, type Repo } from '../../lib
 import { absoluteTime, count, pct, relativeTime } from '../../lib/format'
 import Card from '../ui/Card'
 import StatTile from '../ui/StatTile'
-import ComingSoon from '../ui/ComingSoon'
 import LanguageBar from './LanguageBar'
 
 interface RepoOverviewProps {
@@ -17,10 +16,17 @@ export default function RepoOverview({ repo, chats, reviews, onTab }: RepoOvervi
   const fp = repo.fingerprint
   return (
     <div className="flex flex-col gap-5">
-      <ComingSoon
-        feature="Repo summary"
-        description="A one-line description of what this repo does, generated when it’s analyzed."
-      />
+      <Card className="p-5">
+        <h3 className="text-xs font-medium uppercase tracking-wider text-fg-3">Summary</h3>
+        {repo.summary ? (
+          <p className="mt-1.5 text-[15px] leading-6 text-fg">{repo.summary}</p>
+        ) : (
+          <p className="mt-1.5 text-sm text-fg-3">
+            {fp ? 'No summary yet — this repo was analyzed before summaries existed. Reanalyze to generate one.' : 'A summary is written when the repo is analyzed.'}
+          </p>
+        )}
+        {repo.summary && <p className="mt-2 text-xs text-fg-3">Written by the model from the repo’s description, README and file names at analysis time.</p>}
+      </Card>
 
       {fp ? (
         <Card className="p-5">
