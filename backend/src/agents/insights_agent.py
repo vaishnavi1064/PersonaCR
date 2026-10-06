@@ -14,7 +14,8 @@ from typing import Any
 
 from dotenv import load_dotenv
 
-from backend.src.core.models import InsightsAgentOutput
+from backend.src.core.chat_memory import format_memory, load_past_chats, recent_history
+from backend.src.core.models import ChatMemoryInfo, ChatTurn, InsightsAgentOutput
 from backend.src.core.repo_identity import repo_identity
 from backend.src.db.supabase_rest import SupabaseREST
 
@@ -183,6 +184,8 @@ def get_insights(
     question: str,
     selected_repo_urls: list[str],
     user_id: str,
+    history: list[ChatTurn] | None = None,
+    chat_id: str | None = None,
 ) -> InsightsAgentOutput:
     """
     Answer a natural-language question about the user's repos.
@@ -191,6 +194,8 @@ def get_insights(
         question: The user's free-form question
         selected_repo_urls: List of repo URLs to use as context
         user_id: Supabase user ID (for review lookups)
+        history: earlier turns of this chat (client-sent), for follow-ups
+        chat_id: the current chat, excluded from "earlier chats" memory
 
     Returns:
         InsightsAgentOutput with answer, repos_used, and code_chunks_retrieved
@@ -251,6 +256,16 @@ def get_insights(
 
     context_block = "\n".join(context_parts)
 
+    # ── Repo-scoped memory: this chat + earlier chats about the SAME repo only ──
+    turns = recent_history(history or [])
+    past = load_past_chats(db, user_id, repos_used[0], chat_id) if len(repos_used) == 1 else []
+    memory = ChatMemoryInfo(
+        current_turns=len(turns),
+        past_chats=len(past),
+        past_turns=sum(len(c["items"]) for c in past),
+    )
+    context_block += format_memory(turns, past)
+
     # Call the LLM
     try:
         from backend.src.core.llm_client import complete
@@ -261,9 +276,15 @@ def get_insights(
             max_tokens=1000,
             caller="insights",
         ).strip()
-    except Exception:
+    except Exception as e:
         logger.exception("LLM call failed in insights_agent")
-        answer = "I ran into an error processing that. Try again?"
+        return InsightsAgentOutput(
+            answer="",
+            repos_used=repos_used,
+            code_chunks_retrieved=total_code_chunks,
+            memory=memory,
+            error=f"The model call failed: {str(e)[:200]}",
+        )
 
     elapsed = int((time.time() - start) * 1000)
     logger.info(
@@ -277,4 +298,5 @@ def get_insights(
         answer=answer,
         repos_used=repos_used,
         code_chunks_retrieved=total_code_chunks,
+        memory=memory,
     )

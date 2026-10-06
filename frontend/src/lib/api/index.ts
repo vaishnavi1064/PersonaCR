@@ -13,6 +13,6 @@ export {
   reviewCode, normalizeReview, normalizeFinding, parseLineHint, explainDegraded, formatMetricValue, REVIEW_LANGUAGES, AGENT_LABEL,
 } from './reviews'
 export type { RawReview, RawIssue, ReviewLanguage } from './reviews'
-export { askQuestion, chatRepoUrl, groupChatsByRepo, repoShortName } from './chats'
-export type { Answer, ChatGroup } from './chats'
+export { askQuestion, chatRepoUrl, groupChatsByRepo, historyFor, repoShortName } from './chats'
+export type { Answer, ChatGroup, ChatMemory, HistoryTurn } from './chats'
 export { fetchAllReviews, fetchRepoReviews, fetchRepoChats, fetchSavedReview, reviewFromRow, SAVED_CODE_LIMIT } from './history'

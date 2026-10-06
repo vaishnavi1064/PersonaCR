@@ -53,6 +53,8 @@ def ask_insights(payload: InsightsChatRequest) -> InsightsChatResponse:
             question=payload.message,
             selected_repo_urls=payload.selected_repo_urls,
             user_id=payload.user_id,
+            history=payload.history,
+            chat_id=payload.chat_id,
         )
     except Exception as e:
         logger.exception("Insights agent failed")
@@ -62,4 +64,6 @@ def ask_insights(payload: InsightsChatRequest) -> InsightsChatResponse:
         answer=result.answer,
         repos_used=result.repos_used,
         code_chunks_retrieved=result.code_chunks_retrieved,
+        memory=result.memory,
+        error=result.error,
     )

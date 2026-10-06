@@ -20,9 +20,9 @@ export const capabilities: Record<CapabilityKey, Capability> = {
     detail: 'A one-line description written once at analysis from the repo’s description, README and files. Repos analyzed earlier get one when reanalyzed.',
   },
   repoChatMemory: {
-    level: 'unavailable',
+    level: 'available',
     label: 'Repo-scoped chat memory',
-    detail: 'Answers that remember your past chats about the same repo. Today each question is answered on its own.',
+    detail: 'Answers remember this chat and your earlier saved chats about the same repo — never other repos.',
   },
   findingLines: {
     level: 'available',

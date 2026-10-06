@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { Code2, Loader2, TriangleAlert } from 'lucide-react'
+import { Code2, History, Loader2, TriangleAlert } from 'lucide-react'
 import type { ChatMessage } from '../../store/useStore'
-import { REVIEW_LANGUAGES } from '../../lib/api'
+import { REVIEW_LANGUAGES, type ChatMemory } from '../../lib/api'
 import { elapsed } from '../../lib/format'
 import { useNow } from '../../lib/useNow'
 import { cn } from '../../lib/cn'
@@ -155,7 +155,10 @@ function BotBubble({ message, messages, active, onShowReview, onRetryReview, bus
             <span>{message.text}</span>
           </p>
         ) : (
-          <RichText text={message.text ?? ''} />
+          <>
+            <RichText text={message.text ?? ''} />
+            <MemoryNote memory={(data.memory ?? null) as ChatMemory | null} />
+          </>
         )}
       </div>
     </div>
@@ -182,6 +185,19 @@ function ReviewCard({ message, messages, active, onShowReview, onRetryReview, bu
         retryDisabled={busy}
       />
     </div>
+  )
+}
+
+/** What an answer remembered — so "it knew that from last week" is never a mystery. */
+function MemoryNote({ memory }: { memory: ChatMemory | null }) {
+  if (!memory || (memory.pastChats === 0 && memory.currentTurns === 0)) return null
+  const parts: string[] = []
+  if (memory.pastChats > 0) parts.push(`${memory.pastChats} earlier chat${memory.pastChats === 1 ? '' : 's'} about this repo`)
+  if (memory.currentTurns > 0) parts.push('earlier messages in this chat')
+  return (
+    <p className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] text-fg-3">
+      <History size={11} aria-hidden /> Remembered {parts.join(' and ')}
+    </p>
   )
 }
 

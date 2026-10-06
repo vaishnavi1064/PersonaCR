@@ -329,17 +329,34 @@ class QualityGateResult(BaseModel):
 
 # ── Insights / Conversational Q&A ───────────────────────────────────────────
 
+class ChatTurn(BaseModel):
+    """One turn of the current chat, sent by the client (most recent last)."""
+    role: str  # "user" | "assistant"
+    content: str
+
+
+class ChatMemoryInfo(BaseModel):
+    current_turns: int = 0   # turns of this chat given to the model
+    past_chats: int = 0      # other chats about the same repo
+    past_turns: int = 0      # Q&A pairs / review notes taken from them
+
+
 class InsightsChatRequest(BaseModel):
     message: str
     selected_repo_urls: list[str]
     user_id: str
     chat_id: str | None = None
+    # Earlier turns of this chat (client-side), for follow-up questions
+    history: list[ChatTurn] = Field(default_factory=list)
 
 
 class InsightsChatResponse(BaseModel):
     answer: str
     repos_used: list[str]
     code_chunks_retrieved: int
+    memory: ChatMemoryInfo = Field(default_factory=ChatMemoryInfo)
+    # Set when the model call failed — the answer text is then a fallback, not an answer
+    error: str | None = None
 
 
 class InsightsAgentInput(BaseModel):
@@ -352,3 +369,5 @@ class InsightsAgentOutput(BaseModel):
     answer: str
     repos_used: list[str]
     code_chunks_retrieved: int
+    memory: ChatMemoryInfo = Field(default_factory=ChatMemoryInfo)
+    error: str | None = None

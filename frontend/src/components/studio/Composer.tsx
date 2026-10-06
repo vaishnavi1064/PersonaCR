@@ -1,5 +1,5 @@
 import { lazy, Suspense, useRef, useState, type KeyboardEvent } from 'react'
-import { ArrowUp, Code2, MessageSquare } from 'lucide-react'
+import { ArrowUp, Code2, History, MessageSquare } from 'lucide-react'
 import { capabilities, REVIEW_LANGUAGES, type ChatMode } from '../../lib/api'
 import { cn } from '../../lib/cn'
 import Button from '../ui/Button'
@@ -17,10 +17,12 @@ interface ComposerProps {
   defaultLanguage: string
   onAsk: (question: string) => void
   onReview: (code: string, language: string) => void
+  /** Guests have no saved chats, so memory covers this chat only. */
+  guest?: boolean
 }
 
 /** Bottom composer: "Ask a question" textarea or "Review code" editor. */
-export default function Composer({ mode, onModeChange, repoName, busy, defaultLanguage, onAsk, onReview }: ComposerProps) {
+export default function Composer({ mode, onModeChange, repoName, busy, defaultLanguage, onAsk, onReview, guest }: ComposerProps) {
   const [question, setQuestion] = useState('')
   const [code, setCode] = useState('')
   const [language, setLanguage] = useState(defaultLanguage)
@@ -76,8 +78,13 @@ export default function Composer({ mode, onModeChange, repoName, busy, defaultLa
               </button>
             ))}
           </div>
-          {capabilities.repoChatMemory.level !== 'available' && (
+          {capabilities.repoChatMemory.level !== 'available' ? (
             <ComingSoon compact feature="Remembers past chats for this repo" />
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-xs text-fg-3" title="Answers use this chat and your earlier chats about the same repo — never other repos">
+              <History size={12} aria-hidden />
+              {guest ? 'Remembers this chat (guest chats aren’t saved)' : 'Remembers earlier chats about this repo'}
+            </span>
           )}
         </div>
 

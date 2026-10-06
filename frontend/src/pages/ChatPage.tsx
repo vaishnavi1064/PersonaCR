@@ -4,7 +4,7 @@ import { useStore } from '../store/useStore'
 import type { ChatMessage, PersistedMessage } from '../store/useStore'
 import { toUI, toPersisted } from '../store/useStore'
 import {
-  ApiError, askQuestion, chatRepoUrl, isAccountUserId, repoShortName, reviewCode,
+  ApiError, askQuestion, chatRepoUrl, historyFor, isAccountUserId, repoShortName, reviewCode,
   REVIEW_LANGUAGES, topLanguages, type ChatMode, type Finding,
 } from '../lib/api'
 import { cleanupGuestSession } from '../lib/api/legacy'
@@ -210,10 +210,12 @@ export default function ChatPage() {
     if (!repoUrl || pending) return
     setPending({ kind: 'ask', startedAt: Date.now() })
     try {
+      // This chat's turns before the new question (the server adds earlier chats about this repo)
+      const history = historyFor(useStore.getState().activeMessages)
       const cid = await ensureChat(repoUrl)
       await addMessage(makeUserMsg(text, { mode: 'ask' }), text)
-      const answer = await askQuestion(text, repoUrl, userId, cid)
-      await addMessage(makeBotMsg('text', answer.text, { snippetsUsed: answer.snippetsUsed }))
+      const answer = await askQuestion(text, repoUrl, userId, cid, history)
+      await addMessage(makeBotMsg('text', answer.text, { snippetsUsed: answer.snippetsUsed, memory: answer.memory }))
     } catch (err) {
       await addMessage(makeBotMsg('text', errorText(err, 'ask'), { error: true }))
     } finally {
@@ -364,6 +366,7 @@ export default function ChatPage() {
           defaultLanguage={defaultLanguage}
           onAsk={handleAsk}
           onReview={handleReview}
+          guest={!account}
         />
         {guestMode && (
           <p className="border-t border-line bg-canvas px-4 py-1.5 text-center text-[11px] text-fg-3">Guest session — this chat isn’t saved.</p>

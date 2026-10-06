@@ -7,22 +7,77 @@ interface InsightsResponse {
   answer: string
   repos_used: string[]
   code_chunks_retrieved: number
+  memory?: { current_turns: number; past_chats: number; past_turns: number }
+  error?: string | null
 }
+
+export interface ChatMemory { currentTurns: number; pastChats: number; pastTurns: number }
 
 export interface Answer {
   text: string
   /** How many repo snippets the answer drew on (0 = fingerprint + review history only). */
   snippetsUsed: number
+  /** What the answer remembered: this chat's turns, and earlier chats about the same repo. */
+  memory: ChatMemory
 }
 
-/** Ask a question about one repo. The backend ignores chatId today (capability repoChatMemory). */
-export async function askQuestion(question: string, repoUrl: string, userId: string, chatId: string | null): Promise<Answer> {
+export interface HistoryTurn { role: 'user' | 'assistant'; content: string }
+
+const MAX_HISTORY = 8
+
+interface MessageLike { role: 'user' | 'bot'; type?: string; text?: string; data?: Record<string, unknown> }
+
+/**
+ * This chat's recent turns for follow-up questions (the server adds earlier chats
+ * about the same repo). Code sent for review is described, not resent.
+ */
+export function historyFor(messages: MessageLike[]): HistoryTurn[] {
+  const turns: HistoryTurn[] = []
+  for (const m of messages) {
+    const data = (m.data ?? {}) as { mode?: string; error?: boolean; overall_score?: number | null; issues?: unknown[] }
+    if (m.role === 'user') {
+      if (data.mode === 'review') {
+        const lines = (m.text ?? '').split('\n').length
+        turns.push({ role: 'user', content: `[Submitted ${lines} lines of code for review]` })
+      } else if (m.text?.trim()) {
+        turns.push({ role: 'user', content: m.text })
+      }
+    } else if (m.type === 'review') {
+      const score = data.overall_score
+      turns.push({
+        role: 'assistant',
+        content: `[Review result: ${score == null ? 'no score' : `score ${Math.round(score)}/100`}, ${(data.issues ?? []).length} findings]`,
+      })
+    } else if (m.type === 'text' && !data.error && m.text?.trim()) {
+      turns.push({ role: 'assistant', content: m.text })
+    }
+  }
+  return turns.slice(-MAX_HISTORY)
+}
+
+/** Ask a question about one repo, with this chat's history. */
+export async function askQuestion(
+  question: string,
+  repoUrl: string,
+  userId: string,
+  chatId: string | null,
+  history: HistoryTurn[] = [],
+): Promise<Answer> {
   const r = await request<InsightsResponse>('/api/chat', {
     method: 'POST',
-    body: { message: question, selected_repo_urls: [repoUrl], user_id: userId, chat_id: chatId },
+    body: { message: question, selected_repo_urls: [repoUrl], user_id: userId, chat_id: chatId, history },
     timeoutMs: 3 * 60_000,
   })
-  return { text: r.answer, snippetsUsed: r.code_chunks_retrieved ?? 0 }
+  if (r.error) throw new Error(r.error)
+  return {
+    text: r.answer,
+    snippetsUsed: r.code_chunks_retrieved ?? 0,
+    memory: {
+      currentTurns: r.memory?.current_turns ?? 0,
+      pastChats: r.memory?.past_chats ?? 0,
+      pastTurns: r.memory?.past_turns ?? 0,
+    },
+  }
 }
 
 /** The repo a chat is scoped to. Older chats could select several; the first was the review target. */
