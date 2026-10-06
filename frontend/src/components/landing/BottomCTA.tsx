@@ -53,7 +53,7 @@ export default function BottomCTA() {
             lineHeight: 1.6,
           }}
         >
-          Sign in with GitHub. First review in under a minute.
+          Sign in with GitHub, import a repo, and review code against its style.
         </p>
 
         <Link

@@ -12,7 +12,7 @@ interface StatConfig {
 const stats: StatConfig[] = [
   { target: 6,  suffix: '',   label: 'agent review pipeline + Insights Q&A agent' },
   { target: 30, suffix: '',   label: 'feature style fingerprint' },
-  { target: 9,  suffix: '',   label: 'research papers' },
+  { target: 9,  suffix: '',   label: 'research sources' },
 ]
 
 function AnimatedNumber({ config, trigger }: { config: StatConfig; trigger: boolean }) {

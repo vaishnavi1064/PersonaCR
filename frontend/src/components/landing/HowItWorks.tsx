@@ -6,19 +6,19 @@ const steps = [
     id: '01—FP',
     heading: 'Fingerprint',
     description:
-      'Paste a GitHub repo. We extract 30 features and build a quantified profile of how you write code.',
+      'Import a GitHub repo. We extract 30 features and build a quantified profile of how you write code.',
   },
   {
     id: '02—RV',
     heading: 'Review',
     description:
-      'Submit new code. Six specialized agents review it against your patterns in parallel — style, defects, quality.',
+      'Submit new code. A six-agent pipeline reviews it against your patterns — Style Analyst and Defect Hunter run in parallel, then QA, confidence and quality checks.',
   },
   {
     id: '03—EV',
     heading: 'Improve',
     description:
-      'Track quality over time. See where you deviate most and watch your consistency grow.',
+      'Track review scores over time and see where new code departs most from your own conventions.',
   },
 ]
 

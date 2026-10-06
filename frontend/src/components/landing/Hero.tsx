@@ -90,7 +90,7 @@ export default function Hero() {
             margin: '0 auto 40px',
           }}
         >
-          Every tool reviews against generic rules. PersonaCR learns how you write
+          Most reviewers apply generic rules. PersonaCR learns how you write
           code, then holds new code to your own standard.
         </motion.p>
 

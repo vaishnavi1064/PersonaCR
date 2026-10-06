@@ -46,7 +46,8 @@ const agentDots = [
 ]
 
 // ── Venue badges for Card 2 ───────────────────────────────────────────────────
-const venues = ['EMNLP', 'NAACL', 'ACL', 'MSR']
+// Venues as recorded in research/RELATED_WORK.md (most other sources are arXiv preprints)
+const venues = ['EMNLP', 'ACL', 'MSR']
 
 // ── BentoCard wrapper ─────────────────────────────────────────────────────────
 function BentoCard({
@@ -166,7 +167,7 @@ export default function BentoFeatures() {
           <CardHeading>Personal, not universal</CardHeading>
           <CardBody>
             Reviews compare against your coding fingerprint. Every developer gets
-            feedback shaped by their own history.
+            feedback shaped by their own code.
           </CardBody>
           <MiniFingerprint />
         </BentoCard>
@@ -174,7 +175,7 @@ export default function BentoFeatures() {
         {/* Card 2 — Research-grounded */}
         <BentoCard>
           <CardHeading>Research-grounded</CardHeading>
-          <CardBody>Built on 9 papers from top venues.</CardBody>
+          <CardBody>Grounded in 9 research sources, including work published at:</CardBody>
           <div
             style={{
               display: 'flex',
@@ -208,8 +209,9 @@ export default function BentoFeatures() {
         <BentoCard>
           <CardHeading>Parallel agents</CardHeading>
           <CardBody>
-            Style Analyst and Defect Hunter run simultaneously. Two agentic loops
-            self-correct before results.
+            Style Analyst and Defect Hunter run in parallel within a six-agent
+            pipeline. Two feedback loops re-check reviews that come back
+            low-confidence or fail the quality gate.
           </CardBody>
           <div
             style={{

@@ -1,3 +1,4 @@
+// Example findings (decorative ticker; numbers are illustrative, labelled "Examples" in the UI)
 const findings = [
   { type: 'STYLE',  text: 'Missing docstring — 70% coverage in your fingerprint' },
   { type: 'DEFECT', text: 'No null check on input — TypeError risk' },
@@ -24,7 +25,28 @@ export default function ScrollingTicker() {
         borderBottom: '0.5px solid var(--border)',
         background: 'var(--bg-primary)',
       }}
+      aria-label="Example findings"
     >
+      <span
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          zIndex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0 36px 0 16px',
+          background: 'linear-gradient(90deg, var(--bg-primary) 70%, transparent)',
+          fontFamily: 'var(--font-mono)',
+          fontSize: 10,
+          letterSpacing: '1px',
+          color: 'var(--text-secondary)',
+          textTransform: 'uppercase',
+        }}
+      >
+        Examples
+      </span>
       <style>{`
         @keyframes ticker-scroll {
           0%   { transform: translateX(0); }

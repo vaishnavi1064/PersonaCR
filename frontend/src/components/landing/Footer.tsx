@@ -207,7 +207,7 @@ export default function Footer() {
               color: 'var(--text-tertiary)',
             }}
           >
-            Grounded in 9 papers from EMNLP, NAACL, ACL, and MSR
+            Grounded in 9 research sources
           </span>
           <span
             style={{

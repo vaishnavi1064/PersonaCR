@@ -8,6 +8,7 @@ interface IssueCard {
 }
 
 // ── Data ─────────────────────────────────────────────────────────────────────
+// Illustrative only (labelled as such in the UI): not a real review's output.
 const issues: IssueCard[] = [
   { type: 'STYLE',  text: 'Missing docstring. Your fingerprint shows 70% coverage.' },
   { type: 'DEFECT', text: 'No null check on input. TypeError risk.' },
@@ -145,11 +146,14 @@ export default function ProductShowcase() {
                 style={{
                   marginLeft: 'auto',
                   fontFamily: 'var(--font-mono)',
-                  fontSize: 12,
-                  color: '#444',
+                  fontSize: 11,
+                  color: '#8A8A90',
+                  border: '1px solid #2A2A2E',
+                  padding: '1px 8px',
+                  borderRadius: 4,
                 }}
               >
-                8.5s
+                illustration
               </span>
             </motion.div>
 
@@ -249,11 +253,7 @@ export default function ProductShowcase() {
             color: 'var(--text-tertiary)',
           }}
         >
-          <span>8.5s total</span>
-          <span style={{ opacity: 0.4 }}>·</span>
-          <span>6 agents</span>
-          <span style={{ opacity: 0.4 }}>·</span>
-          <span>9 papers</span>
+          <span>Illustrative example — not output from a real review</span>
         </motion.div>
       </div>
     </section>
