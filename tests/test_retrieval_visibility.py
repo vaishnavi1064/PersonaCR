@@ -38,6 +38,7 @@ def test_analyze_as_user_a_review_as_user_b_has_retrieval_examples(isolated_chro
     """End to end through analyze_repo + Style Analyst retrieval (LLM mocked)."""
     import backend.src.agents.style_analyst as sa
     import backend.src.routes.analyze_routes as ar
+    import backend.src.core.analysis as analysis_mod
     from backend.src.routes.review_routes import _parse_repo
 
     chunks = [
@@ -45,10 +46,10 @@ def test_analyze_as_user_a_review_as_user_b_has_retrieval_examples(isolated_chro
         make_chunk("parse_header", "def parse_header(raw: str) -> dict:\n    return dict(x.split(':') for x in raw.splitlines())", file_path="h.py"),
         make_chunk("__file_summary__", "File h.py: header helpers", file_path="h.py", granularity="file"),
     ]
-    monkeypatch.setattr(ar, "ingest_repo", lambda url, token=None: (chunks, "sha123"))
-    monkeypatch.setattr(ar, "get_cached_fingerprint", lambda *a, **k: None)
-    monkeypatch.setattr(ar, "save_fingerprint", MagicMock())
-    monkeypatch.setattr(ar, "SupabaseREST", MagicMock())
+    monkeypatch.setattr(analysis_mod, "ingest_repo", lambda url, token=None, **_: (chunks, "sha123"))
+    monkeypatch.setattr(analysis_mod, "get_cached_fingerprint", lambda *a, **k: None)
+    monkeypatch.setattr(analysis_mod, "save_fingerprint", MagicMock())
+    monkeypatch.setattr(analysis_mod, "SupabaseREST", MagicMock())
     ar.analyze_repo(ar.AnalyzeRequest(repo_url=REPO_URL, user_id=str(uuid.uuid4()), force_refresh=True))
 
     # A different caller ("user B") reviews: the review path derives identity from the URL.

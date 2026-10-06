@@ -81,6 +81,7 @@ def isolated_chroma(tmp_path, monkeypatch):
 @pytest.mark.slow
 def test_analyze_as_user_a_review_as_user_b_shares_collection(isolated_chroma, monkeypatch):
     import backend.src.routes.analyze_routes as ar
+    import backend.src.core.analysis as analysis_mod
     from backend.src.routes.review_routes import _parse_repo
 
     emb = isolated_chroma
@@ -89,10 +90,10 @@ def test_analyze_as_user_a_review_as_user_b_shares_collection(isolated_chroma, m
         make_chunk("merge_headers", "def merge_headers(a: dict, b: dict) -> dict:\n    return {**a, **b}", file_path="h.py"),
         make_chunk("__file_summary__", "File h.py: header helpers", file_path="h.py", granularity="file"),
     ]
-    monkeypatch.setattr(ar, "ingest_repo", lambda url, token=None: (chunks, "sha123"))
-    monkeypatch.setattr(ar, "get_cached_fingerprint", lambda *a, **k: None)
-    monkeypatch.setattr(ar, "save_fingerprint", MagicMock())
-    monkeypatch.setattr(ar, "SupabaseREST", MagicMock())
+    monkeypatch.setattr(analysis_mod, "ingest_repo", lambda url, token=None, **_: (chunks, "sha123"))
+    monkeypatch.setattr(analysis_mod, "get_cached_fingerprint", lambda *a, **k: None)
+    monkeypatch.setattr(analysis_mod, "save_fingerprint", MagicMock())
+    monkeypatch.setattr(analysis_mod, "SupabaseREST", MagicMock())
 
     user_a = str(uuid.uuid4())
     out = ar.analyze_repo(ar.AnalyzeRequest(repo_url=REPO_URL, user_id=user_a, force_refresh=True))

@@ -1,5 +1,6 @@
 """
-Repo list route — the user's imported repos joined with their cached fingerprints.
+Repo list route — the user's imported repos joined with their cached fingerprints
+and their latest background-analysis status.
 GET /api/repos?user_id=...  →  {"repos": [...]}, most recently analyzed first
 
 Reads with the service role so the browser never needs direct access to the
@@ -9,10 +10,12 @@ every other route; the backend-auth slice replaces it with the JWT subject.
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 import httpx
 from fastapi import APIRouter, HTTPException
 
+from backend.src.core import analysis_store
 from backend.src.core.repo_identity import as_uuid_or_none
 from backend.src.db.supabase_rest import SupabaseREST
 
@@ -31,14 +34,43 @@ def _full_name(url: str) -> str:
     return "/".join(url.split("/")[-2:])
 
 
+def _analysis_records(user_id: str) -> dict[str, dict[str, Any]]:
+    """Latest analysis per repo; empty when Redis is unavailable (list still works)."""
+    try:
+        return {_normalize_url(r["repo_url"]): r for r in analysis_store.list_records(user_id)}
+    except Exception as e:
+        logger.warning("list_repos: analysis status unavailable: %s", e)
+        return {}
+
+
+def _item_from_record(url: str, rec: dict[str, Any]) -> dict[str, Any]:
+    """A repo known only from its analysis (first import in progress/failed, or a guest's)."""
+    summary = rec.get("summary") or {}
+    fp = summary.get("fingerprint")
+    return {
+        "repo_url": url,
+        "repo_name": _full_name(url),
+        "languages": list(((fp or {}).get("language_distribution") or {}).keys()),
+        "functions_count": summary.get("num_functions"),
+        "analyzed_at": summary.get("analyzed_at"),
+        "last_commit_sha": summary.get("last_commit_sha"),
+        "fingerprint": fp,
+        "analysis": analysis_store.public_view(rec),
+    }
+
+
 @router.get("/repos", operation_id="list_repos")
 def list_repos(user_id: str) -> dict:
     """
     List the repos a user has imported, each with its fingerprint (or null if
-    none is cached). Guests and non-UUID ids have no saved repos.
+    none is cached) and `analysis` (latest background analysis, or null).
+    Guests get the repos analyzed in their session; "anonymous" gets none.
     """
+    records = _analysis_records(user_id) if user_id.startswith("guest_") or as_uuid_or_none(user_id) else {}
+
     if as_uuid_or_none(user_id) is None:
-        return {"repos": []}
+        # Guests have no saved list or saved fingerprints — only their analysis records
+        return {"repos": [_item_from_record(url, rec) for url, rec in records.items()]}
 
     db = SupabaseREST()
     try:
@@ -81,5 +113,10 @@ def list_repos(user_id: str) -> dict:
             "analyzed_at": (fp or {}).get("updated_at") or row.get("analyzed_at"),
             "last_commit_sha": (fp or {}).get("last_commit_sha"),
             "fingerprint": (fp or {}).get("fingerprint_data"),
+            "analysis": analysis_store.public_view(records.get(url)),
         })
+    # Repos whose first analysis hasn't produced a user_repos row (queued, running or failed)
+    for url, rec in records.items():
+        if url not in latest:
+            repos.insert(0, _item_from_record(url, rec))
     return {"repos": repos}

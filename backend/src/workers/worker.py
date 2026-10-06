@@ -1,20 +1,24 @@
-"""RQ worker process for review jobs.
+"""RQ worker process for background jobs: reviews and repo analysis.
 
 Usage (after Redis is up):
   python -m backend.src.workers.worker
 
-Single-worker local/dev scale — not a multi-node deployment.
+Single-worker local/dev scale — not a multi-node deployment. On Windows (no
+fork, no SIGALRM) it runs jobs in-process with a timer-based timeout.
 """
 from __future__ import annotations
 
 import logging
+import os
 import sys
 
 from redis import Redis
-from rq import Queue, Worker
+from rq import Queue, SimpleWorker, Worker
+from rq.timeouts import TimerDeathPenalty
 
 from backend.src.core.redis_client import get_redis_url
-from backend.src.workers.review_jobs import QUEUE_NAME
+from backend.src.workers.analyze_jobs import QUEUE_NAME as ANALYZE_QUEUE
+from backend.src.workers.review_jobs import QUEUE_NAME as REVIEW_QUEUE
 
 logging.basicConfig(
     level=logging.INFO,
@@ -23,14 +27,22 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+class WindowsWorker(SimpleWorker):
+    """No fork and no SIGALRM on Windows: run jobs in-process, time out with a timer thread."""
+
+    death_penalty_class = TimerDeathPenalty
+
+
 def main() -> None:
     url = get_redis_url()
     # RQ prefers undecoded bytes for its own keys; job_store uses a separate
     # decode_responses client via get_redis().
     conn = Redis.from_url(url)
-    queues = [Queue(QUEUE_NAME, connection=conn)]
-    logger.info("Starting RQ worker on queue=%s redis=%s", QUEUE_NAME, url)
-    worker = Worker(queues, connection=conn)
+    names = [REVIEW_QUEUE, ANALYZE_QUEUE]
+    queues = [Queue(name, connection=conn) for name in names]
+    worker_cls = WindowsWorker if os.name == "nt" else Worker
+    logger.info("Starting RQ %s on queues=%s redis=%s", worker_cls.__name__, names, url)
+    worker = worker_cls(queues, connection=conn)
     worker.work(with_scheduler=False)
 
 

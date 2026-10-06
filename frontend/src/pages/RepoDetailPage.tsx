@@ -15,6 +15,7 @@ import Tabs from '../components/ui/Tabs'
 import GitHubMark from '../components/ui/GitHubMark'
 import { buttonClass } from '../components/ui/styles'
 import RepoStatusPill from '../components/repos/RepoStatusPill'
+import { activeAnalysis, stuckHint } from '../components/repos/analysisStatus'
 import RepoOverview from '../components/repo/RepoOverview'
 import ConventionAtlas from '../components/repo/ConventionAtlas'
 import RepoChatsTab from '../components/repo/RepoChatsTab'
@@ -58,7 +59,8 @@ export default function RepoDetailPage() {
   const startAnalyze = useRepoJobs((s) => s.startAnalyze)
   const requestNewChat = useStore((s) => s.requestNewChat)
   const setActiveChatId = useStore((s) => s.setActiveChatId)
-  const analyzing = job?.state === 'analyzing'
+  const active = repo ? activeAnalysis(repo, job) : null
+  const analyzing = active != null
   const now = useNow(analyzing)
 
   const [chats, retryChats] = useLoad<ChatMeta[]>(account && !!repo, () => fetchRepoChats(userId, repoUrl), [userId, repoUrl])
@@ -112,11 +114,19 @@ export default function RepoDetailPage() {
             <a href={repo.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-fg hover:underline">
               <GitHubMark size={13} /> {repo.fullName}
             </a>
-            {analyzing && job?.state === 'analyzing'
-              ? <span className="inline-flex items-center gap-1.5 text-fg-2"><Loader2 size={13} className="animate-spin text-accent" aria-hidden /> Analyzing… {elapsed(now - job.startedAt)} elapsed</span>
+            {active
+              ? (
+                <span className="inline-flex items-center gap-1.5 text-fg-2" role="status">
+                  <Loader2 size={13} className="animate-spin text-accent" aria-hidden /> {active.message}
+                  {active.startedAt > 0 && <span className="tabular-nums text-fg-3">· {elapsed(now - active.startedAt)}</span>}
+                </span>
+              )
               : repo.analyzedAt && <span>Analyzed {relativeTime(repo.analyzedAt)}</span>}
           </p>
-          {job?.state === 'failed' && <p className="mt-1.5 text-sm text-danger">{job.error}</p>}
+          {active && stuckHint(active, now) && <p className="mt-1.5 text-sm text-warning">{stuckHint(active, now)}</p>}
+          {!active && (job?.state === 'failed' ? job.error : repo.status === 'failed' ? repo.error : null) && (
+            <p className="mt-1.5 text-sm text-danger">{job?.state === 'failed' ? job.error : repo.error}</p>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <Button icon={<RefreshCw size={15} />} loading={analyzing} onClick={() => startAnalyze(repo, userId, { force: true })}>

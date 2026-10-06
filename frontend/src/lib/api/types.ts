@@ -46,6 +46,17 @@ export interface Fingerprint {
   raw: Record<string, unknown>
 }
 
+/** Latest background analysis of a repo (server-side, survives reloads). */
+export interface RepoAnalysis {
+  jobId: string
+  state: 'queued' | 'running' | 'completed' | 'failed'
+  /** e.g. "Fetching files 12/80", "Indexing 156 code chunks for reviews" */
+  message: string | null
+  error: string | null
+  startedAt: string | null
+  finishedAt: string | null
+}
+
 export interface Repo {
   /** Canonical https://github.com/owner/name (no trailing slash). */
   url: string
@@ -64,6 +75,8 @@ export interface Repo {
   fingerprint: Fingerprint | null
   /** One-line summary — null until capability `repoSummary` ships. */
   summary: string | null
+  /** Latest background analysis, or null (none recorded / queue unavailable). */
+  analysis: RepoAnalysis | null
 }
 
 // ── Reviews ───────────────────────────────────────────────────────────────────

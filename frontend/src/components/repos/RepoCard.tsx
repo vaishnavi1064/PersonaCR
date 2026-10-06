@@ -12,6 +12,7 @@ import ComingSoon from '../ui/ComingSoon'
 import GitHubMark from '../ui/GitHubMark'
 import { buttonClass } from '../ui/styles'
 import RepoStatusPill from './RepoStatusPill'
+import { activeAnalysis, stuckHint } from './analysisStatus'
 import { languageColor, languageLabel } from './languages'
 
 interface RepoCardProps {
@@ -26,6 +27,7 @@ interface RepoCardProps {
 
 export default function RepoCard({ repo, job, placeholder, onAnalyze, onStartChat, onDismiss }: RepoCardProps) {
   const analyzing = repo.status === 'analyzing'
+  const active = activeAnalysis(repo, job)
   const now = useNow(analyzing)
   const chips = fingerprintChips(repo.fingerprint)
   const langs = topLanguages(repo)
@@ -51,11 +53,15 @@ export default function RepoCard({ repo, job, placeholder, onAnalyze, onStartCha
         </div>
 
         <div className="min-h-10 text-[13px] leading-5">
-          {analyzing && job?.state === 'analyzing' ? (
-            <p className="flex items-center gap-2 text-fg-2" role="status">
-              <Loader2 size={13} className="shrink-0 animate-spin text-accent" aria-hidden />
-              Analyzing… {elapsed(now - job.startedAt)} elapsed
-            </p>
+          {analyzing && active ? (
+            <div role="status">
+              <p className="flex items-center gap-2 text-fg-2">
+                <Loader2 size={13} className="shrink-0 animate-spin text-accent" aria-hidden />
+                <span className="truncate">{active.message}</span>
+                {active.startedAt > 0 && <span className="shrink-0 tabular-nums text-fg-3">· {elapsed(now - active.startedAt)}</span>}
+              </p>
+              {stuckHint(active, now) && <p className="mt-0.5 text-xs text-warning">{stuckHint(active, now)}</p>}
+            </div>
           ) : repo.status === 'failed' && repo.error ? (
             <p className="line-clamp-2 text-danger" title={repo.error}>{repo.error}</p>
           ) : repo.summary ? (

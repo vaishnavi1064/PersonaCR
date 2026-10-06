@@ -8,6 +8,7 @@ import Button from '../ui/Button'
 import Chip from '../ui/Chip'
 import IconButton from '../ui/IconButton'
 import GitHubMark from '../ui/GitHubMark'
+import { stuckHint } from './analysisStatus'
 
 interface ImportRepoDialogProps {
   userId: string
@@ -17,8 +18,8 @@ interface ImportRepoDialogProps {
 }
 
 /**
- * Import a repo by URL. Progress is honest: analysis is one synchronous
- * request, so all we know is that it's running and for how long.
+ * Import a repo by URL. Progress is honest: the server reports the stage it's
+ * in (fetching files n/total, extracting, indexing, saving) — no invented %.
  * Mount it only while open so its state resets each time.
  */
 export default function ImportRepoDialog({ userId, initialValue = '', onClose, onStartChat }: ImportRepoDialogProps) {
@@ -124,16 +125,24 @@ export default function ImportRepoDialog({ userId, initialValue = '', onClose, o
                 <span className="truncate font-medium text-fg">{target.fullName}</span>
               </div>
 
-              {running && (
+              {job.state === 'analyzing' && (
                 <div className="rounded-xl border border-line bg-canvas p-4" role="status" aria-live="polite">
                   <p className="flex items-center gap-2 text-sm font-medium text-fg">
-                    <Loader2 size={15} className="animate-spin text-accent" aria-hidden />
-                    Analyzing… {elapsed(now - job.startedAt)} elapsed
+                    <Loader2 size={15} className="shrink-0 animate-spin text-accent" aria-hidden />
+                    <span className="min-w-0 truncate">{job.message}</span>
+                    <span className="shrink-0 font-normal tabular-nums text-fg-3">· {elapsed(now - job.startedAt)}</span>
                   </p>
                   <p className="mt-1.5 text-[13px] text-fg-3">
                     Reading the code, measuring conventions (naming, type hints, docstrings, error handling),
-                    and indexing functions for reviews. You can close this — the card keeps updating.
+                    and indexing functions for reviews.{' '}
+                    {job.background
+                      ? 'It runs on the server — you can close this dialog, leave the page or reload; the card shows its status.'
+                      : 'The job queue is offline, so this runs while you wait — keep this tab open.'}
                   </p>
+                  {(() => {
+                    const hint = stuckHint({ startedAt: job.startedAt, message: job.message, queued: job.message.startsWith('Queued'), background: job.background }, now)
+                    return hint ? <p className="mt-1.5 text-[13px] text-warning">{hint}</p> : null
+                  })()}
                 </div>
               )}
 
@@ -168,7 +177,7 @@ export default function ImportRepoDialog({ userId, initialValue = '', onClose, o
               )}
 
               <div className="flex flex-wrap justify-end gap-2">
-                {running && <Button onClick={onClose}>Run in background</Button>}
+                {running && <Button onClick={onClose}>{job.state === 'analyzing' && job.background ? 'Close — keep running' : 'Run in background'}</Button>}
                 {job.state === 'failed' && (
                   <>
                     <Button onClick={() => { useRepoJobs.getState().dismissJob(target.url); setTarget(null) }}>Edit URL</Button>

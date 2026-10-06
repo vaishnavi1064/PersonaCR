@@ -1,21 +1,24 @@
 """
-Analyze repo route — triggers Layer 1 fingerprint extraction pipeline.
-POST /api/analyze-repo  →  returns FingerprintResponse
+Analyze routes — Layer 1 fingerprint extraction.
+
+POST /api/analyze-repo            synchronous (waits for the whole analysis)
+POST /api/analyze-jobs            background: enqueue on the RQ "analyze" queue (202)
+GET  /api/analyze-jobs/{job_id}   job status / stage / result
 """
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+import uuid
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel
 
-from backend.src.core.github_ingestor import ingest_repo
-from backend.src.core.pattern_extractor import extract_fingerprint
-from backend.src.core.embedder import embed_and_store, delete_guest_collections
-from backend.src.core.cache_manager import get_cached_fingerprint, save_fingerprint
+from backend.src.core import analysis_store, job_store
+from backend.src.core.analysis import AnalysisError, run_analysis
+from backend.src.core.analyze_queue import enqueue_analyze_job
+from backend.src.core.embedder import delete_guest_collections
+from backend.src.core.models import StatusResponse
 from backend.src.core.repo_identity import repo_identity
-from backend.src.db.supabase_rest import SupabaseREST
 
 logger = logging.getLogger(__name__)
 
@@ -42,103 +45,80 @@ def analyze_repo(payload: AnalyzeRequest) -> dict:
 
     Must be called before review_code — the fingerprint is required for
     personalized review. Use force_refresh=true to re-analyze after new commits.
+    Synchronous; POST /api/analyze-jobs runs the same analysis in the background.
     """
-    db = SupabaseREST()
-    repo_url = payload.repo_url.rstrip("/")
-
-    # ── Check cache ──────────────────────────────────────────────────────────
-    if not payload.force_refresh:
-        cached = get_cached_fingerprint(db, repo_url, payload.user_id, payload.github_token)
-        if cached and cached.get("_cache_status") == "fresh":
-            return {
-                "repo_url": repo_url,
-                "repo_name": cached.get("repo_name", ""),
-                "fingerprint": cached.get("fingerprint_data", {}),
-                "num_functions": cached.get("num_functions", 0),
-                "last_commit_sha": cached.get("last_commit_sha", ""),
-                "analyzed_at": cached.get("updated_at"),
-                "cache_status": "fresh",
-                "message": "Loaded from cache — repo unchanged since last analysis.",
-                "embedding": {
-                    "status": "cached",
-                    "collection": None,
-                    "chunks_embedded": 0,
-                    "error": None,
-                },
-            }
-
-    # ── Run full extraction ──────────────────────────────────────────────────
     try:
-        chunks, latest_sha = ingest_repo(repo_url, payload.github_token)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ingestion failed: {e}")
+        return run_analysis(
+            payload.repo_url,
+            user_id=payload.user_id,
+            github_token=payload.github_token,
+            force_refresh=payload.force_refresh,
+        )
+    except AnalysisError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
 
-    if not chunks:
-        raise HTTPException(status_code=422, detail="No code functions found in this repo.")
 
-    # Extract fingerprint
-    fingerprint = extract_fingerprint(chunks)
+class AnalyzeJobResponse(BaseModel):
+    job_id: str
+    repo_url: str
+    state: str
+    analysis: dict | None = None
 
-    # Per-repo identity: the collection is keyed on the repo (owner/name), not on who
-    # analyzed it, so reviews by any user hit the same vectors.
+
+@router.post("/analyze-jobs", operation_id="enqueue_analysis", response_model=AnalyzeJobResponse, status_code=202)
+def enqueue_analysis(payload: AnalyzeRequest, response: Response) -> AnalyzeJobResponse:
+    """
+    Analyze a repo in the background (RQ worker). Returns immediately with a
+    job id; poll GET /api/analyze-jobs/{job_id}, or read the repo's `analysis`
+    in GET /api/repos. A repeat request while one is queued/running returns it.
+    """
+    repo_url = analysis_store.normalize_url(payload.repo_url)
     try:
-        owner, repo_name = repo_identity(repo_url)
+        repo_identity(repo_url)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    # Embed and store in ChromaDB (explicit status — never silent)
-    embedding_info: dict = {
-        "status": "skipped",
-        "collection": None,
-        "chunks_embedded": 0,
-        "error": None,
-    }
     try:
-        emb = embed_and_store(chunks, owner, repo_name, analyzed_by=payload.user_id)
-        embedding_info = {
-            "status": "ok",
-            "collection": emb.get("collection"),
-            "chunks_embedded": emb.get("chunks_embedded", 0),
-            "error": None,
-        }
+        existing = analysis_store.get_record(payload.user_id, repo_url)
     except Exception as e:
-        logger.exception("ChromaDB embedding failed for %s", repo_url)
-        embedding_info = {
-            "status": "failed",
-            "collection": None,
-            "chunks_embedded": 0,
-            "error": str(e),
-        }
+        logger.warning("Analysis queue unavailable: %s", e)
+        raise HTTPException(status_code=503, detail="Background analysis is unavailable (job queue offline).")
+    if existing and existing.get("state") in analysis_store.ACTIVE_STATES:
+        response.status_code = 200
+        return AnalyzeJobResponse(
+            job_id=existing["job_id"], repo_url=repo_url, state=existing["state"],
+            analysis=analysis_store.public_view(existing),
+        )
 
-    # Save to Supabase — skip for guest sessions (no persistent account)
-    is_guest = payload.user_id.startswith("guest_")
-    if not is_guest:
-        try:
-            save_fingerprint(
-                db,
-                repo_url,
-                repo_name,
-                fingerprint,
-                latest_sha,
-                payload.user_id,
-                num_chunks=len(chunks),
-            )
-        except Exception as e:
-            logger.warning("Could not save fingerprint to Supabase: %s", e)
+    job_id = str(uuid.uuid4())
+    job_store.create_job(job_id, message="queued", meta={"kind": "analyze", "repo_url": repo_url})
+    record = analysis_store.start_record(payload.user_id, repo_url, job_id, force=payload.force_refresh)
+    try:
+        enqueue_analyze_job(job_id, {
+            "repo_url": repo_url,
+            "user_id": payload.user_id,
+            "force_refresh": payload.force_refresh,
+            "github_token": payload.github_token,
+        })
+    except Exception as e:
+        logger.exception("Failed to enqueue analyze job %s", job_id)
+        job_store.update_job(job_id, state="failed", progress=100, message="enqueue failed", error=str(e))
+        analysis_store.update_record(payload.user_id, repo_url, state="failed", error="Could not queue the analysis.")
+        raise HTTPException(status_code=503, detail=f"Could not enqueue analysis: {e}")
 
-    return {
-        "repo_url": repo_url,
-        "repo_name": repo_name,
-        "fingerprint": fingerprint,
-        "num_functions": len(chunks),
-        "last_commit_sha": latest_sha,
-        "analyzed_at": datetime.now(timezone.utc).isoformat(),
-        "cache_status": "new",
-        "message": f"Analyzed {len(chunks)} functions from {repo_name}.",
-        "embedding": embedding_info,
-    }
+    return AnalyzeJobResponse(job_id=job_id, repo_url=repo_url, state="queued", analysis=analysis_store.public_view(record))
+
+
+@router.get("/analyze-jobs/{job_id}", operation_id="get_analysis_job", response_model=StatusResponse)
+def get_analysis_job(job_id: str) -> StatusResponse:
+    """Background analysis status: state, progress, stage message; result when completed."""
+    try:
+        job = job_store.get_job(job_id)
+    except Exception:
+        raise HTTPException(status_code=503, detail="Background analysis is unavailable (job queue offline).")
+    if job is None:
+        raise HTTPException(status_code=404, detail=f"Unknown job_id: {job_id}")
+    return job
 
 
 @router.delete("/cleanup-guest/{session_id}", operation_id="cleanup_guest")

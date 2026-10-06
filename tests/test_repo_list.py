@@ -33,6 +33,19 @@ class FakeDB:
         return list(self.fingerprints)
 
 
+@pytest.fixture(autouse=True)
+def fake_redis():
+    """GET /api/repos merges analysis status from Redis — keep tests off the network."""
+    import fakeredis
+
+    from backend.src.core.redis_client import reset_redis, set_redis
+
+    client = fakeredis.FakeStrictRedis(server=fakeredis.FakeServer())
+    set_redis(client)
+    yield client
+    reset_redis()
+
+
 @pytest.fixture
 def client():
     from backend.src.main import app
@@ -115,8 +128,10 @@ def test_analyze_cached_returns_stored_timestamp(monkeypatch):
 
     from backend.src.routes import analyze_routes as ar
 
-    monkeypatch.setattr(ar, "SupabaseREST", MagicMock())
-    monkeypatch.setattr(ar, "get_cached_fingerprint", lambda *a, **k: {
+    from backend.src.core import analysis as analysis_mod
+
+    monkeypatch.setattr(analysis_mod, "SupabaseREST", MagicMock())
+    monkeypatch.setattr(analysis_mod, "get_cached_fingerprint", lambda *a, **k: {
         "_cache_status": "fresh", "repo_name": "api", "fingerprint_data": {"type_hint_usage": 0.5},
         "num_functions": 7, "last_commit_sha": "abc", "updated_at": "2026-09-30T12:00:00+00:00",
     })
@@ -131,12 +146,14 @@ def test_analyze_fresh_returns_now(monkeypatch, tmp_path):
     from unittest.mock import MagicMock
 
     from backend.src.routes import analyze_routes as ar
+
+    from backend.src.core import analysis as analysis_mod
     from tests.conftest import make_chunk
 
-    monkeypatch.setattr(ar, "SupabaseREST", MagicMock())
-    monkeypatch.setattr(ar, "ingest_repo", lambda url, token=None: ([make_chunk("f", "def f(x: int) -> int:\n    return x")], "sha1"))
-    monkeypatch.setattr(ar, "embed_and_store", lambda *a, **k: {"collection": "c", "chunks_embedded": 1})
-    monkeypatch.setattr(ar, "save_fingerprint", MagicMock())
+    monkeypatch.setattr(analysis_mod, "SupabaseREST", MagicMock())
+    monkeypatch.setattr(analysis_mod, "ingest_repo", lambda url, token=None, **_: ([make_chunk("f", "def f(x: int) -> int:\n    return x")], "sha1"))
+    monkeypatch.setattr(analysis_mod, "embed_and_store", lambda *a, **k: {"collection": "c", "chunks_embedded": 1})
+    monkeypatch.setattr(analysis_mod, "save_fingerprint", MagicMock())
     out = ar.analyze_repo(ar.AnalyzeRequest(repo_url="https://github.com/acme/api", user_id=USER, force_refresh=True))
     assert out["cache_status"] == "new"
     analyzed = datetime.fromisoformat(out["analyzed_at"])

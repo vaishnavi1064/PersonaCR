@@ -27,7 +27,9 @@ def get_redis() -> Any:
         from redis import Redis
 
         # decode_responses=False — RQ job blobs expect bytes-capable Redis.
-        _redis = Redis.from_url(get_redis_url())
+        # Short timeouts: when Redis is down, API calls that only *read* job status
+        # (e.g. GET /api/repos) must degrade quickly instead of hanging.
+        _redis = Redis.from_url(get_redis_url(), socket_connect_timeout=1, socket_timeout=5)
     return _redis
 
 

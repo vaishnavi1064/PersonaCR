@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import ast
 import os
+from collections.abc import Callable
 import re
 from dataclasses import dataclass, field
 
@@ -176,13 +177,18 @@ def _create_file_level_chunk(
     )
 
 
-def ingest_repo(repo_url: str, github_token: str | None = None) -> tuple[list[CodeChunk], str]:
+def ingest_repo(
+    repo_url: str,
+    github_token: str | None = None,
+    on_progress: Callable[[int, int], None] | None = None,
+) -> tuple[list[CodeChunk], str]:
     """
     Pull all code files from a GitHub repo and extract functions.
 
     Args:
         repo_url: Full URL like https://github.com/owner/repo
         github_token: Optional PAT for higher rate limits (5000 req/hr vs 60)
+        on_progress: Optional callback(files_done, files_total) while fetching code files
 
     Returns:
         (list of CodeChunk, latest commit SHA on default branch)
@@ -212,15 +218,17 @@ def ingest_repo(repo_url: str, github_token: str | None = None) -> tuple[list[Co
     except GithubException as e:
         raise ValueError(f"Could not read repo tree: {e}") from e
 
-    for item in contents.tree:
-        if item.type != "blob":
-            continue
-        path = item.path
-        if SKIP_PATTERNS.search(path):
-            continue
-        ext = os.path.splitext(path)[1].lower()
-        if ext not in CODE_EXTENSIONS:
-            continue
+    code_paths = [
+        item.path for item in contents.tree
+        if item.type == "blob"
+        and not SKIP_PATTERNS.search(item.path)
+        and os.path.splitext(item.path)[1].lower() in CODE_EXTENSIONS
+    ]
+    total_files = len(code_paths)
+
+    for done, path in enumerate(code_paths):
+        if on_progress:
+            on_progress(done, total_files)
 
         # Fetch file content
         try:
@@ -254,4 +262,6 @@ def ingest_repo(repo_url: str, github_token: str | None = None) -> tuple[list[Co
 
         chunks.extend(file_chunks)
 
+    if on_progress:
+        on_progress(total_files, total_files)
     return chunks, latest_sha

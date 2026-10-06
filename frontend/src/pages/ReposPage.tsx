@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { FolderGit2, Plus, SearchX, TriangleAlert } from 'lucide-react'
-import { ApiError, listRepos, type Repo, type RepoStatus } from '../lib/api'
+import { ApiError, isActiveAnalysis, listRepos, type Repo, type RepoStatus } from '../lib/api'
 import { useRepoJobs, type RepoJob } from '../store/useRepoJobs'
 import { useStore } from '../store/useStore'
 import { useCurrentUser } from '../lib/useCurrentUser'
@@ -40,7 +40,7 @@ function placeholderRepo(job: RepoJob): Repo {
   const [owner = '', name = job.fullName] = job.fullName.split('/')
   return {
     url: job.url, fullName: job.fullName, owner, name, status: 'added', error: null,
-    languages: [], functionsCount: null, analyzedAt: null, lastCommitSha: null, fingerprint: null, summary: null,
+    languages: [], functionsCount: null, analyzedAt: null, lastCommitSha: null, fingerprint: null, summary: null, analysis: null,
   }
 }
 
@@ -81,13 +81,28 @@ export default function ReposPage() {
     return () => ctrl.abort()
   }, [userId, reloadKey, completedCount])
 
+  // Background analyses this tab isn't watching (started elsewhere, or before a reload):
+  // re-read the list until they finish
+  useEffect(() => {
+    if (list.status !== 'ok') return
+    const pending = list.repos.some((r) => isActiveAnalysis(r.analysis) && jobs[r.url]?.state !== 'analyzing')
+    if (!pending) return
+    const t = setTimeout(() => setReloadKey((k) => k + 1), 3000)
+    return () => clearTimeout(t)
+  }, [list, jobs])
+
   const repos = useMemo(() => {
     const byUrl = new Map<string, Repo>()
     if (list.status === 'ok') for (const r of list.repos) byUrl.set(r.url, r)
     // This session's analyses are fresher than the server row (and are all guests have)
+    // The server (fingerprint + background-analysis record) wins; this session's
+    // results only fill in what it doesn't have yet (e.g. right after a sync analyze)
     for (const r of Object.values(sessionRepos)) {
       const prev = byUrl.get(r.url)
-      byUrl.set(r.url, { ...prev, ...r, analyzedAt: r.analyzedAt ?? prev?.analyzedAt ?? null })
+      if (!prev) byUrl.set(r.url, r)
+      else if (!prev.fingerprint && r.fingerprint && !isActiveAnalysis(prev.analysis)) {
+        byUrl.set(r.url, { ...prev, ...r, status: 'ready', error: null, analysis: prev.analysis, analyzedAt: r.analyzedAt ?? prev.analyzedAt })
+      }
     }
     for (const j of Object.values(jobs)) if (!byUrl.has(j.url)) byUrl.set(j.url, placeholderRepo(j))
     return [...byUrl.values()].map((r) => {

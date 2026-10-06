@@ -6,9 +6,9 @@ export { ApiError, API_BASE, request, setAuthTokenProvider } from './http'
 export type { ApiErrorKind } from './http'
 export {
   parseRepoUrl, normalizeFingerprint, fingerprintChips, typeHintsMeasured, typeHintsRepresentative, topLanguages,
-  isAccountUserId, listRepos, analyzeRepo,
+  isAccountUserId, listRepos, analyzeRepo, startAnalyzeJob, getAnalyzeJob, isActiveAnalysis,
 } from './repos'
-export type { ParsedRepoUrl, AnalyzeResult } from './repos'
+export type { ParsedRepoUrl, AnalyzeResult, AnalyzeJobStatus } from './repos'
 export {
   reviewCode, normalizeReview, normalizeFinding, parseLineHint, explainDegraded, REVIEW_LANGUAGES, AGENT_LABEL,
 } from './reviews'

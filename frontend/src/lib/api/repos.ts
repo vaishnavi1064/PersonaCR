@@ -3,7 +3,7 @@
 import { saveRepo } from '../db'
 import { pct } from '../format'
 import { request } from './http'
-import type { Fingerprint, NamingConvention, Repo } from './types'
+import type { Fingerprint, NamingConvention, Repo, RepoAnalysis } from './types'
 
 // ── URL parsing ───────────────────────────────────────────────────────────────
 
@@ -141,7 +141,16 @@ export function topLanguages(repo: Pick<Repo, 'languages' | 'fingerprint'>, max 
 
 // ── List ──────────────────────────────────────────────────────────────────────
 
-interface RepoListItem {
+interface AnalysisWire {
+  job_id: string
+  state: RepoAnalysis['state']
+  message: string | null
+  error: string | null
+  started_at: string | null
+  finished_at: string | null
+}
+
+export interface RepoListItem {
   repo_url: string
   repo_name: string
   languages: string[] | null
@@ -149,25 +158,46 @@ interface RepoListItem {
   analyzed_at: string | null
   last_commit_sha: string | null
   fingerprint: unknown
+  analysis?: AnalysisWire | null
 }
 
-function repoFromListItem(item: RepoListItem): Repo {
+function analysisFromWire(a: AnalysisWire | null | undefined): RepoAnalysis | null {
+  if (!a) return null
+  return {
+    jobId: a.job_id, state: a.state, message: a.message, error: a.error,
+    startedAt: a.started_at, finishedAt: a.finished_at,
+  }
+}
+
+export function isActiveAnalysis(a: RepoAnalysis | null | undefined): boolean {
+  return !!a && (a.state === 'queued' || a.state === 'running')
+}
+
+/** Status from the saved fingerprint plus the latest background analysis. */
+function statusOf(fingerprint: Fingerprint | null, analysis: RepoAnalysis | null): Repo['status'] {
+  if (isActiveAnalysis(analysis)) return 'analyzing'
+  if (analysis?.state === 'failed') return 'failed'
+  return fingerprint ? 'ready' : 'added'
+}
+
+export function repoFromListItem(item: RepoListItem): Repo {
   const id = splitUrl(item.repo_url)
   const fingerprint = normalizeFingerprint(item.fingerprint)
+  const analysis = analysisFromWire(item.analysis)
   return {
     url: id.url,
     fullName: id.fullName,
     owner: id.owner,
     name: id.name,
-    // Analysis is synchronous today, so a row is either fingerprinted or not.
-    status: fingerprint ? 'ready' : 'added',
-    error: null,
+    status: statusOf(fingerprint, analysis),
+    error: analysis?.state === 'failed' ? analysis.error : null,
     languages: item.languages ?? fingerprint?.languages ?? [],
     functionsCount: num(item.functions_count),
     analyzedAt: item.analyzed_at,
     lastCommitSha: item.last_commit_sha,
     fingerprint,
     summary: null, // capability repoSummary
+    analysis,
   }
 }
 
@@ -178,8 +208,10 @@ export function isAccountUserId(userId: string | null | undefined): userId is st
   return !!userId && UUID.test(userId)
 }
 
+/** Account repos (saved list), or a guest's repos analyzed in the background this session. */
 export async function listRepos(userId: string, signal?: AbortSignal): Promise<Repo[]> {
-  if (!isAccountUserId(userId)) return []
+  const guest = userId.startsWith('guest_')
+  if (!guest && !isAccountUserId(userId)) return []
   const res = await request<{ repos: RepoListItem[] }>(
     `/api/repos?user_id=${encodeURIComponent(userId)}`,
     { timeoutMs: 30_000, signal },
@@ -210,7 +242,34 @@ export interface AnalyzeResult {
   indexError: string | null
 }
 
-/** Analyze (or with force, re-analyze) a repo. Records it in the user's repo list. */
+function resultFromResponse(r: AnalyzeResponse, url: string): AnalyzeResult {
+  const id = splitUrl(r.repo_url || url)
+  const fingerprint = normalizeFingerprint(r.fingerprint)
+  return {
+    repo: {
+      url: id.url,
+      fullName: id.fullName,
+      owner: id.owner,
+      name: id.name,
+      status: fingerprint ? 'ready' : 'added',
+      error: null,
+      languages: fingerprint?.languages ?? [],
+      functionsCount: num(r.num_functions),
+      analyzedAt: r.analyzed_at ?? null,
+      lastCommitSha: r.last_commit_sha || null,
+      fingerprint,
+      summary: null,
+      analysis: null,
+    },
+    cacheStatus: r.cache_status,
+    indexError: r.embedding?.status === 'failed' ? r.embedding.error ?? 'Indexing failed' : null,
+  }
+}
+
+/**
+ * Synchronous analysis (waits for the whole run). Fallback when the background
+ * queue is unavailable. Records the repo in the user's list itself.
+ */
 export async function analyzeRepo(
   url: string,
   userId: string,
@@ -222,36 +281,55 @@ export async function analyzeRepo(
     // Synchronous on the backend: big repos can take several minutes.
     timeoutMs: 15 * 60_000,
   })
-
-  const id = splitUrl(r.repo_url || url)
-  const fingerprint = normalizeFingerprint(r.fingerprint)
-  const languages = fingerprint?.languages ?? []
-  const repo: Repo = {
-    url: id.url,
-    fullName: id.fullName,
-    owner: id.owner,
-    name: id.name,
-    status: fingerprint ? 'ready' : 'added',
-    error: null,
-    languages,
-    functionsCount: num(r.num_functions),
-    analyzedAt: r.analyzed_at ?? null,
-    lastCommitSha: r.last_commit_sha || null,
-    fingerprint,
-    summary: null,
-  }
-
+  const result = resultFromResponse(r, url)
   if (isAccountUserId(userId)) {
     // user_repos is what GET /api/repos lists; saveRepo logs and never throws.
     await saveRepo({
-      userId, repoUrl: id.url, repoName: id.fullName,
-      functionsCount: repo.functionsCount ?? 0, languages,
+      userId, repoUrl: result.repo.url, repoName: result.repo.fullName,
+      functionsCount: result.repo.functionsCount ?? 0, languages: result.repo.languages,
     })
   }
+  return result
+}
 
+// ── Background analysis (capability analyzeJobs) ─────────────────────────────
+
+export interface AnalyzeJobStatus {
+  jobId: string
+  state: 'queued' | 'running' | 'completed' | 'failed'
+  progress: number
+  message: string | null
+  error: string | null
+  createdAt: string | null
+  result: AnalyzeResult | null
+}
+
+/** Queue an analysis; an analysis already queued/running for this repo is reused. */
+export async function startAnalyzeJob(
+  url: string,
+  userId: string,
+  opts: { force?: boolean } = {},
+): Promise<{ jobId: string; startedAt: string | null }> {
+  const r = await request<{ job_id: string; analysis: AnalysisWire | null }>('/api/analyze-jobs', {
+    method: 'POST',
+    body: { repo_url: url, user_id: userId, force_refresh: !!opts.force },
+    timeoutMs: 20_000,
+  })
+  return { jobId: r.job_id, startedAt: r.analysis?.started_at ?? null }
+}
+
+export async function getAnalyzeJob(jobId: string, url: string): Promise<AnalyzeJobStatus> {
+  const r = await request<{
+    job_id: string; state: AnalyzeJobStatus['state']; progress: number; message: string | null
+    error: string | null; created_at: string | null; result: AnalyzeResponse | null
+  }>(`/api/analyze-jobs/${encodeURIComponent(jobId)}`, { timeoutMs: 15_000 })
   return {
-    repo,
-    cacheStatus: r.cache_status,
-    indexError: r.embedding?.status === 'failed' ? r.embedding.error ?? 'Indexing failed' : null,
+    jobId: r.job_id,
+    state: r.state,
+    progress: r.progress,
+    message: r.message,
+    error: r.error,
+    createdAt: r.created_at,
+    result: r.state === 'completed' && r.result ? resultFromResponse(r.result, url) : null,
   }
 }

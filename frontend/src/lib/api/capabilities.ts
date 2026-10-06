@@ -35,9 +35,9 @@ export const capabilities: Record<CapabilityKey, Capability> = {
     detail: 'Style findings describe the difference in words; exact percentages are not sent yet.',
   },
   analyzeJobs: {
-    level: 'unavailable',
+    level: 'available',
     label: 'Background repo analysis',
-    detail: 'Analysis runs while you wait; status is not saved if you leave the page.',
+    detail: 'Analysis runs on the server; its status survives reloads and closed tabs.',
   },
 }
 
