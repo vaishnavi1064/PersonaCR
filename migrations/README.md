@@ -21,8 +21,9 @@ Run in numeric order against an empty Postgres / local Supabase:
 7. `007_rls_user_tables.sql` — RLS: each user reads/writes only their own `user_reviews` / `user_repos` / `user_chats` rows
 8. `008_rls_fingerprints_service_only.sql` — RLS: `fingerprints` readable/writable by the backend (service role) only
 9. `009_user_id_text_to_uuid.sql` — converts `user_reviews.user_id` / `user_repos.user_id` from `text` to `uuid` (live schema drift) and recreates the RLS policies as `auth.uid() = user_id`
+10. `010_lock_unused_tables.sql` — locks the unused legacy tables `reviews`, `chat_messages`, `documentation`, `agent_traces` (RLS on, no policies, `anon` / `authenticated` access revoked; kept, not dropped)
 
-`007`–`009` are idempotent and are meant to be run in the Supabase SQL editor. All three have been applied to the live project.
+`007`–`010` are idempotent and are meant to be run in the Supabase SQL editor. All four have been applied to the live project.
 
 ## `user_id` column types
 
