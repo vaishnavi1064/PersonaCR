@@ -179,9 +179,13 @@ body {
   outline-offset: 2px;
 }
 
+/* Collapse motion to a single instant pass. Without iteration-count: 1 the
+   `infinite` loops (landing ticker, login fingerprint dial) would cycle every
+   0.01ms and appear to race instead of stopping. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
