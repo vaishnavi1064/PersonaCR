@@ -4,7 +4,7 @@ vi.mock('../db', () => ({ saveRepo: vi.fn() }))
 
 import { askQuestion } from './chats'
 import { cleanupGuestOnUnload } from './guest'
-import { request, resolveApiBase, setAuthTokenProvider } from './http'
+import { ApiError, isRateLimited, request, resolveApiBase, setAuthTokenProvider } from './http'
 import { listRepos, startAnalyzeJob } from './repos'
 
 const USER = '3f2b8c1e-9a4d-4e57-8b1a-2c6d9e0f1a2b'
@@ -87,5 +87,30 @@ describe('API base URL', () => {
     expect(resolveApiBase(undefined)).toBe('http://localhost:8000')
     expect(resolveApiBase('')).toBe('http://localhost:8000')
     expect(resolveApiBase('https://api.example.com/')).toBe('https://api.example.com')
+  })
+})
+
+describe('rate limits (429)', () => {
+  it('keeps the server’s message and is recognised as rate limited', async () => {
+    const detail = "You've reached the demo limit of 5 reviews per hour. Try again in 12 minutes."
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ detail }), { status: 429, headers: { 'Retry-After': '700' } }))
+    const err = await request('/api/reviews', { method: 'POST', body: {} }).catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(ApiError)
+    expect(isRateLimited(err)).toBe(true)
+    expect((err as ApiError).message).toBe(detail)
+  })
+
+  it('a 429 without a body still reads as a friendly message', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('', { status: 429 }))
+    const err = await request('/api/chat').catch((e: unknown) => e)
+    expect(isRateLimited(err)).toBe(true)
+    expect((err as ApiError).message).toBe('Too many requests — wait a few minutes and try again.')
+  })
+
+  it('other errors are not rate limits', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ detail: 'nope' }), { status: 503 }))
+    const err = await request('/api/reviews').catch((e: unknown) => e)
+    expect(isRateLimited(err)).toBe(false)
+    expect(isRateLimited(new Error('x'))).toBe(false)
   })
 })

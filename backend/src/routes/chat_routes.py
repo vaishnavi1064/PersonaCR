@@ -11,6 +11,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from backend.src.core import rate_limit
 from backend.src.core.auth import AuthUser, current_user
 from backend.src.core.models import InsightsChatRequest, InsightsChatResponse
 from backend.src.agents.insights_agent import get_insights
@@ -41,6 +42,7 @@ def ask_insights(payload: InsightsChatRequest, user: AuthUser = Depends(current_
 
     if not payload.message.strip():
         raise HTTPException(status_code=400, detail="Message cannot be empty.")
+    rate_limit.enforce(user.user_id, rate_limit.CHAT)
 
     logger.info(
         "Chat request from user=%s with %d repo(s): %s",

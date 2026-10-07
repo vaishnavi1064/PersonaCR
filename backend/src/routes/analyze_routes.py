@@ -13,7 +13,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 
-from backend.src.core import analysis_store, job_store
+from backend.src.core import analysis_store, job_store, rate_limit
 from backend.src.core.analysis import AnalysisError, run_analysis
 from backend.src.core.auth import AuthUser, current_user
 from backend.src.core.analyze_queue import enqueue_analyze_job
@@ -48,6 +48,7 @@ def analyze_repo(payload: AnalyzeRequest, user: AuthUser = Depends(current_user)
     personalized review. Use force_refresh=true to re-analyze after new commits.
     Synchronous; POST /api/analyze-jobs runs the same analysis in the background.
     """
+    rate_limit.enforce(user.user_id, rate_limit.ANALYZE)
     try:
         return run_analysis(
             payload.repo_url,
@@ -93,6 +94,8 @@ def enqueue_analysis(
             job_id=existing["job_id"], repo_url=repo_url, state=existing["state"],
             analysis=analysis_store.public_view(existing),
         )
+    # Only new jobs count — re-attaching to a running one is free.
+    rate_limit.enforce(user_id, rate_limit.ANALYZE)
 
     job_id = str(uuid.uuid4())
     job_store.create_job(job_id, message="queued", meta={"kind": "analyze", "repo_url": repo_url, "user_id": user_id})

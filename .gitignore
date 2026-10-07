@@ -37,3 +37,6 @@ terraform/.terraform.lock.hcl
 # IDE / OS
 .vscode/
 .DS_Store
+
+# Production secrets on the server (deploy/.env.prod.example is the template)
+deploy/.env.prod

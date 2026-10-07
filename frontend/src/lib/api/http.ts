@@ -30,6 +30,17 @@ export class ApiError extends Error {
   }
 }
 
+const TOO_MANY_REQUESTS = 'Too many requests — wait a few minutes and try again.'
+
+/**
+ * HTTP 429: a per-user demo limit (backend core/rate_limit.py). The message is
+ * the server's, written for the user ("…limit of 5 reviews per hour. Try again
+ * in 12 minutes.") — show it as is, without a "failed:" prefix.
+ */
+export function isRateLimited(err: unknown): boolean {
+  return err instanceof ApiError && err.status === 429
+}
+
 type TokenProvider = () => Promise<string | null>
 let tokenProvider: TokenProvider | null = null
 /** Last token sent — for keepalive requests on tab close, which can't await the provider. */
@@ -102,7 +113,8 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
   }
 
   if (!res.ok) {
-    throw new ApiError('http', detailMessage(payload) ?? `Request failed (${res.status})`, res.status)
+    const fallback = res.status === 429 ? TOO_MANY_REQUESTS : `Request failed (${res.status})`
+    throw new ApiError('http', detailMessage(payload) ?? fallback, res.status)
   }
   return payload as T
 }

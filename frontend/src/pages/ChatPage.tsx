@@ -4,7 +4,7 @@ import { useStore } from '../store/useStore'
 import type { ChatMessage, PersistedMessage } from '../store/useStore'
 import { toUI, toPersisted } from '../store/useStore'
 import {
-  ApiError, askQuestion, chatRepoUrl, cleanupGuestOnUnload, historyFor, isAccountUserId, repoShortName, reviewCode,
+  ApiError, askQuestion, isRateLimited, chatRepoUrl, cleanupGuestOnUnload, historyFor, isAccountUserId, repoShortName, reviewCode,
   REVIEW_LANGUAGES, topLanguages, type ChatMode, type Finding,
 } from '../lib/api'
 import {
@@ -40,6 +40,7 @@ function errorText(err: unknown, action: 'ask' | 'review'): string {
   if (err instanceof ApiError) {
     if (err.kind === 'network') return 'Could not reach the PersonaCR server. Is the backend running?'
     if (err.kind === 'timeout') return `${err.message}. Try a smaller piece of code.`
+    if (isRateLimited(err)) return err.message
     if (action === 'review' && err.status === 503) {
       return 'Reviews are unavailable right now — the background job queue is offline. Try again shortly.'
     }

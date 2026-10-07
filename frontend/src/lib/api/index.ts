@@ -2,7 +2,7 @@
 // Domain modules (repos, reviews, chats) are added slice by slice.
 export * from './types'
 export * from './capabilities'
-export { ApiError, API_BASE, request, sendKeepalive, setAuthTokenProvider } from './http'
+export { ApiError, API_BASE, isRateLimited, request, sendKeepalive, setAuthTokenProvider } from './http'
 export type { ApiErrorKind } from './http'
 export {
   parseRepoUrl, normalizeFingerprint, repoSummaryOf, fingerprintChips, typeHintsMeasured, typeHintsRepresentative, topLanguages,

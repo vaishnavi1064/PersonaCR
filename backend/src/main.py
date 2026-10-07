@@ -1,4 +1,5 @@
 import logging
+import os
 
 from fastapi import Depends, FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,14 +28,23 @@ app = FastAPI(
     ),
 )
 
+_DEV_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175",
+    "http://localhost:3000",
+]
+
+
+def allowed_origins() -> list[str]:
+    """Local dev origins plus ALLOWED_ORIGINS (comma-separated, e.g. the deployed https:// domain)."""
+    extra = [o.strip().rstrip("/") for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()]
+    return _DEV_ORIGINS + [o for o in extra if o not in _DEV_ORIGINS]
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:5175",
-        "http://localhost:3000",
-    ],
+    allow_origins=allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

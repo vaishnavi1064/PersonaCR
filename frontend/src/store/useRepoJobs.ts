@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import {
-  analyzeRepo, ApiError, capabilities, getAnalyzeJob, startAnalyzeJob, type AnalyzeResult, type Repo,
+  analyzeRepo, ApiError, capabilities, isRateLimited, getAnalyzeJob, startAnalyzeJob, type AnalyzeResult, type Repo,
 } from '../lib/api'
 
 // Analysis runs as a background job on the server (capability analyzeJobs):
@@ -46,6 +46,7 @@ function errorMessage(err: unknown, fullName: string): string {
   if (err instanceof ApiError) {
     if (err.kind === 'network') return 'Could not reach the PersonaCR server. Is the backend running?'
     if (err.kind === 'timeout') return `${err.message}. The repo may be too large to analyze in one request.`
+    if (isRateLimited(err)) return err.message
     return humanize(err.message, fullName)
   }
   return err instanceof Error ? err.message : String(err)

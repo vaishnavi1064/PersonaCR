@@ -45,6 +45,14 @@ def _no_real_services(request, monkeypatch):
         pytest.fail(f"test tried to reach real service(s) {sorted(set(attempts))}; mock the client instead")
 
 
+@pytest.fixture(autouse=True)
+def _rate_limit_off(monkeypatch):
+    """Per-user rate limits (core/rate_limit.py) are on by default; tests that
+    don't test them would trip them by making several requests. test_rate_limit.py
+    turns them back on."""
+    monkeypatch.setenv("RATE_LIMIT_ENABLED", "0")
+
+
 @pytest.fixture
 def login():
     """

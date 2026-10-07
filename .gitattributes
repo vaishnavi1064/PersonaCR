@@ -1,0 +1,5 @@
+# Shell scripts and the Caddyfile run on Linux — keep LF even on a Windows checkout.
+*.sh text eol=lf
+deploy/Caddyfile text eol=lf
+deploy/*.yml text eol=lf
+deploy/.env.prod.example text eol=lf

@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from backend.src.agents.orchestrator import review_code_sync
-from backend.src.core import job_store
+from backend.src.core import job_store, rate_limit
 from backend.src.core.auth import AuthUser, current_user
 from backend.src.core.cache_manager import get_cached_fingerprint
 from backend.src.core.repo_identity import repo_identity
@@ -89,7 +89,7 @@ def _load_fingerprint(repo_url: str, user_id: str, repo_name: str) -> tuple[dict
 
 
 @router.post("/review", operation_id="review_code")
-def review_code(req: CodeReviewRequest) -> dict:
+def review_code(req: CodeReviewRequest, user: AuthUser = Depends(current_user)) -> dict:
     """
     Submit code for personalized review against a developer's coding fingerprint.
 
@@ -108,6 +108,7 @@ def review_code(req: CodeReviewRequest) -> dict:
     """
     repo_url, user_id, repo_name = _parse_repo(req.repo_url)
     fingerprint, cache_status = _load_fingerprint(repo_url, user_id, repo_name)
+    rate_limit.enforce(user.user_id, rate_limit.REVIEW)
 
     logger.info("Starting review for %s/%s (%s)", user_id, repo_name, req.language)
     try:
@@ -168,6 +169,8 @@ def enqueue_review(
         fingerprint, cache_status = _load_fingerprint(repo_url, user_id, repo_name)
         payload["fingerprint"] = fingerprint
         payload["fingerprint_cache_status"] = cache_status
+    # After validation, so a 400/404 doesn't use up the caller's quota.
+    rate_limit.enforce(user.user_id, rate_limit.REVIEW)
 
     job_id = str(uuid.uuid4())
     status = job_store.create_job(job_id, message="queued", meta={"kind": "review", "user_id": user.user_id})
