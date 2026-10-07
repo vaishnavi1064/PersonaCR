@@ -7,7 +7,7 @@
 ![frontend tests](https://img.shields.io/badge/frontend_tests-87_passed-brightgreen)
 ![live demo](https://img.shields.io/badge/live_demo-coming_soon-lightgrey)
 
-**Live demo:** coming soon. Today it runs locally and on a local minikube cluster ([run it yourself](#run-it-locally)).
+**Live demo:** https://personacr.northcentralus.cloudapp.azure.com/
 
 ![Chat/Review Studio: findings pinned to the lines they are about](docs/screenshots/07-studio-findings.png)
 <sub>Real review of a function submitted against <code>vaishnavi1064/Code-Review-Agent</code>. Each finding sits under its line; style findings show the repo's value next to this code's ("Type hints: your repo 48% · this code 0%").</sub>
